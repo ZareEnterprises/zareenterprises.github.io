@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sight Melody — EMN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+<style>
+  :root{
+    --red:#C8102E;
+    --red-dark:#9B0C22;
+    --ink:#1B1B1D;
+    --paper:#FBFBF9;
+    --panel:#FFFFFF;
+    --line:#E4E2DD;
+    --muted:#767470;
+    --shadow: 0 10px 30px rgba(20,20,20,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:18px 22px;
+    border-bottom:1px solid var(--line);
+    background:var(--paper);
+  }
+  .gear-btn{
+    width:42px;height:42px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:border-color .15s ease, transform .1s ease;
+    flex-shrink:0;
+  }
+  .gear-btn:hover{border-color:var(--red);}
+  .gear-btn:active{transform:scale(0.96);}
+  .gear-btn svg{width:22px;height:22px;stroke:var(--ink);}
+  .brand{display:flex;flex-direction:column;line-height:1.1;}
+
+  /* ---- EMN branding: header ad + brand signature ---- */
+  .topbar{flex-wrap:nowrap;}
+  .topbar-ad{
+    background:var(--red);color:#fff;border-radius:12px;
+    padding:11px 16px;
+    display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+    margin-left:auto;
+    flex-shrink:0;
+  }
+  .topbar-ad .pitch{
+    font-family:'Fraunces',serif;font-weight:600;font-size:16px;line-height:1.3;
+    white-space:nowrap;
+  }
+  .topbar-ad .links{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+  .topbar-ad a{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:opacity .15s;}
+  .topbar-ad a:hover{opacity:.85;}
+  .topbar-ad a.cta{background:#fff;color:var(--red);padding:6px 12px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;}
+  .topbar-ad a.icon{border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px;border-radius:50%;}
+  @media (max-width:640px){
+    .topbar{flex-wrap:wrap;}
+    .topbar-ad{max-width:100%;width:100%;margin-left:0;flex:1 1 100%;}
+    .topbar-ad .pitch{white-space:normal;font-size:15px;}
+  }
+  .brandline-below{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 22px 0 22px;
+  }
+  .brandline-below img.logo{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:block;}
+  .brandline-below .brandtext{display:flex;flex-direction:column;gap:1px;line-height:1.22;}
+  .brandline-below .byline{font-size:12.5px;font-weight:600;color:var(--ink);letter-spacing:.01em;}
+  .brandline-below .sublabel{font-size:10.5px;color:var(--muted);letter-spacing:.04em;}
+  .brand .title{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:22px;
+    letter-spacing:-0.01em;
+  }
+  .brand .title em{color:var(--red);font-style:italic;}
+  .brand .sub{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .stage-hint{
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:14px;
+    letter-spacing:.02em;
+  }
+  .stage-hint b{color:var(--ink);}
+  #staff-wrap{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:28px 18px;
+    max-width:96vw;
+    overflow-x:auto;
+  }
+  #staff-wrap svg{display:block;margin:0 auto;}
+  .meta-row{
+    margin-top:16px;
+    display:flex;
+    gap:18px;
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:.03em;
+  }
+  .meta-row span b{color:var(--red);font-weight:600;}
+
+  .page-footer{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    font-size:11.5px;
+    color:var(--muted);
+    padding:18px 22px 22px;
+    letter-spacing:.02em;
+    flex-shrink:0;
+  }
+  .page-footer .fnote{color:var(--muted);}
+  .page-footer .flinks{display:flex;align-items:center;gap:8px;}
+  .page-footer .flinks a{
+    display:inline-flex;align-items:center;justify-content:center;
+    text-decoration:none;color:var(--muted);font-size:11.5px;font-weight:600;
+    transition:color .15s;
+  }
+  .page-footer .flinks a.contact{
+    color:var(--red);border:1px solid var(--red);
+    padding:6px 14px;border-radius:999px;
+  }
+  .page-footer .flinks a.contact:hover{background:var(--red);color:#fff;}
+  .page-footer .flinks a.icon{border:1px solid var(--line);border-radius:50%;padding:6px;}
+  .page-footer .flinks a.icon:hover{color:var(--ink);border-color:var(--ink);}
+  .page-footer .flinks a:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+  @media (max-width:640px){
+    .page-footer{justify-content:center;text-align:center;}
+  }
+
+  /* ---- Settings panel ---- */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(20,18,16,0.28);
+    opacity:0;pointer-events:none;
+    transition:opacity .18s ease;
+    z-index:40;
+  }
+  .overlay.open{opacity:1;pointer-events:auto;}
+  .panel{
+    position:fixed;top:0;left:0;bottom:0;
+    width:400px;max-width:92vw;
+    background:var(--panel);
+    box-shadow:6px 0 30px rgba(0,0,0,0.12);
+    transform:translateX(-100%);
+    transition:transform .22s cubic-bezier(.4,0,.2,1);
+    z-index:50;
+    display:flex;flex-direction:column;
+  }
+  .panel.open{transform:translateX(0);}
+  .panel-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px;
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+  }
+  .panel-header h2{
+    font-family:'Fraunces',serif;
+    font-size:18px;font-weight:600;margin:0;
+  }
+  .close-btn{
+    width:32px;height:32px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--muted);
+  }
+  .close-btn:hover{border-color:var(--red);color:var(--red);}
+  .panel-body{
+    overflow-y:auto;
+    padding:6px 20px 30px;
+    flex:1;
+  }
+  .section{
+    padding:16px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .section:last-child{border-bottom:none;}
+  .section h3{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.11em;
+    color:var(--muted);
+    margin:0 0 10px 0;
+    font-weight:600;
+  }
+  .section p.hint{
+    font-size:11.5px;color:var(--muted);margin:-4px 0 10px 0;line-height:1.4;
+  }
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{
+    padding:7px 12px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    font-size:13px;
+    cursor:pointer;
+    background:var(--panel);
+    color:var(--ink);
+    transition:all .12s ease;
+    user-select:none;
+  }
+  .chip:hover{border-color:var(--red);}
+  .chip.active{
+    background:var(--red);
+    border-color:var(--red);
+    color:#fff;
+    font-weight:600;
+  }
+  .row2{display:flex;gap:8px;}
+  .row2 .chip{flex:1;text-align:center;}
+  .check-grid{display:flex;flex-wrap:wrap;gap:8px 14px;}
+  .check-item{
+    display:flex;align-items:center;gap:6px;
+    font-size:13px;cursor:pointer;
+  }
+  .check-item input{
+    width:16px;height:16px;accent-color:var(--red);cursor:pointer;
+  }
+  .range-inputs{display:flex;gap:10px;align-items:center;}
+  .range-inputs label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;}
+  .range-inputs select{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    font-family:inherit;
+    background:var(--panel);
+  }
+  select.field{
+    padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+    font-size:13px;font-family:inherit;background:var(--panel);width:100%;
+  }
+  .meter-group{margin-bottom:12px;}
+  .meter-group:last-child{margin-bottom:0;}
+  .meter-group .label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .footer-note{
+    font-size:11px;color:var(--muted);line-height:1.5;padding:14px 20px 20px;
+    border-top:1px solid var(--line);
+  }
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:#DDD9D2;border-radius:8px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="gear-btn" id="gearBtn" aria-label="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
+  <div class="brand">
+    <div class="title">Sight <em>Melody</em></div>
+    <div class="sub">by EMN</div>
+  </div>
+
+  <div class="topbar-ad">
+    <div class="pitch">En EMN te preparamos individualmente para audicionar con beca a Berklee.</div>
+    <div class="links">
+      <a class="cta" href="https://academy.emnlatam.com/" target="_blank" rel="noopener">Aprende cómo</a>
+      <a class="icon" href="https://www.instagram.com/emn.latam/" target="_blank" rel="noopener" aria-label="Instagram de EMN"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.68.93 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.32 1.35 20.65.93 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0z"/><path d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle cx="18.41" cy="5.59" r="1.44"/></svg></a>
+      <a class="icon" href="https://academy.emnlatam.com/" target="_blank" rel="noopener" aria-label="Sitio web de EMN"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4"/><path d="M12 2.8c2.4 2.6 3.6 5.8 3.6 9.2s-1.2 6.6-3.6 9.2c-2.4-2.6-3.6-5.8-3.6-9.2S9.6 5.4 12 2.8z"/></svg></a>
+    </div>
+  </div>
+</div>
+
+<div class="brandline-below">
+  <img class="logo" src="data:image/png;base64,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" alt="Logo de Escuela de Música y Negocios">
+  <div class="brandtext">
+    <div class="byline">EMN</div>
+    <div class="sublabel">Escuela de Música y Negocios</div>
+  </div>
+</div>
+
+<div class="main" id="mainStage">
+  <div class="stage-hint">Click anywhere to generate a new exercise · <b id="hintKey">C Major</b></div>
+  <div id="staff-wrap"><div id="output"></div></div>
+  <div class="meta-row">
+    <span>Meter <b id="metaMeter">4/4</b></span>
+    <span>Measures <b id="metaMeasures">4</b></span>
+    <span>Difficulty <b id="metaDiff">Easy</b></span>
+  </div>
+</div>
+
+<footer class="page-footer">
+  <span class="fnote">&copy; All rights reserved by Escuela de Música y Negocios, 2026.</span>
+  <span class="flinks">
+    <a class="contact" href="https://linktr.ee/emnlatam" target="_blank" rel="noopener">Contáctanos</a>
+    <a class="icon" href="https://www.instagram.com/emn.latam/" target="_blank" rel="noopener" aria-label="Instagram de EMN"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38C1.35 2.68.93 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13C21.32 1.35 20.65.93 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0z"/><path d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/><circle cx="18.41" cy="5.59" r="1.44"/></svg></a>
+    <a class="icon" href="https://academy.emnlatam.com/" target="_blank" rel="noopener" aria-label="Sitio web de EMN"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4"/><path d="M12 2.8c2.4 2.6 3.6 5.8 3.6 9.2s-1.2 6.6-3.6 9.2c-2.4-2.6-3.6-5.8-3.6-9.2S9.6 5.4 12 2.8z"/></svg></a>
+  </span>
+</footer>
+
+<div class="overlay" id="overlay"></div>
+<div class="panel" id="panel">
+  <div class="panel-header">
+    <h2>Exercise settings</h2>
+    <button class="close-btn" id="closeBtn">✕</button>
+  </div>
+  <div class="panel-body">
+
+    <div class="section">
+      <h3>1 · Key</h3>
+      <div class="row2" style="margin-bottom:10px;">
+        <div class="chip active" data-quality-mode="major">Major</div>
+        <div class="chip" data-quality-mode="minor">minor</div>
+      </div>
+      <div class="chip-row" id="tonicRow"></div>
+    </div>
+
+    <div class="section">
+      <h3>Scale quality <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></h3>
+      <div class="chip-row" id="qualityRow"></div>
+    </div>
+
+    <div class="section">
+      <h3>2 · Scale degrees available</h3>
+      <p class="hint">Uncheck a degree to remove that note from the melody pool.</p>
+      <div class="check-grid" id="degreeGrid"></div>
+    </div>
+
+    <div class="section">
+      <h3>3 · Absolute pitch limits</h3>
+      <div class="range-inputs">
+        <div style="flex:1"><label>Not lower than</label><select id="lowLimit" class="field"></select></div>
+        <div style="flex:1"><label>Not higher than</label><select id="highLimit" class="field"></select></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>4 · Register</h3>
+      <p class="hint">Middle = the 7 scale notes centered on the staff. Combine registers freely.</p>
+      <div class="check-grid" id="registerGrid"></div>
+    </div>
+
+    <div class="section">
+      <h3>5 · Total measures</h3>
+      <select id="measureCount" class="field">
+        <option value="1">1 measure</option>
+        <option value="2">2 measures</option>
+        <option value="4" selected>4 measures</option>
+        <option value="8">8 measures</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <h3>Time signature</h3>
+      <div class="meter-group">
+        <div class="label">Simple meter</div>
+        <div class="chip-row" id="meterSimple"></div>
+      </div>
+      <div class="meter-group">
+        <div class="label">Alla breve meter</div>
+        <div class="chip-row" id="meterBreve"></div>
+      </div>
+      <div class="meter-group">
+        <div class="label">Compound meter</div>
+        <div class="chip-row" id="meterCompound"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>6 · Rhythm difficulty</h3>
+      <div class="chip-row" id="diffRow">
+        <div class="chip active" data-diff="easy">Easy</div>
+        <div class="chip" data-diff="medium">Medium</div>
+        <div class="chip" data-diff="hard">Hard</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>7 · Measure population</h3>
+      <p class="hint">How much of the exercise is rests versus notes.</p>
+      <div class="chip-row" id="populationRow">
+        <div class="chip" data-population="notpopulated">Not Populated</div>
+        <div class="chip active" data-population="average">Average</div>
+        <div class="chip" data-population="populated">Populated</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer-note">Sight Melody — EMN Music School. Settings apply live; close this panel and click the staff for a new exercise.</div>
+</div>
+
+<script>
+/* ============================= THEORY ENGINE ============================= */
+const LETTERS = ['C','D','E','F','G','A','B'];
+const NATURAL_PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const SHARP_ORDER = ['F','C','G','D','A','E','B'];
+const FLAT_ORDER  = ['B','E','A','D','G','C','F'];
+
+// 12 tonics: label, letter, pc, sig:{type,count}
+const TONICS = [
+  {key:'C',  letter:'C', pc:0,  sig:{type:'',   n:0}},
+  {key:'D',  letter:'D', pc:2,  sig:{type:'#',  n:2}},
+  {key:'E',  letter:'E', pc:4,  sig:{type:'#',  n:4}},
+  {key:'F',  letter:'F', pc:5,  sig:{type:'b',  n:1}},
+  {key:'G',  letter:'G', pc:7,  sig:{type:'#',  n:1}},
+  {key:'A',  letter:'A', pc:9,  sig:{type:'#',  n:3}},
+  {key:'B',  letter:'B', pc:11, sig:{type:'#',  n:5}},
+  {key:'Db', letter:'D', pc:1,  sig:{type:'b',  n:5}},
+  {key:'Eb', letter:'E', pc:3,  sig:{type:'b',  n:3}},
+  {key:'F#', letter:'F', pc:6,  sig:{type:'#',  n:6}},
+  {key:'Ab', letter:'A', pc:8,  sig:{type:'b',  n:4}},
+  {key:'Bb', letter:'B', pc:10, sig:{type:'b',  n:2}},
+];
+
+const MODES = {
+  major:  { label:'Ionian (natural major)', group:'major', iv:[0,2,4,5,7,9,11] },
+  lydian: { label:'Lydian', group:'major', iv:[0,2,4,6,7,9,11] },
+  mixo:   { label:'Mixolydian', group:'major', iv:[0,2,4,5,7,9,10] },
+  minor:  { label:'Aeolian (natural minor)', group:'minor', iv:[0,2,3,5,7,8,10] },
+  harmonic: { label:'Harmonic minor', group:'minor', iv:[0,2,3,5,7,8,11] },
+  melodic:  { label:'Melodic minor', group:'minor', iv:[0,2,3,5,7,9,11] },
+  dorian:   { label:'Dorian', group:'minor', iv:[0,2,3,5,7,9,10] },
+  phrygian: { label:'Phrygian', group:'minor', iv:[0,1,3,5,7,8,10] },
+};
+
+function keySigAlteration(letter, sig){
+  if(sig.type==='#') return SHARP_ORDER.slice(0,sig.n).includes(letter) ? 1 : 0;
+  if(sig.type==='b') return FLAT_ORDER.slice(0,sig.n).includes(letter) ? -1 : 0;
+  return 0;
+}
+
+function vexKeySpec(tonicKey, isMinorTonic){
+  // VexFlow key signature string, e.g. "D", "Bb", "Cm", "F#m"
+  return tonicKey + (isMinorTonic ? 'm' : '');
+}
+
+// The signature actually drawn on the staff: for minor tonics this is the
+// RELATIVE MAJOR's signature (e.g. D minor -> F major -> 1 flat), never the
+// minor tonic's own major signature. This is what earlier caused nearly
+// every note to need a spurious accidental.
+function effectiveSignature(tonicKey, isMinorTonic){
+  const tonic = TONICS.find(t=>t.key===tonicKey);
+  if(!isMinorTonic) return tonic.sig;
+  const relMajorPc = (tonic.pc + 3) % 12;
+  const relMajor = TONICS.find(t=>t.pc===relMajorPc);
+  return relMajor.sig;
+}
+
+// Build the 7-degree spelling table for current key+mode. totalAlt is the
+// note's alteration from its natural pitch (needed to build a correct VexFlow
+// key string); whether an accidental GLYPH is shown is decided later, per
+// measure, by comparing totalAlt against the signature/previous state.
+function buildScaleSpelling(tonicKey, modeId, isMinorTonic){
+  const tonic = TONICS.find(t=>t.key===tonicKey);
+  const mode = MODES[modeId];
+  const letters = [];
+  const startIdx = LETTERS.indexOf(tonic.letter);
+  for(let i=0;i<7;i++) letters.push(LETTERS[(startIdx+i)%7]);
+
+  return mode.iv.map((interval,i)=>{
+    const letter = letters[i];
+    const target = ((tonic.pc + interval) % 12 + 12) % 12;
+    const natural = NATURAL_PC[letter];
+    let diff = target - natural;
+    while(diff > 6) diff -= 12;
+    while(diff < -6) diff += 12;
+    return { degree: i+1, letter, totalAlt: diff, pc: target };
+  });
+}
+
+// naturalOctaveBaseMidi anchors tonic degree near midi 60 (~C4 region)
+function buildNotePool(tonicKey, modeId, isMinorTonic){
+  const spelling = buildScaleSpelling(tonicKey, modeId, isMinorTonic);
+  const tonic = TONICS.find(t=>t.key===tonicKey);
+  const mode = MODES[modeId];
+  // base_i = 60 + tonic.pc + interval_i  (monotonic, consistent spacing)
+  const baseArr = mode.iv.map(iv => 60 + tonic.pc + iv);
+
+  const D4=62, G5=79; // staff span reference given by spec
+  const kRange = [-4,-3,-2,-1,0,1,2,3,4];
+  let bestK = 0, bestCount = -1;
+  kRange.forEach(k=>{
+    let count=0;
+    baseArr.forEach(b=>{
+      const m = b + 12*k;
+      if(m>=D4 && m<=G5) count++;
+    });
+    if(count>bestCount){ bestCount=count; bestK=k; }
+  });
+
+  function windowFor(k){
+    return baseArr.map((b,i)=>({
+      degree: i+1,
+      letter: spelling[i].letter,
+      totalAlt: spelling[i].totalAlt,
+      midi: b + 12*k
+    }));
+  }
+  return {
+    spelling,
+    middle: windowFor(bestK),
+    lower: windowFor(bestK-1),
+    higher: windowFor(bestK+1)
+  };
+}
+
+const ALT_SYMBOL = {'-2':'bb','-1':'b','0':'n','1':'#','2':'##'};
+
+function letterOctave(midi){ return Math.floor(midi/12)-1; }
+
+function vfKeyString(letter, totalAlt, octave){
+  const accCode = totalAlt===0 ? '' : ALT_SYMBOL[totalAlt];
+  return `${letter.toLowerCase()}${accCode}/${octave}`;
+}
+
+/* naturals-only reference list for the absolute-range dropdowns */
+function buildNaturalRangeList(){
+  const list=[];
+  for(let oct=2;oct<=7;oct++){
+    LETTERS.forEach(l=>{
+      const midi = (oct+1)*12 + NATURAL_PC[l];
+      list.push({label:`${l}${oct}`, midi});
+    });
+  }
+  return list.sort((a,b)=>a.midi-b.midi);
+}
+
+/* ============================= RHYTHM ENGINE ============================= */
+// tick unit = sixteenth note.
+// Atom = {ticks:int, notes:[{dur,dots,rest}], tuplet:n (wrap ALL notes in
+// this atom in a tuplet bracket of n)}. Beaming is NOT declared per atom —
+// it's computed afterwards by beat position, so any two adjacent eighth-or-
+// shorter notes sharing a beat get linked, regardless of which atom(s) they
+// came from.
+const EASY_ATOMS = [
+  {ticks:16, notes:[{dur:'w'}]},
+  {ticks:8,  notes:[{dur:'h'}]},
+  {ticks:4,  notes:[{dur:'q'}]},
+  {ticks:2,  notes:[{dur:'8'}]},
+  {ticks:4,  notes:[{dur:'8'},{dur:'8'}]},
+  {ticks:16, notes:[{dur:'w', rest:true}]},
+  {ticks:8,  notes:[{dur:'h', rest:true}]},
+  {ticks:4,  notes:[{dur:'q', rest:true}]},
+  {ticks:2,  notes:[{dur:'8', rest:true}]},
+];
+
+const MEDIUM_ATOMS = [
+  {ticks:16, notes:[{dur:'w'}]},
+  {ticks:8,  notes:[{dur:'h'}]},
+  {ticks:4,  notes:[{dur:'q'}]},
+  {ticks:1,  notes:[{dur:'16'}]},
+  {ticks:16, notes:[{dur:'w', rest:true}]},
+  {ticks:8,  notes:[{dur:'h', rest:true}]},
+  {ticks:4,  notes:[{dur:'q', rest:true}]},
+  {ticks:4,  notes:[{dur:'8'},{dur:'8'}]},
+  {ticks:4,  notes:[{dur:'16'},{dur:'16'},{dur:'16'},{dur:'16'}]},
+  {ticks:4,  notes:[{dur:'8'},{dur:'16'},{dur:'16'}]},
+  {ticks:4,  notes:[{dur:'16'},{dur:'16'},{dur:'8'}]},
+  {ticks:4,  notes:[{dur:'16'},{dur:'8'},{dur:'16'}]},
+  {ticks:12, notes:[{dur:'h', dots:1}]},
+  {ticks:6,  notes:[{dur:'q', dots:1}]},
+  {ticks:4,  notes:[{dur:'8', dots:1},{dur:'16'}]},
+  {ticks:4,  notes:[{dur:'16'},{dur:'8', dots:1}]},
+  {ticks:4,  notes:[{dur:'8'},{dur:'8', rest:true}]},
+  {ticks:4,  notes:[{dur:'8', rest:true},{dur:'8'}]},
+  {ticks:8,  notes:[{dur:'8'},{dur:'q'},{dur:'8'}]},
+];
+
+const HARD_ATOMS = MEDIUM_ATOMS.concat([
+  {ticks:4,  notes:[{dur:'8'},{dur:'8'},{dur:'8'}], tuplet:3},
+  {ticks:10, notes:[{dur:'8'},{dur:'8'},{dur:'q'},{dur:'8'}]},
+  {ticks:12, notes:[{dur:'8'},{dur:'q'},{dur:'q'},{dur:'8'}]},
+]);
+
+function atomsForDiff(diff){
+  if(diff==='medium') return MEDIUM_ATOMS;
+  if(diff==='hard') return HARD_ATOMS;
+  return EASY_ATOMS;
+}
+
+function fillMeasure(totalTicks, diff, opts={}){
+  const pool = atomsForDiff(diff);
+  const beatTicks = opts.beatTicks || 4;
+  const noRestFirstBeat = !!opts.noRestFirstBeat;
+  const maxRests = opts.maxRests; // null/undefined = unlimited (event-count cap)
+  const minNotes = opts.minNotes || 0;
+  const maxRestTicks = opts.maxRestTicks; // null/undefined = unlimited (tick-budget cap, drives population %)
+  const maxSingleRestTicks = opts.maxSingleRestTicks; // e.g. 2 = no rest longer than an eighth
+  const pairedRestsOnly = !!opts.pairedRestsOnly; // forbid a lone rest atom with no note alongside it
+
+  for(let attempt=0; attempt<80; attempt++){
+    let remaining = totalTicks;
+    let position = 0;
+    let restCount = 0;
+    let restTicksUsed = 0;
+    let noteCount = 0;
+    const seq = [];
+    let ok = true;
+    let guard = 0;
+    while(remaining>0 && guard<40){
+      guard++;
+      let candidates = pool.filter(a=>a.ticks<=remaining);
+      if(noRestFirstBeat && position < beatTicks){
+        candidates = candidates.filter(a => !a.notes.some(n=>n.rest));
+      }
+      if(maxRests!=null){
+        candidates = candidates.filter(a=>{
+          const restsInAtom = a.notes.filter(n=>n.rest).length;
+          return restCount + restsInAtom <= maxRests;
+        });
+      }
+      if(maxRestTicks!=null){
+        candidates = candidates.filter(a=>{
+          const restTicksInAtom = a.notes.filter(n=>n.rest).reduce((s,n)=>s+specTicks(n), 0);
+          return restTicksUsed + restTicksInAtom <= maxRestTicks;
+        });
+      }
+      if(maxSingleRestTicks!=null){
+        candidates = candidates.filter(a => a.notes.every(n => !n.rest || specTicks(n) <= maxSingleRestTicks));
+      }
+      if(pairedRestsOnly){
+        candidates = candidates.filter(a => !(a.notes.length===1 && a.notes[0].rest));
+      }
+      // Half notes (blancas) may only start exactly on a beat (position
+      // aligned to beatTicks) — never mid-beat, which would be a syncopated
+      // "contratiempo" entry. Applies to plain and dotted half notes alike.
+      candidates = candidates.filter(a => {
+        const hasHalf = a.notes.some(n => n.dur==='h');
+        return !hasHalf || (position % beatTicks === 0);
+      });
+      if(candidates.length===0){ ok=false; break; }
+      // Weighted pick: while under the rest-tick budget, actively favor
+      // rest-containing atoms so the target population % is actually
+      // reached rather than merely allowed (uniform random rarely lands
+      // on the minority of rest atoms in the pool on its own).
+      let atom;
+      if(maxRestTicks!=null && restTicksUsed < maxRestTicks){
+        const weights = candidates.map(a => a.notes.some(n=>n.rest) ? 10 : 1);
+        const total = weights.reduce((s,w)=>s+w, 0);
+        let r = Math.random()*total;
+        atom = candidates[candidates.length-1];
+        for(let i=0;i<candidates.length;i++){ r -= weights[i]; if(r<=0){ atom = candidates[i]; break; } }
+      } else {
+        atom = candidates[Math.floor(Math.random()*candidates.length)];
+      }
+      seq.push(atom);
+      restCount += atom.notes.filter(n=>n.rest).length;
+      restTicksUsed += atom.notes.filter(n=>n.rest).reduce((s,n)=>s+specTicks(n), 0);
+      noteCount += atom.notes.filter(n=>!n.rest).length;
+      remaining -= atom.ticks;
+      position += atom.ticks;
+    }
+    if(ok && remaining===0 && noteCount>=minNotes) return seq;
+  }
+  // Fallback: guaranteed valid, ALL NOTES (no rests) — greedy decomposition
+  // using the largest note values that fit. Only reached in rare cases where
+  // the constraints above couldn't be satisfied within the attempt budget.
+  const seq=[]; let remaining=totalTicks;
+  const sizes=[16,8,4,2,1];
+  const durFor={16:'w',8:'h',4:'q',2:'8',1:'16'};
+  sizes.forEach(s=>{
+    while(remaining>=s){ seq.push({ticks:s, notes:[{dur:durFor[s]}]}); remaining-=s; }
+  });
+  return seq;
+}
+
+const METER_TICKS = { // ticks per measure (sixteenth=1)
+  '2/4':8, '3/4':12, '4/4':16, 'C':16, '5/4':20, '6/4':24, '7/4':28,
+  '2/2':16, '3/2':24, '4/2':32, 'C|':16,
+  '6/8':12, '9/8':18, '12/8':24
+};
+
+function beatTicksForMeter(meter){
+  // compound meters (x/8, x a multiple of 3) beam in dotted-quarter beats;
+  // everything else beams in quarter-note beats.
+  if(meter==='6/8' || meter==='9/8' || meter==='12/8') return 6;
+  return 4;
+}
+
+const POPULATION_CONFIG = {
+  notpopulated: { restFraction: 0.40 },
+  average:      { restFraction: 0.20 },
+  populated:    { restFraction: 0.08, maxSingleRestTicks: 2, pairedRestsOnly: true },
+};
+
+function specTicks(spec){
+  const base = {w:16, h:8, q:4, '8':2, '16':1}[spec.dur];
+  return spec.dots ? base * 1.5 : base;
+}
+
+const REST_SIZES = [
+  {ticks:16, dur:'w', dots:0}, {ticks:12, dur:'h', dots:1}, {ticks:8, dur:'h', dots:0},
+  {ticks:6,  dur:'q', dots:1}, {ticks:4,  dur:'q', dots:0}, {ticks:3, dur:'8', dots:1},
+  {ticks:2,  dur:'8', dots:0}, {ticks:1,  dur:'16', dots:0},
+];
+function decomposeTicksToRests(ticks){
+  const out = []; let remain = ticks;
+  for(const size of REST_SIZES){
+    while(remain >= size.ticks){ out.push({dur:size.dur, dots:size.dots, rest:true}); remain -= size.ticks; }
+  }
+  return out;
+}
+
+// Flattens the atom sequence into individual note/rest specs, splitting any
+// rest that would otherwise straddle a beat boundary into smaller rests
+// aligned to each beat — so a rest never obscures where the next beat starts.
+// Also tags each spec with which tuplet group (if any) it belongs to.
+function flattenAndSplitRests(seq, beatTicks){
+  const out = [];
+  let runningTick = 0;
+  seq.forEach((atom, atomIdx)=>{
+    const atomStart = runningTick;
+    atom.notes.forEach(spec=>{
+      const ticks = specTicks(spec);
+      if(spec.rest && !atom.tuplet){
+        let remain = ticks, cursor = runningTick;
+        while(remain > 0){
+          const beatEnd = (Math.floor(cursor/beatTicks)+1) * beatTicks;
+          const chunk = Math.min(remain, beatEnd - cursor);
+          decomposeTicksToRests(chunk).forEach(r => out.push(r));
+          cursor += chunk; remain -= chunk;
+        }
+      } else {
+        out.push({dur:spec.dur, dots:spec.dots, rest:!!spec.rest, tupletGroup: atom.tuplet ? atomIdx : null});
+      }
+      if(!atom.tuplet) runningTick += ticks;
+    });
+    if(atom.tuplet) runningTick = atomStart + atom.ticks;
+  });
+  return out;
+}
+
+// Merges two adjacent plain eighth rests into a single quarter rest —
+// but only when both fall inside the same beat (never across a boundary,
+// which would undo the beat-alignment split above).
+function mergeEighthRestPairs(flat, beatTicks){
+  const out = [];
+  let pos = 0, i = 0;
+  while(i < flat.length){
+    const cur = flat[i];
+    const curTicks = specTicks(cur);
+    if(cur.rest && cur.dur==='8' && !cur.dots && i+1<flat.length){
+      const next = flat[i+1];
+      if(next.rest && next.dur==='8' && !next.dots){
+        const beatOfCur = Math.floor(pos/beatTicks);
+        const beatOfNext = Math.floor((pos+curTicks)/beatTicks);
+        if(beatOfCur === beatOfNext){
+          out.push({dur:'q', dots:0, rest:true, tupletGroup:null});
+          pos += curTicks + specTicks(next);
+          i += 2;
+          continue;
+        }
+      }
+    }
+    out.push(cur);
+    pos += curTicks;
+    i++;
+  }
+  return out;
+}
+
+/* ============================= APP STATE ============================= */
+const state = {
+  qualityMode: 'major',
+  tonicKey: 'C',
+  modeId: 'major',
+  degrees: {1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true},
+  lowMidi: null, highMidi: null,
+  registers: {middle:true, lower:false, higher:false},
+  measures: 4,
+  meter: '4/4',
+  diff: 'easy',
+  population: 'average'
+};
+
+const rangeList = buildNaturalRangeList();
+
+/* ============================= UI BUILD ============================= */
+function el(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!==undefined) e.textContent=txt; return e; }
+
+// Tonic chips
+const tonicRow = document.getElementById('tonicRow');
+function renderTonics(){
+  tonicRow.innerHTML='';
+  TONICS.forEach(t=>{
+    const c = el('div','chip', t.key);
+    c.dataset.key = t.key;
+    if(t.key===state.tonicKey) c.classList.add('active');
+    c.onclick = ()=>{ state.tonicKey=t.key; renderTonics(); generate(); };
+    tonicRow.appendChild(c);
+  });
+}
+renderTonics();
+
+// Quality mode (major/minor) toggle
+document.querySelectorAll('[data-quality-mode]').forEach(c=>{
+  c.onclick = ()=>{
+    document.querySelectorAll('[data-quality-mode]').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    state.qualityMode = c.dataset.qualityMode;
+    state.modeId = state.qualityMode==='major' ? 'major' : 'minor';
+    renderQualityRow();
+    generate();
+  };
+});
+
+const qualityRow = document.getElementById('qualityRow');
+function renderQualityRow(){
+  qualityRow.innerHTML='';
+  const opts = Object.entries(MODES).filter(([id,m])=>m.group===state.qualityMode);
+  opts.forEach(([id,m])=>{
+    const c = el('div','chip', m.label);
+    c.dataset.mode=id;
+    if(id===state.modeId) c.classList.add('active');
+    c.onclick=()=>{ state.modeId=id; renderQualityRow(); generate(); };
+    qualityRow.appendChild(c);
+  });
+}
+renderQualityRow();
+
+// Degree checkboxes
+const degreeGrid = document.getElementById('degreeGrid');
+function renderDegrees(){
+  degreeGrid.innerHTML='';
+  for(let d=1; d<=8; d++){
+    const label = el('label','check-item');
+    const cb = document.createElement('input');
+    cb.type='checkbox'; cb.checked = state.degrees[d];
+    cb.onchange = ()=>{ state.degrees[d]=cb.checked; generate(); };
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(String(d)));
+    degreeGrid.appendChild(label);
+  }
+}
+renderDegrees();
+
+// Absolute range dropdowns
+const lowSel = document.getElementById('lowLimit');
+const highSel = document.getElementById('highLimit');
+rangeList.forEach(n=>{
+  const o1 = new Option(n.label, n.midi);
+  const o2 = new Option(n.label, n.midi);
+  lowSel.appendChild(o1);
+  highSel.appendChild(o2);
+});
+lowSel.value = rangeList.find(n=>n.label==='E3').midi;
+highSel.value = rangeList.find(n=>n.label==='C6').midi;
+state.lowMidi = parseInt(lowSel.value);
+state.highMidi = parseInt(highSel.value);
+lowSel.onchange = ()=>{ state.lowMidi=parseInt(lowSel.value); generate(); };
+highSel.onchange = ()=>{ state.highMidi=parseInt(highSel.value); generate(); };
+
+// Register checkboxes
+const registerGrid = document.getElementById('registerGrid');
+[['middle','Middle register (7 notes)'],['lower','Lower register'],['higher','Higher register']].forEach(([key,label])=>{
+  const l = el('label','check-item');
+  const cb = document.createElement('input');
+  cb.type='checkbox'; cb.checked = state.registers[key];
+  cb.onchange = ()=>{ state.registers[key]=cb.checked; generate(); };
+  l.appendChild(cb);
+  l.appendChild(document.createTextNode(label));
+  registerGrid.appendChild(l);
+});
+
+// Measures
+const measureSel = document.getElementById('measureCount');
+measureSel.onchange = ()=>{ state.measures=parseInt(measureSel.value); generate(); };
+
+// Time signature groups
+function buildMeterGroup(containerId, list){
+  const c = document.getElementById(containerId);
+  list.forEach(m=>{
+    const chip = el('div','chip', m.label);
+    chip.dataset.meter = m.value;
+    if(m.value===state.meter) chip.classList.add('active');
+    chip.onclick = ()=>{
+      document.querySelectorAll('#meterSimple .chip,#meterBreve .chip,#meterCompound .chip').forEach(x=>x.classList.remove('active'));
+      chip.classList.add('active');
+      state.meter = m.value;
+      generate();
+    };
+    c.appendChild(chip);
+  });
+}
+buildMeterGroup('meterSimple', [
+  {label:'2/4',value:'2/4'},{label:'3/4',value:'3/4'},{label:'4/4',value:'4/4'},
+  {label:'C',value:'C'},{label:'5/4',value:'5/4'},{label:'6/4',value:'6/4'},{label:'7/4',value:'7/4'}
+]);
+buildMeterGroup('meterBreve', [
+  {label:'2/2',value:'2/2'},{label:'3/2',value:'3/2'},{label:'4/2',value:'4/2'},{label:'𝄵',value:'C|'}
+]);
+buildMeterGroup('meterCompound', [
+  {label:'6/8',value:'6/8'},{label:'9/8',value:'9/8'},{label:'12/8',value:'12/8'}
+]);
+
+// Difficulty
+document.querySelectorAll('#diffRow .chip').forEach(c=>{
+  c.onclick = ()=>{
+    document.querySelectorAll('#diffRow .chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    state.diff = c.dataset.diff;
+    generate();
+  };
+});
+
+// Measure population
+document.querySelectorAll('#populationRow .chip').forEach(c=>{
+  c.onclick = ()=>{
+    document.querySelectorAll('#populationRow .chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    state.population = c.dataset.population;
+    generate();
+  };
+});
+
+/* ============================= PANEL TOGGLE ============================= */
+const panel = document.getElementById('panel');
+const overlay = document.getElementById('overlay');
+const gearBtn = document.getElementById('gearBtn');
+const closeBtn = document.getElementById('closeBtn');
+function openPanel(){ panel.classList.add('open'); overlay.classList.add('open'); }
+function closePanel(){ panel.classList.remove('open'); overlay.classList.remove('open'); }
+gearBtn.onclick = (e)=>{ e.stopPropagation(); openPanel(); };
+closeBtn.onclick = (e)=>{ e.stopPropagation(); closePanel(); };
+overlay.onclick = closePanel;
+panel.onclick = (e)=> e.stopPropagation();
+
+document.getElementById('mainStage').onclick = ()=>{
+  if(panel.classList.contains('open')){ closePanel(); return; }
+  generate();
+};
+
+/* ============================= NOTE POOL RESOLUTION ============================= */
+function resolvePool(){
+  const isMinorTonic = state.qualityMode==='minor';
+  const {middle, lower, higher} = buildNotePool(state.tonicKey, state.modeId, isMinorTonic);
+  let pool = [];
+  if(state.registers.middle) pool = pool.concat(middle);
+  if(state.registers.lower) pool = pool.concat(lower);
+  if(state.registers.higher) pool = pool.concat(higher);
+  if(pool.length===0) pool = middle.slice(); // safety net
+
+  // degree filter (1-7); degree "8" = tonic an octave above the highest active register
+  pool = pool.filter(n => state.degrees[n.degree]);
+
+  if(state.degrees[8]){
+    const activeRegs = ['lower','middle','higher'].filter(r=>state.registers[r]);
+    const topReg = activeRegs.length ? activeRegs[activeRegs.length-1] : 'middle';
+    const srcWindow = topReg==='lower'?lower:(topReg==='higher'?higher:middle);
+    const tonicNote = srcWindow.find(n=>n.degree===1);
+    if(tonicNote) pool.push({...tonicNote, midi: tonicNote.midi+12, degree:8});
+  }
+
+  // absolute clamp — hard hierarchy over register choice
+  pool = pool.filter(n => n.midi>=state.lowMidi && n.midi<=state.highMidi);
+
+  // de-dup by midi
+  const seen = new Set();
+  pool = pool.filter(n=>{ if(seen.has(n.midi)) return false; seen.add(n.midi); return true; });
+
+  if(pool.length===0){
+    // relax: fall back to middle register ignoring degree filter, still clamp
+    pool = middle.filter(n => n.midi>=state.lowMidi && n.midi<=state.highMidi);
+  }
+  if(pool.length===0) pool = [middle[0]]; // absolute last resort
+
+  return pool;
+}
+
+/* ============================= RENDER ============================= */
+const VF = Vex.Flow;
+const NOTE_SPACING = 58; // px reserved per note/rest event — keeps the staff uncrowded
+const MEASURES_PER_ROW = 4; // wraps to a new line every 4 measures, like the Rhythm Randomizer
+
+// Picks the next note weighted toward smaller melodic intervals from the
+// previous note (leaps > a fifth still possible, just less frequent), AND
+// toward degrees used less so far — so checking many degrees actually gets
+// them all exercised instead of the smoothness bias collapsing onto a few.
+function weightedPick(pool, prevMidi, usageCounts){
+  const weights = pool.map(n=>{
+    let w = 1;
+    if(prevMidi!=null){
+      const interval = Math.abs(n.midi - prevMidi);
+      w *= 1 / Math.pow(1 + interval, 1.6);
+      if(interval > 7) w *= 0.18; // beyond a fifth: allowed, but much less likely
+    }
+    const used = usageCounts ? (usageCounts[n.midi] || 0) : 0;
+    w *= 1 / Math.pow(1 + used, 1.3); // under-used notes get boosted for coverage
+    return w;
+  });
+  const total = weights.reduce((a,b)=>a+b, 0);
+  let r = Math.random() * total;
+  for(let i=0; i<pool.length; i++){ r -= weights[i]; if(r<=0) return pool[i]; }
+  return pool[pool.length-1];
+}
+
+function generate(){
+  const pool = resolvePool();
+  const isMinorTonic = state.qualityMode==='minor';
+  const vfKeySig = vexKeySpec(state.tonicKey, isMinorTonic);
+  const sig = effectiveSignature(state.tonicKey, isMinorTonic);
+
+  const outputSvg = document.getElementById('output');
+  outputSvg.innerHTML = '';
+
+  const measureTicks = METER_TICKS[state.meter] || 16;
+  const beatTicks = beatTicksForMeter(state.meter);
+
+  // Pass 1: generate all rhythm sequences first, then flatten each into
+  // individual note/rest specs with beat-aligned rests, so stave width can
+  // be driven by actual event count rather than a generic guess.
+  const measureFlats = [];
+  const popCfg = POPULATION_CONFIG[state.population] || POPULATION_CONFIG.average;
+  for(let m=0; m<state.measures; m++){
+    const maxRestTicks = Math.max(2, Math.round(measureTicks * popCfg.restFraction));
+    const popOpts = {
+      maxRestTicks,
+      maxSingleRestTicks: popCfg.maxSingleRestTicks,
+      pairedRestsOnly: popCfg.pairedRestsOnly
+    };
+    if(m===0){
+      // First measure: no rest on beat 1, at most 2 rest events total —
+      // checked AFTER rest-splitting, since a single rest atom can split
+      // into two events if it crosses a beat boundary.
+      let flat, okFlat = null;
+      for(let attempt=0; attempt<40; attempt++){
+        const seq = fillMeasure(measureTicks, state.diff, {...popOpts, beatTicks, noRestFirstBeat:true, maxRests:2, minNotes:2});
+        flat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatTicks), beatTicks);
+        let pos=0, restCount=0, restOnBeat1=false;
+        flat.forEach(spec=>{
+          if(spec.rest){ restCount++; if(pos<beatTicks) restOnBeat1=true; }
+          pos += specTicks(spec);
+        });
+        if(!restOnBeat1 && restCount<=2){ okFlat = flat; break; }
+      }
+      measureFlats.push(okFlat || flat);
+    } else {
+      const seq = fillMeasure(measureTicks, state.diff, {...popOpts, beatTicks, minNotes:2});
+      measureFlats.push(mergeEighthRestPairs(flattenAndSplitRests(seq, beatTicks), beatTicks));
+    }
+  }
+
+  // Every measure in column c (1st, 2nd, 3rd, 4th of a row) gets the exact
+  // same width in every row, so barlines line up vertically with the row(s)
+  // below — matters once there's more than one row (8 measures). With a
+  // single row this reduces to just fitting that row's own content exactly,
+  // so 4 measures always fits with no scrollbar either.
+  const rowMargin = 40; // 20px left + 20px right, per row
+  let available = Math.max(340, window.innerWidth - 140);
+  if(state.measures === 1) available = available / 2; // a single measure shouldn't stretch across the whole width
+  const columnsUsed = Math.min(state.measures, MEASURES_PER_ROW);
+
+  const colBase = [], colMaxCount = [];
+  for(let c=0; c<columnsUsed; c++){
+    colBase[c] = c===0 ? 170 : 60; // column 0 always reserves clef+key(+time on row 1)
+    let maxCount = 1;
+    for(let m=c; m<state.measures; m+=MEASURES_PER_ROW) maxCount = Math.max(maxCount, measureFlats[m].length);
+    colMaxCount[c] = maxCount;
+  }
+  const totalBase = colBase.reduce((a,b)=>a+b, 0);
+  const totalCount = colMaxCount.reduce((a,b)=>a+b, 0);
+  const spacing = Math.max(1, Math.floor((available - rowMargin - totalBase) / Math.max(1, totalCount)));
+  const colWidth = colBase.map((b,c) => b + colMaxCount[c]*spacing);
+
+  const measureWidths = [];
+  for(let m=0; m<state.measures; m++) measureWidths.push(colWidth[m % MEASURES_PER_ROW]);
+
+  const rowCount = Math.ceil(state.measures / MEASURES_PER_ROW);
+  const rowWidths = [];
+  for(let r=0; r<rowCount; r++){
+    const start = r*MEASURES_PER_ROW, end = Math.min(start+MEASURES_PER_ROW, state.measures);
+    let w = 0;
+    for(let m=start; m<end; m++) w += measureWidths[m];
+    rowWidths.push(w + rowMargin);
+  }
+  const totalWidth = Math.max(...rowWidths);
+  const ROW_HEIGHT = 150;
+  const height = 40 + rowCount*ROW_HEIGHT;
+
+  const renderer = new VF.Renderer(outputSvg, VF.Renderer.Backends.SVG);
+  renderer.resize(Math.max(totalWidth, 320), height);
+  const ctx = renderer.getContext();
+  ctx.setFont('Inter', 10);
+
+  let x = 20;
+  let y = 30;
+  let prevMidi = null; // carries melodic continuity across measures
+  const usageCounts = {}; // midi -> times used so far, drives degree-coverage balancing
+  for(let m=0; m<state.measures; m++){
+    const isFirst = m===0;
+    const isRowStart = (m % MEASURES_PER_ROW) === 0;
+    if(isRowStart && !isFirst){ x = 20; y += ROW_HEIGHT; }
+    const w = measureWidths[m];
+    const stave = new VF.Stave(x, y, w);
+    if(isRowStart){
+      stave.addClef('treble');
+      stave.addKeySignature(vfKeySig);
+      if(isFirst) stave.addTimeSignature(state.meter);
+    }
+    stave.setContext(ctx).draw();
+
+    const flat = measureFlats[m];
+    const vfNotes = [];
+    const events = []; // {note, startTick, dur, isRest, inTuplet} — drives beat-based auto-beaming
+    const tupletBuckets = {}; // tupletGroup id -> notes[]
+    const measureAcc = {}; // letter+octave -> currently-sounding alteration, reset each measure
+    let runningTick = 0;
+
+    flat.forEach(spec=>{
+      let note;
+      if(spec.rest){
+        note = new VF.StaveNote({ keys:['b/4'], duration: spec.dur + 'r' });
+      } else {
+        const pick = weightedPick(pool, prevMidi, usageCounts);
+        prevMidi = pick.midi;
+        usageCounts[pick.midi] = (usageCounts[pick.midi] || 0) + 1;
+        const octave = letterOctave(pick.midi);
+        const vfKey = vfKeyString(pick.letter, pick.totalAlt, octave);
+        note = new VF.StaveNote({ keys:[vfKey], duration: spec.dur });
+
+        const memKey = pick.letter + octave;
+        const baseline = measureAcc.hasOwnProperty(memKey) ? measureAcc[memKey] : keySigAlteration(pick.letter, sig);
+        if(pick.totalAlt !== baseline){
+          note.addModifier(new VF.Accidental(ALT_SYMBOL[pick.totalAlt]), 0);
+        }
+        measureAcc[memKey] = pick.totalAlt;
+      }
+      if(spec.dots){
+        for(let d=0; d<spec.dots; d++) VF.Dot.buildAndAttach([note], {all:true});
+      }
+      vfNotes.push(note);
+      events.push({ note, startTick: runningTick, dur: spec.dur, isRest: !!spec.rest, inTuplet: spec.tupletGroup!=null });
+      if(spec.tupletGroup!=null){
+        (tupletBuckets[spec.tupletGroup] = tupletBuckets[spec.tupletGroup] || []).push(note);
+      }
+      runningTick += specTicks(spec);
+    });
+    const tupletGroups = Object.values(tupletBuckets).map(notes => ({notes, num:3}));
+
+    // Beat-based auto-beaming: link any run of 2+ consecutive eighth-or-
+    // shorter notes that share a beat, regardless of which rhythm atom they
+    // came from. Rests, longer notes, and tuplet-internal notes break a run.
+    const beamGroups = [];
+    let current = [];
+    let currentBeat = null;
+    function flushBeam(){
+      if(current.length>1) beamGroups.push(current.map(e=>e.note));
+      current = [];
+      currentBeat = null;
+    }
+    events.forEach(e=>{
+      const eligible = !e.isRest && !e.inTuplet && (e.dur==='8' || e.dur==='16');
+      if(!eligible){ flushBeam(); return; }
+      const beatIdx = Math.floor(e.startTick / beatTicks);
+      if(current.length===0){ current=[e]; currentBeat=beatIdx; return; }
+      if(beatIdx===currentBeat){ current.push(e); }
+      else { flushBeam(); current=[e]; currentBeat=beatIdx; }
+    });
+    flushBeam();
+
+    // Beam and Tuplet objects must be constructed BEFORE the voice is drawn:
+    // their constructors assign each note's .beam property, which is what
+    // suppresses the individual flag/tail when the note itself renders.
+    // Building them after voice.draw() draws flags AND a beam on top.
+    const beamInstances = beamGroups.map(g => new VF.Beam(g));
+    const tupletInstances = tupletGroups.map(t => new VF.Tuplet(t.notes, {num_notes:t.num, notes_occupied:2}));
+
+    const voice = new VF.Voice({ num_beats: measureTicks, beat_value: 16 });
+    voice.setStrict(false);
+    voice.addTickables(vfNotes);
+
+    // Use VexFlow's own measured start/end of the note area for this exact
+    // stave (accounts precisely for whatever clef/key/time glyphs it has)
+    // instead of a guessed constant — that guess was leaving a large unused
+    // gap between the last note and the barline.
+    const formatWidth = Math.max(40, stave.getNoteEndX() - stave.getNoteStartX() - 12);
+    new VF.Formatter().joinVoices([voice]).format([voice], formatWidth);
+    voice.draw(ctx, stave);
+
+    beamInstances.forEach(b => b.setContext(ctx).draw());
+    tupletInstances.forEach(t => t.setContext(ctx).draw());
+
+    x += w;
+  }
+
+  // meta
+  const qualityLabel = MODES[state.modeId].label.split(' (')[0];
+  document.getElementById('hintKey').textContent = `${state.tonicKey} ${state.qualityMode==='major'?'Major':'minor'} — ${qualityLabel}`;
+  document.getElementById('metaMeter').textContent = state.meter==='C|' ? 'Cut time' : state.meter;
+  document.getElementById('metaMeasures').textContent = state.measures;
+  document.getElementById('metaDiff').textContent = state.diff.charAt(0).toUpperCase()+state.diff.slice(1);
+}
+
+window.addEventListener('load', generate);
+</script>
+</body>
+</html>

@@ -82,9 +82,11 @@ img { max-width: 100%; display: block; }
 }
 
 .emn-header__inner {
-  max-width: var(--max-width);
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 0 var(--side-pad) 0 0;
+  height: 64px;
+  overflow: hidden;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
@@ -92,15 +94,19 @@ img { max-width: 100%; display: block; }
 }
 
 .emn-logo {
-  display: flex;
-  align-items: flex-start;
+  display: block;
+  height: 100%;
+  font-size: 0;
+  line-height: 0;
   flex-shrink: 0;
 }
 
 .emn-logo img {
   height: 64px;
-  width: auto;
+  width: 64px;
+  object-fit: cover;
   display: block;
+  vertical-align: top;
   border-radius: 0;
 }
 
@@ -245,15 +251,17 @@ a.emn-nav__dropdown-item:hover {
 @media (max-width: 640px) {
   .emn-header__inner {
     flex-wrap: wrap;
+    height: auto;
     padding: 0 var(--side-pad) 14px 0;
   }
+  .emn-logo { height: 52px; }
+  .emn-logo img { height: 52px; width: 52px; }
   .emn-nav {
     width: 100%;
     justify-content: space-between;
     gap: 2px;
     padding-left: var(--side-pad);
   }
-  .emn-logo img { height: 52px; }
   .emn-nav__link {
     padding: 8px 8px;
     font-size: 13px;
@@ -555,8 +563,8 @@ main {
 .section figure img {
   width: 100%;
   height: auto;
-  border: 1px solid var(--gray-300);
-  border-radius: var(--radius);
+  border: none;
+  border-radius: 0;
 }
 
 /* Landing — tool cards */

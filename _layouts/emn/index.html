@@ -84,28 +84,29 @@ img { max-width: 100%; display: block; }
 .emn-header__inner {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 18px var(--side-pad);
+  padding: 0 var(--side-pad) 0 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: 24px;
 }
 
 .emn-logo {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
   flex-shrink: 0;
 }
 
 .emn-logo img {
-  height: 40px;
+  height: 64px;
   width: auto;
-  border-radius: 6px;
+  display: block;
+  border-radius: 0;
 }
 
 .emn-nav {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -244,13 +245,15 @@ a.emn-nav__dropdown-item:hover {
 @media (max-width: 640px) {
   .emn-header__inner {
     flex-wrap: wrap;
-    padding: 16px var(--side-pad);
+    padding: 0 var(--side-pad) 14px 0;
   }
   .emn-nav {
     width: 100%;
     justify-content: space-between;
     gap: 2px;
+    padding-left: var(--side-pad);
   }
+  .emn-logo img { height: 52px; }
   .emn-nav__link {
     padding: 8px 8px;
     font-size: 13px;
@@ -273,8 +276,15 @@ main {
 
 /* Landing hero */
 .hero {
-  padding: 96px 0 64px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  background: var(--red);
+  padding: 96px var(--side-pad) 88px;
   text-align: center;
+  margin-bottom: 0;
+}
+
+.hero__inner {
   max-width: 720px;
   margin: 0 auto;
 }
@@ -285,7 +295,7 @@ main {
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--red);
+  color: rgba(255, 255, 255, 0.75);
   margin: 0 0 18px;
 }
 
@@ -295,18 +305,19 @@ main {
   font-size: clamp(32px, 5vw, 48px);
   line-height: 1.15;
   margin: 0 0 18px;
-  color: var(--ink);
+  color: #FFFFFF;
 }
 
 .hero h1 em {
-  font-style: italic;
-  color: var(--red);
+  font-style: normal;
+  font-weight: 700;
+  color: #FFFFFF;
 }
 
 .hero p {
   font-size: 17px;
   line-height: 1.6;
-  color: var(--gray-700);
+  color: rgba(255, 255, 255, 0.85);
   margin: 0 auto;
   max-width: 520px;
 }
@@ -315,8 +326,10 @@ main {
 .band {
   width: 100vw;
   margin-left: calc(50% - 50vw);
-  background: var(--red);
-  padding: 76px var(--side-pad);
+  background: var(--gray-100);
+  border-top: none;
+  border-bottom: 1px solid var(--gray-300);
+  padding: 44px var(--side-pad);
   margin-bottom: 88px;
 }
 
@@ -330,25 +343,68 @@ main {
   font-family: var(--font-display);
   font-weight: 400;
   font-style: italic;
-  font-size: clamp(22px, 3.1vw, 31px);
-  line-height: 1.35;
-  color: #FFFFFF;
-  margin: 0 0 22px;
+  font-size: clamp(19px, 2.3vw, 24px);
+  line-height: 1.4;
+  color: var(--ink);
+  margin: 0 0 14px;
   letter-spacing: -0.01em;
 }
 
 .band h2 .caps {
   font-style: normal;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--red);
   letter-spacing: 0.02em;
 }
 
 .band p {
-  font-size: 15.5px;
+  font-size: 14.5px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--gray-700);
   margin: 0;
+}
+
+.section--center {
+  text-align: center;
+}
+
+.section--center .section__note {
+  border-left: none;
+  padding-left: 0;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* Gray full-bleed band */
+.band--gray {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  background: #F1F6F7;
+  padding: 76px var(--side-pad);
+  margin-bottom: 88px;
+}
+
+.band--gray .band-inner {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.band--gray .section {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+
+.band--gray .section__title {
+  color: var(--ink);
+}
+
+.band--gray .section__body {
+  color: var(--gray-700);
+}
+
+.band--gray figure img {
+  border: none;
 }
 
 /* Stat comparison block */
@@ -423,8 +479,6 @@ main {
   font-size: clamp(24px, 3.4vw, 32px);
   color: var(--ink);
   margin: 0 0 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--gray-300);
 }
 
 .section__body {
@@ -432,6 +486,16 @@ main {
   line-height: 1.7;
   color: var(--gray-700);
   margin: 0 0 28px;
+}
+
+.section__body a {
+  color: var(--red);
+  font-weight: 500;
+  border-bottom: 1px solid rgba(200, 16, 46, 0.3);
+}
+
+.section__body a:hover {
+  border-bottom-color: var(--red);
 }
 
 .section__body strong {
@@ -656,6 +720,12 @@ main {
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
+.emn-footer__icons a.is-wa:hover {
+  border-color: #25D366;
+  color: #25D366;
+  background: rgba(37, 211, 102, 0.08);
+}
+
 .emn-footer__icons a:hover {
   border-color: var(--red);
   color: var(--red);
@@ -674,7 +744,7 @@ main {
 
   <header class="emn-header">
     <div class="emn-header__inner">
-      <a href="https://zareenterprises.github.io/emn/" class="emn-logo">
+      <a href="https://zareenterprises.github.io/emn" class="emn-logo">
         <img src="/assets/img/emn-logo.png" alt="EMN logo">
       </a>
       <nav class="emn-nav">
@@ -696,9 +766,11 @@ main {
 
   <main>
     <section class="hero">
-      <p class="hero__eyebrow">EMN Apps</p>
-      <h1>Prepárate para <em>audicionar</em><br>con beca a Berklee</h1>
-      <p>Alumnos becados de Berklee ayudándote a ganar una tú también.</p>
+      <div class="hero__inner">
+        <p class="hero__eyebrow">EMN Apps</p>
+        <h1>Herramientas para <em>audicionar</em><br>con beca a Berklee</h1>
+        <p>Alumnos becados de Berklee ayudándote a ganar una tú también.</p>
+      </div>
     </section>
 
     <section class="band">
@@ -709,7 +781,7 @@ main {
     </section>
 
     <section class="section">
-      <h2 class="section__title">¿Cómo funciona?</h2>
+      <h2 class="section__title">El costo de no prepararse correctamente para Berklee</h2>
       <div class="stats">
         <div class="stat">
           <p class="stat__label">Costo de la carrera completa</p>
@@ -727,22 +799,28 @@ main {
       </figure>
     </section>
 
-    <section class="section">
-      <h2 class="section__title">¿En qué consiste la audición a Berklee?</h2>
-      <p class="section__body">Se conforma de 5 pruebas explicadas a continuación. El tiempo total es entre 30 a 45 minutos, y a veces se puede extender a 1 hora.</p>
-      <figure>
-        <img src="/assets/img/auditionParts.png" alt="Partes que componen la audición a Berklee.">
-      </figure>
-    </section>
+    <div class="band--gray">
+      <div class="band-inner">
+        <section class="section">
+          <h2 class="section__title">¿En qué consiste la audición a Berklee?</h2>
+          <p class="section__body">Se conforma de 5 pruebas explicadas a continuación. El tiempo total es entre 30 a 45 minutos, y a veces se puede extender a 1 hora.</p>
+          <figure>
+            <img src="/assets/img/auditionParts.png" alt="Partes que componen la audición a Berklee.">
+          </figure>
+        </section>
+      </div>
+    </div>
 
     <section class="section">
       <h2 class="section__title">Prepárate con Nosotros</h2>
-      <p class="section__body">Si deseas que quienes ya lograron lo que buscas se enfoquen en brindarte los hacks y el desarrollo de habilidades requeridas para ayudarte a obtener una beca en Berklee, postula sin costos aquí.</p>
+      <p class="section__body">Prepárate y aprende de quienes ya consiguieron una beca en Berklee, y desarrolla las habilidades requeridas y las estrategias no antes compartidas que necesitarás para conseguir la tuya.</p>
+      <p class="section__body">EMN trabaja bajo un sistema propio de entrenamiento (PISEI) enfocado netamente en la audición. Para más información, visita <a href="https://academy.emnlatam.com/" target="_blank" rel="noopener">nuestra página web</a> o escríbenos directamente a <a href="https://wa.me/51986658866" target="_blank" rel="noopener">nuestro WhatsApp</a>.</p>
+      <p class="section__body">Finalmente, si deseas que te evaluemos y te brindemos un plan de trabajo hoy mismo para lograr tu sueño, postula gratuitamente aquí.</p>
       <div class="btn-row"><a href="https://zareenterprises.github.io/feedback" class="btn">Postular</a></div>
       <p class="section__note">Esta evaluación nos permitirá saber en qué áreas de la audición necesitas ayuda, y te propondremos un paquete personalizado para conseguirlo.</p>
     </section>
 
-    <section class="section">
+    <section class="section section--center">
       <h2 class="section__title">¡Comienza a practicar!</h2>
       <p class="section__body">EMN es la primera escuela que prepara para Berklee de verdad. No solamente es un sistema que integra todas las pruebas con data real de alumnos, no solo te conecta con estudiantes becados para que ellos mismos te preparen, sino que también desarrolla apps para que puedas practicar y prepararte.</p>
       <p class="section__cta">Dale click a EMN Practice Lab y selecciona qué prueba quieres comenzar a practicar.</p>
@@ -763,6 +841,11 @@ main {
               <rect x="3" y="3" width="18" height="18" rx="5"/>
               <circle cx="12" cy="12" r="4"/>
               <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+          <a href="https://wa.me/51986658866" target="_blank" rel="noopener" class="is-wa" aria-label="Escríbenos por WhatsApp">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.41a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.8-.78.97-.15.16-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.08.15-1.18-.06-.11-.22-.17-.47-.29z"/>
             </svg>
           </a>
           <a href="https://linktr.ee/emnlatam" target="_blank" rel="noopener" aria-label="Linktree de EMN">

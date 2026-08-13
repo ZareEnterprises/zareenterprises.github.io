@@ -1,4 +1,4 @@
 ---
 layout: emn/index
-permalink: /emn
+permalink: /emn/
 ---

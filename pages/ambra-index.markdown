@@ -1,6 +1,6 @@
 ---
 layout: ambra/index
-permalink: /ambra
+permalink: /ambra/
 ---
 
 # asdfg

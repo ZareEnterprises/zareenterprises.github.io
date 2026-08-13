@@ -1,4 +1,4 @@
 ---
-layout: sight-melody
+layout: emn/sight-melody
 permalink: /sight-melody
 ---

@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMN: Escuela de Música y Negocios</title>
+<meta name="description" content="EMN: Escuela de Música y Negocios — herramientas gratuitas para prepararte con beca a Berklee.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+/* ==========================================================================
+   EMN — Escuela de Música y Negocios
+   Shared stylesheet for all /emn/ pages
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Brand */
+  --red: #C8102E;
+  --red-dark: #9C0C24;
+  --red-tint: #FCE9EB;
+
+  /* Neutrals */
+  --ink: #1A1A1A;
+  --gray-700: #4B5563;
+  --gray-500: #8A8F98;
+  --gray-300: #D8DBDF;
+  --gray-100: #F4F5F6;
+  --paper: #FFFFFF;
+
+  /* Accent — used sparingly */
+  --blue: #2E5FA3;
+
+  /* Type */
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Layout */
+  --max-width: 1200px;
+  --side-pad: 40px;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+
+img { max-width: 100%; display: block; }
+
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Header / Nav
+   -------------------------------------------------------------------------- */
+
+.emn-header {
+  border-bottom: 1px solid var(--gray-300);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.emn-header__inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 18px var(--side-pad);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.emn-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.emn-logo img {
+  height: 40px;
+  width: auto;
+  border-radius: 6px;
+}
+
+.emn-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.emn-nav__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.emn-nav__caret {
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 8px 8px 8px 2px;
+  margin-left: -6px;
+  color: var(--gray-500);
+  font-size: 11px;
+  line-height: 1;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.emn-nav__item:hover .emn-nav__caret,
+.emn-nav__item.is-open .emn-nav__caret {
+  color: var(--red);
+  transform: rotate(180deg);
+}
+
+.emn-nav__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 220px;
+  background: var(--paper);
+  border: 1px solid var(--gray-300);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  z-index: 30;
+}
+
+.emn-nav__item:hover .emn-nav__dropdown,
+.emn-nav__item.is-open .emn-nav__dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.emn-nav__dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+a.emn-nav__dropdown-item:hover {
+  background: var(--gray-100);
+  color: var(--red);
+}
+
+.emn-nav__dropdown-item.is-disabled {
+  color: var(--gray-500);
+  cursor: default;
+}
+
+.emn-nav__dropdown-item .soon {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  background: var(--gray-100);
+  padding: 2px 7px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .emn-nav__dropdown {
+    left: auto;
+    right: 0;
+  }
+}
+
+.emn-nav__link {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--gray-700);
+  padding: 8px 14px;
+  border-radius: 6px;
+  position: relative;
+  transition: color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.emn-nav__link:hover {
+  color: var(--ink);
+  background: var(--gray-100);
+}
+
+.emn-nav__link.is-active {
+  color: var(--red);
+}
+
+.emn-nav__link.is-active::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 1px;
+  height: 2px;
+  background: var(--red);
+  border-radius: 2px;
+}
+
+.emn-nav__link--external {
+  color: var(--gray-500);
+}
+
+.emn-nav__link--external:hover {
+  color: var(--gray-700);
+}
+
+/* Mobile nav */
+@media (max-width: 640px) {
+  .emn-header__inner {
+    flex-wrap: wrap;
+    padding: 16px var(--side-pad);
+  }
+  .emn-nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 2px;
+  }
+  .emn-nav__link {
+    padding: 8px 8px;
+    font-size: 13px;
+    flex: 1;
+    text-align: center;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Main content area
+   -------------------------------------------------------------------------- */
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--side-pad);
+}
+
+/* Landing hero */
+.hero {
+  padding: 96px 0 64px;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.hero__eyebrow {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin: 0 0 18px;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(32px, 5vw, 48px);
+  line-height: 1.15;
+  margin: 0 0 18px;
+  color: var(--ink);
+}
+
+.hero h1 em {
+  font-style: italic;
+  color: var(--red);
+}
+
+.hero p {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--gray-700);
+  margin: 0 auto;
+  max-width: 520px;
+}
+
+/* Full-bleed band */
+.band {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  background: var(--red);
+  padding: 76px var(--side-pad);
+  margin-bottom: 88px;
+}
+
+.band__inner {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.band h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;
+  font-size: clamp(22px, 3.1vw, 31px);
+  line-height: 1.35;
+  color: #FFFFFF;
+  margin: 0 0 22px;
+  letter-spacing: -0.01em;
+}
+
+.band h2 .caps {
+  font-style: normal;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 0.02em;
+}
+
+.band p {
+  font-size: 15.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0;
+}
+
+/* Stat comparison block */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 30px 32px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  margin: 0 0 28px;
+}
+
+.stat {
+  flex: 1;
+}
+
+.stat__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  margin: 0 0 8px;
+}
+
+.stat__figure {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(26px, 4vw, 38px);
+  line-height: 1;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.stat__figure--muted {
+  color: var(--gray-500);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.stat__figure--red {
+  color: var(--red);
+}
+
+.stat__arrow {
+  font-size: 22px;
+  color: var(--gray-300);
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .stats {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    text-align: center;
+  }
+  .stat__arrow { transform: rotate(90deg); }
+}
+
+/* Content sections */
+.section {
+  padding: 0 0 88px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.section__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(24px, 3.4vw, 32px);
+  color: var(--ink);
+  margin: 0 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--gray-300);
+}
+
+.section__body {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--gray-700);
+  margin: 0 0 28px;
+}
+
+.section__body strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.section__cta {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+.btn {
+  display: inline-block;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 13px 26px;
+  border-radius: 8px;
+  margin: 4px 0 24px;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  background: var(--red-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.25);
+}
+
+.btn-row {
+  text-align: center;
+  margin: 4px 0 24px;
+}
+
+.btn-row .btn {
+  margin: 0;
+}
+
+.section__note {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--gray-500);
+  margin: 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--gray-300);
+}
+
+.section figure {
+  margin: 0;
+}
+
+.section figure img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+}
+
+/* Landing — tool cards */
+.tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 880px;
+  margin: 48px auto 96px;
+}
+
+@media (max-width: 640px) {
+  .tool-grid { grid-template-columns: 1fr; }
+}
+
+.tool-card {
+  display: block;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.tool-card:hover {
+  border-color: var(--red);
+  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.08);
+  transform: translateY(-2px);
+}
+
+.tool-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  margin: 0 0 10px;
+}
+
+.tool-card h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+
+.tool-card p {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--gray-700);
+  margin: 0;
+}
+
+.tool-card__arrow {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--red);
+}
+
+/* --------------------------------------------------------------------------
+   Subpage (Practice Lab / Feedback) — content pending
+   -------------------------------------------------------------------------- */
+
+.subpage-header {
+  padding: 56px 0 32px;
+  border-bottom: 1px solid var(--gray-300);
+  margin-bottom: 48px;
+}
+
+.subpage-header__label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin: 0 0 10px;
+}
+
+.subpage-header h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(28px, 4vw, 40px);
+  margin: 0;
+  color: var(--ink);
+}
+
+.empty-state {
+  border: 1px dashed var(--gray-300);
+  border-radius: var(--radius);
+  padding: 64px 32px;
+  text-align: center;
+  margin-bottom: 96px;
+}
+
+.empty-state p {
+  font-size: 15px;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Footer
+   -------------------------------------------------------------------------- */
+
+.emn-footer {
+  border-top: 1px solid var(--gray-300);
+  background: var(--gray-100);
+}
+
+.emn-footer__inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 28px var(--side-pad);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.emn-footer p {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.emn-footer__links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.emn-footer__links a {
+  color: var(--gray-700);
+  font-weight: 500;
+}
+
+.emn-footer__links a:hover {
+  color: var(--red);
+}
+
+.emn-footer__icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.emn-footer__icons a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--gray-300);
+  color: var(--gray-700);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.emn-footer__icons a:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-tint);
+}
+
+.emn-footer__icons svg {
+  width: 16px;
+  height: 16px;
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="emn-header">
+    <div class="emn-header__inner">
+      <a href="https://zareenterprises.github.io/emn/" class="emn-logo">
+        <img src="/assets/img/emn-logo.png" alt="EMN logo">
+      </a>
+      <nav class="emn-nav">
+        <div class="emn-nav__item">
+          <a href="https://zareenterprises.github.io/practice-lab" class="emn-nav__link ">EMN Practice Lab</a>
+          <button class="emn-nav__caret" aria-label="Abrir submenú de EMN Practice Lab" aria-expanded="false">&#9662;</button>
+          <div class="emn-nav__dropdown">
+            <a href="https://zareenterprises.github.io/sight-melody" class="emn-nav__dropdown-item">Berklee Sight Read</a>
+            <a href="https://zareenterprises.github.io/interview-prep" class="emn-nav__dropdown-item">Berklee Interview Prep</a>
+            <span class="emn-nav__dropdown-item is-disabled">Berklee Ear Training <span class="soon">Pronto</span></span>
+            <span class="emn-nav__dropdown-item is-disabled">Berklee Piece &amp; Impro <span class="soon">Pronto</span></span>
+          </div>
+        </div>
+        <a href="https://zareenterprises.github.io/feedback" class="emn-nav__link ">Obtén Feedback</a>
+        <a href="https://academy.emnlatam.com/" class="emn-nav__link emn-nav__link--external" target="_blank" rel="noopener">Nosotros</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="hero__eyebrow">EMN Apps</p>
+      <h1>Prepárate para <em>audicionar</em><br>con beca a Berklee</h1>
+      <p>Alumnos becados de Berklee ayudándote a ganar una tú también.</p>
+    </section>
+
+    <section class="band">
+      <div class="band__inner">
+      <h2>La mejor forma de invertir en tu proyecto musical es <span class="caps">NO</span> gastando todo en la universidad.</h2>
+      <p>Aprende cómo ahorrar +$100k con una beca en la audición.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section__title">¿Cómo funciona?</h2>
+      <div class="stats">
+        <div class="stat">
+          <p class="stat__label">Costo de la carrera completa</p>
+          <p class="stat__figure stat__figure--muted">$418,400</p>
+        </div>
+        <div class="stat__arrow" aria-hidden="true">→</div>
+        <div class="stat">
+          <p class="stat__label">Con preparación integral</p>
+          <p class="stat__figure stat__figure--red">$76,000</p>
+        </div>
+      </div>
+      <p class="section__body">Berklee cuesta $418,400 por toda la carrera. Pero con una preparación integral bajo un sistema probado, puedes disminuir tus costos a $76k. Observa el siguiente gráfico.</p>
+      <figure>
+        <img src="/assets/img/berkleeCost.png" alt="Comparación de costos: carrera completa en Berklee frente al costo con beca.">
+      </figure>
+    </section>
+
+    <section class="section">
+      <h2 class="section__title">¿En qué consiste la audición a Berklee?</h2>
+      <p class="section__body">Se conforma de 5 pruebas explicadas a continuación. El tiempo total es entre 30 a 45 minutos, y a veces se puede extender a 1 hora.</p>
+      <figure>
+        <img src="/assets/img/auditionParts.png" alt="Partes que componen la audición a Berklee.">
+      </figure>
+    </section>
+
+    <section class="section">
+      <h2 class="section__title">Prepárate con Nosotros</h2>
+      <p class="section__body">Si deseas que quienes ya lograron lo que buscas se enfoquen en brindarte los hacks y el desarrollo de habilidades requeridas para ayudarte a obtener una beca en Berklee, postula sin costos aquí.</p>
+      <div class="btn-row"><a href="https://zareenterprises.github.io/feedback" class="btn">Postular</a></div>
+      <p class="section__note">Esta evaluación nos permitirá saber en qué áreas de la audición necesitas ayuda, y te propondremos un paquete personalizado para conseguirlo.</p>
+    </section>
+
+    <section class="section">
+      <h2 class="section__title">¡Comienza a practicar!</h2>
+      <p class="section__body">EMN es la primera escuela que prepara para Berklee de verdad. No solamente es un sistema que integra todas las pruebas con data real de alumnos, no solo te conecta con estudiantes becados para que ellos mismos te preparen, sino que también desarrolla apps para que puedas practicar y prepararte.</p>
+      <p class="section__cta">Dale click a EMN Practice Lab y selecciona qué prueba quieres comenzar a practicar.</p>
+      <div class="btn-row"><a href="https://zareenterprises.github.io/practice-lab" class="btn">EMN Practice Lab</a></div>
+      <p class="section__note">Todos los ejercicios son nivel básico-intermedio, sin embargo audicionar con un nivel avanzado incrementa la oportunidad de obtener una beca.</p>
+    </section>
+
+  </main>
+
+  <footer class="emn-footer">
+    <div class="emn-footer__inner">
+      <p>© Escuela de Música y Negocios, 2026.</p>
+      <div class="emn-footer__links">
+        <a href="mailto:admisiones@emnperu.com">admisiones@emnperu.com</a>
+        <div class="emn-footer__icons">
+          <a href="https://www.instagram.com/emn.latam/" target="_blank" rel="noopener" aria-label="Instagram de EMN">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="3" width="18" height="18" rx="5"/>
+              <circle cx="12" cy="12" r="4"/>
+              <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+          <a href="https://linktr.ee/emnlatam" target="_blank" rel="noopener" aria-label="Linktree de EMN">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M10 13a5 5 0 0 0 7.5.4l2-2a5 5 0 0 0-7-7l-1.2 1.2"/>
+              <path d="M14 11a5 5 0 0 0-7.5-.4l-2 2a5 5 0 0 0 7 7l1.2-1.2"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const items = document.querySelectorAll('.emn-nav__item');
+
+  items.forEach((item) => {
+    const caret = item.querySelector('.emn-nav__caret');
+    if (!caret) return;
+
+    caret.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isOpen = item.classList.contains('is-open');
+      items.forEach((i) => i.classList.remove('is-open'));
+      if (!isOpen) {
+        item.classList.add('is-open');
+        caret.setAttribute('aria-expanded', 'true');
+      } else {
+        caret.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    items.forEach((item) => {
+      if (!item.contains(e.target)) {
+        item.classList.remove('is-open');
+        const caret = item.querySelector('.emn-nav__caret');
+        if (caret) caret.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      items.forEach((item) => item.classList.remove('is-open'));
+    }
+  });
+});
+
+</script>
+</body>
+</html>

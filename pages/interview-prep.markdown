@@ -1,4 +1,4 @@
 ---
-layout: interview-prep
+layout: emn/interview-prep
 permalink: /interview-prep
 ---

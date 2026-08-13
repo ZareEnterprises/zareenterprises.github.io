@@ -239,14 +239,6 @@
   border-radius: 2px;
 }
 
-.emn-landing .emn-nav__link--external {
-  color: var(--gray-500);
-}
-
-.emn-landing .emn-nav__link--external:hover {
-  color: var(--gray-700);
-}
-
 /* Mobile nav */
 @media (max-width: 640px) {
   .emn-landing .emn-header__inner {

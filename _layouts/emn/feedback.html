@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="es" class="emn-landing">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Obtén Feedback — EMN</title>
+<meta name="description" content="Simulacro de audición a Berklee. Recibe feedback desde dentro de Berklee.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="/assets/css/emn.css">
+</head>
+<body>
+<div class="wrap fb-wrap">
+
+  <header class="emn-header">
+    <div class="emn-header__inner">
+      <a href="https://zareenterprises.github.io/emn" class="emn-logo">
+        <img src="/assets/img/emn-logo.png" alt="EMN logo">
+      </a>
+      <nav class="emn-nav">
+        <div class="emn-nav__item">
+          <a href="https://zareenterprises.github.io/practice-lab" class="emn-nav__link">EMN Practice Lab</a>
+          <button class="emn-nav__caret" aria-label="Abrir submenú de EMN Practice Lab" aria-expanded="false">&#9662;</button>
+          <div class="emn-nav__dropdown">
+            <a href="https://zareenterprises.github.io/sight-melody" class="emn-nav__dropdown-item">Berklee Sight Read</a>
+            <a href="https://zareenterprises.github.io/interview-prep" class="emn-nav__dropdown-item">Berklee Interview Prep</a>
+            <span class="emn-nav__dropdown-item is-disabled">Berklee Ear Training <span class="soon">Pronto</span></span>
+            <span class="emn-nav__dropdown-item is-disabled">Berklee Piece &amp; Impro <span class="soon">Pronto</span></span>
+          </div>
+        </div>
+        <a href="https://zareenterprises.github.io/feedback" class="emn-nav__link is-active">Obtén Feedback</a>
+        <a href="https://academy.emnlatam.com/" class="emn-nav__link emn-nav__link--external" target="_blank" rel="noopener">Nosotros</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="fb-stage" id="fbStage">
+
+    <!-- 1 — Intro -->
+    <section class="fb-slide fb-slide--red is-active" data-slide="0">
+      <div class="fb-slide__inner">
+        <div class="fb-intro-head">
+          <h1 class="fb-title">Obtén Feedback desde dentro de Berklee</h1>
+          <p class="fb-sub">Una vez terminado este simulacro de audición a Berklee, te enviaremos tus resultados y un plan de estudios con nosotros para incrementar tus oportunidades de beca.</p>
+        </div>
+
+        <p class="fb-prep__lead">Prepara tres videos antes de empezar.</p>
+
+        <div class="fb-prep">
+          <div class="fb-prep__item">
+            <span class="fb-prep__n">1</span>
+            <div>
+              <h3>Piece</h3>
+              <p>Interpreta una pieza en el estilo que mejor domines. Asegúrate de que tú y tu instrumento sean visibles durante toda la ejecución.</p>
+              <p class="fb-prep__min">Mínimo 3 min</p>
+            </div>
+          </div>
+
+          <div class="fb-prep__item">
+            <span class="fb-prep__n">2</span>
+            <div>
+              <h3>Improvisation</h3>
+              <p>Graba un video improvisando en tu instrumento sobre una de <a href="https://college.berklee.edu/admissions/undergraduate/practiceexercises" target="_blank" rel="noopener">estas pistas</a>.</p>
+              <p class="fb-prep__min">Mínimo 2 min</p>
+            </div>
+          </div>
+
+          <div class="fb-prep__item">
+            <span class="fb-prep__n">3</span>
+            <div>
+              <h3>Interview</h3>
+              <p>Graba un video respondiendo en inglés estas 3 preguntas:</p>
+              <ul class="fb-prep__q">
+                <li>What can Berklee learn from you?</li>
+                <li>Who are you as an artist?</li>
+                <li>Why Berklee?</li>
+              </ul>
+              <p class="fb-prep__min">Máximo 5 min</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="fb-upload fb-upload--center">
+          <p class="fb-upload__title"><strong>Luego de grabar los videos:</strong></p>
+          <p>Súbelos a YouTube (opcional: puedes ponerlos como <strong>No listados</strong> si no quieres que aparezcan en tu canal). Necesitaremos los links listos para que puedas pegarlos en el siguiente slide.</p>
+          <p class="fb-upload__warn"><strong>IMPORTANTE:</strong> si no se te ve tocando o el audio es de muy baja calidad, la aplicación será rechazada. Puedes grabar con el celular, pero asegúrate de que el sonido se entienda con claridad.</p>
+        </div>
+
+        <p class="fb-prep__foot">Duración aproximada: 15 min</p>
+
+        <div class="fb-nav-row--center"><button class="fb-btn fb-btn--light" data-open-form>Comenzar</button></div>
+      </div>
+    </section>
+
+    <!-- 2 — Links -->
+    <section class="fb-slide" data-slide="1">
+      <div class="fb-slide__inner">
+        <p class="fb-step">Paso 1 de 5</p>
+        <h2 class="fb-title">Tus videos</h2>
+        <p class="fb-sub">Pega los tres links de YouTube. Con esto queda lista la parte grabada de tu audición.</p>
+
+        <label class="fb-linkfield">
+          <span>Your Piece</span>
+          <input type="url" class="fb-input" id="linkPiece" placeholder="https://youtube.com/watch?v=..." autocomplete="off">
+        </label>
+
+        <label class="fb-linkfield">
+          <span>Your Improvisation</span>
+          <input type="url" class="fb-input" id="linkImpro" placeholder="https://youtube.com/watch?v=..." autocomplete="off">
+        </label>
+
+        <label class="fb-linkfield">
+          <span>Your Interview</span>
+          <input type="url" class="fb-input" id="linkInterview" placeholder="https://youtube.com/watch?v=..." autocomplete="off">
+        </label>
+
+        <div class="fb-nav-row">
+          <button class="fb-btn fb-btn--ghost" data-prev>Atrás</button>
+          <button class="fb-btn" data-next>Siguiente</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 — Sight Reading -->
+    <section class="fb-slide" data-slide="2" data-ear="sight">
+      <div class="fb-slide__inner">
+        <p class="fb-step">Paso 2 de 5 <span class="fb-counter" data-counter hidden></span></p>
+        <h2 class="fb-title">First-Sight Reading</h2>
+        <p class="fb-sub">Elige tu instrumento. Verás una partitura a la vez y deberás grabarte leyéndola. No olvides descargar cada audio grabado a tu dispositivo; al final te daremos el link donde subirlas todas.</p>
+        <p class="fb-warn">Tienes solo 1 minuto desde que aparece la partitura hasta que comienzas a grabar. Fallar en ello significará un diagnóstico erróneo.</p>
+        <div class="fb-chips" id="sightChips">
+          <button class="fb-chip" data-inst="Voz">Voz</button>
+          <button class="fb-chip" data-inst="Guitarra">Guitarra</button>
+          <button class="fb-chip" data-inst="Bajo">Bajo</button>
+          <button class="fb-chip" data-inst="Piano">Piano</button>
+          <button class="fb-chip" data-inst="Percusion">Percusión</button>
+          <button class="fb-chip" data-inst="Vientos">Vientos</button>
+          <button class="fb-chip" data-inst="Cuerdas">Cuerdas</button>
+        </div>
+        <div class="fb-take-list" data-take-list id="sightTakes" hidden></div>
+        <div class="fb-nav-row">
+          <button class="fb-btn fb-btn--ghost" data-prev>Atrás</button>
+          <button class="fb-btn" data-next>Siguiente</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 — Ear Training: Melody -->
+    <section class="fb-slide" data-slide="3" data-ear="melody">
+      <div class="fb-slide__inner">
+        <p class="fb-step">Paso 3 de 5 · Ear Training <span class="fb-counter" data-counter hidden></span></p>
+        <h2 class="fb-title">Melody Dictation</h2>
+        <p class="fb-sub">Escucha cada ejercicio y grábate cantándolo de vuelta (usa el botón de <strong>Grabar respuesta</strong>). No olvides descargar cada audio; al final te brindaremos un link donde subirlos.</p>
+        <p class="fb-warn">Solo puedes repetir el audio dos veces.</p>
+        <div class="fb-take-list" data-take-list></div>
+        <div class="fb-nav-row">
+          <button class="fb-btn fb-btn--ghost" data-prev>Atrás</button>
+          <button class="fb-btn" data-next>Siguiente</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 — Ear Training: Rhythm -->
+    <section class="fb-slide" data-slide="4" data-ear="rhythm">
+      <div class="fb-slide__inner">
+        <p class="fb-step">Paso 4 de 5 · Ear Training <span class="fb-counter" data-counter hidden></span></p>
+        <h2 class="fb-title">Rhythm Dictation</h2>
+        <p class="fb-sub">Escucha cada ejercicio y grábate repitiéndolo de vuelta (usa el botón de <strong>Grabar respuesta</strong>). No olvides descargar cada audio; al final te brindaremos un link donde subirlos.</p>
+        <p class="fb-warn">Solo puedes repetir el audio dos veces.</p>
+        <div class="fb-take-list" data-take-list></div>
+        <div class="fb-nav-row">
+          <button class="fb-btn fb-btn--ghost" data-prev>Atrás</button>
+          <button class="fb-btn" data-next>Siguiente</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 — Ear Training: Harmony -->
+    <section class="fb-slide" data-slide="5" data-quiz="harmony">
+      <div class="fb-slide__inner">
+        <p class="fb-step">Paso 5 de 5 · Ear Training <span class="fb-counter" data-counter hidden></span></p>
+        <h2 class="fb-title">Harmony Dictation</h2>
+        <p class="fb-sub">Escucha cada ejemplo y selecciona la opción correcta. No necesitas grabar nada en esta sección.</p>
+        <div class="fb-quiz-list" data-quiz-list></div>
+        <div class="fb-nav-row">
+          <button class="fb-btn fb-btn--ghost" data-prev>Atrás</button>
+          <button class="fb-btn" data-next>Siguiente</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 — Closing -->
+    <section class="fb-slide fb-slide--red" data-slide="6">
+      <div class="fb-slide__inner">
+        <div class="fb-intro-head">
+          <h2 class="fb-title">¡Sube tus grabaciones!</h2>
+          <p class="fb-sub">Sube tus 10 archivos de audio descargados en este formulario y en 1 a 8 horas recibirás tu resultado y tu plan de estudios.</p>
+        </div>
+
+        <div class="fb-brief fb-brief--center">
+          <p class="fb-brief__label">Último paso</p>
+          <p>Estos archivos ya vienen nombrados correctamente, no cambies los nombres por favor.</p>
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSfDD6k86gFIK8cHV6R0lqiwrhgz_c2OgnVNRcTxLWqLjLYEQA/viewform" target="_blank" rel="noopener" class="fb-btn fb-btn--light fb-btn--bold">Subir mis grabaciones</a>
+        </div>
+
+        <div class="fb-close-row">
+          <button class="fb-btn fb-btn--ghost fb-btn--onred" data-prev>Atrás</button>
+          <div class="fb-close-links">
+            <a href="https://academy.emnlatam.com/" target="_blank" rel="noopener" class="fb-underline">Conoce más de nosotros</a>
+            <a href="https://www.instagram.com/emn.latam/" target="_blank" rel="noopener" aria-label="Instagram de EMN">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20">
+                <rect x="3" y="3" width="18" height="18" rx="5"/>
+                <circle cx="12" cy="12" r="4"/>
+                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Intake form modal -->
+  <div class="fb-overlay" id="fbOverlay" hidden>
+    <div class="fb-modal" role="dialog" aria-modal="true" aria-labelledby="fbModalTitle">
+      <button class="fb-modal__close" data-close-form aria-label="Cerrar">&times;</button>
+      <h2 class="fb-modal__title" id="fbModalTitle">Antes de comenzar</h2>
+      <p class="fb-modal__sub">Completa estos datos para que podamos enviarte tus resultados.</p>
+
+      <form id="fbForm" action="https://formspree.io/f/mwleqqqn" method="POST">
+        <label class="fb-field">
+          <span>Nombre y apellido completo</span>
+          <input type="text" name="nombre" required>
+        </label>
+
+        <label class="fb-field">
+          <span>Edad</span>
+          <input type="text" name="edad" required>
+        </label>
+
+        <label class="fb-field">
+          <span>País de origen</span>
+          <input type="text" name="pais" required>
+        </label>
+
+        <label class="fb-field">
+          <span>¿Con qué instrumento postularás a Berklee?</span>
+          <input type="text" name="instrumento" required>
+        </label>
+
+        <label class="fb-field">
+          <span>Correo</span>
+          <input type="email" name="email" required>
+        </label>
+
+        <label class="fb-field">
+          <span>¿Hace cuántos años te dedicas a la música?</span>
+          <select name="anios_musica" required>
+            <option value="">Selecciona</option>
+            <option>Menos de 1 año</option>
+            <option>1–3 años</option>
+            <option>3–5 años</option>
+            <option>Más de 5 años</option>
+          </select>
+        </label>
+
+        <label class="fb-field">
+          <span>¿Cuándo planeas postular, presencial o virtual?</span>
+          <input type="text" name="modalidad" required>
+        </label>
+
+        <label class="fb-field">
+          <span>¿Dónde has recibido tu formación musical? Menciona si es un BPC</span>
+          <input type="text" name="formacion" required>
+        </label>
+
+        <label class="fb-field">
+          <span>¿Cuál es tu nivel de inglés?</span>
+          <select name="ingles" required>
+            <option value="">Selecciona</option>
+            <option>Básico</option>
+            <option>Intermedio</option>
+            <option>Avanzado</option>
+          </select>
+        </label>
+
+        <label class="fb-field">
+          <span>¿Qué tan dependiente sería tu decisión de estudiar en Berklee en base a una beca?</span>
+          <select name="dependencia_beca" required>
+            <option value="">Selecciona</option>
+            <option>No dependemos de una beca para estudiar</option>
+            <option>Una beca sería beneficiosa pero no indispensable</option>
+            <option>Una beca sería necesaria para estudiar</option>
+            <option>Solo podríamos estudiar con una beca de 100%</option>
+          </select>
+        </label>
+
+        <input type="hidden" name="link_pieza" id="fLinkPiece">
+        <input type="hidden" name="link_improvisacion" id="fLinkImpro">
+        <input type="hidden" name="partitura_asignada" id="fSheet">
+
+        <p class="fb-form__error" id="fbError" hidden></p>
+        <button type="submit" class="fb-btn" id="fbSubmit">Enviar y comenzar</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script src="/assets/js/site.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ====================================================================
+     CONFIGURACIÓN — edita solo esta sección
+     ==================================================================== */
+
+  /* -----------------------------------------------------------------
+     INTERRUPTORES  ·  cambia false por true para activar
+     ----------------------------------------------------------------- */
+
+  // true  = el alumno debe llenar el formulario antes de empezar
+  // false = entra directo (modo revisión)
+  var REQUIRE_FORM = false;
+
+
+  // Carpeta y extensión de los audios del banco.
+  var AUDIO_PATH = '/assets/audio/';
+  var AUDIO_EXT  = '.mp3';
+
+  // Carpeta y extensión de las partituras.
+  // Se espera: /assets/sheets/emnPiano1.png ... emnPiano4.png
+  var SHEET_PATH = '/assets/sheets/';
+  var SHEET_EXT  = '.png';
+  var SHEETS_PER_INSTRUMENT = 4;
+
+  // HARMONY — opción múltiple. El nombre del audio NO se muestra en pantalla;
+  // se envía al correo junto con la respuesta elegida.
+  // Rellena "correct" con la respuesta correcta de cada audio para que el
+  // correo llegue ya corregido. Si lo dejas vacío, solo se envía lo elegido.
+  var HARMONY_OPTIONS = [
+    'Major', 'Minor', 'Diminished', 'Augmented', 'Major 7',
+    'Minor 7', 'Diminished 7', 'Dominant 7', 'Sus2', 'Sus4'
+  ];
+
+  var HARMONY_QUESTIONS = [
+    { file: 'emnharmony1', correct: '' },
+    { file: 'emnharmony2', correct: '' },
+    { file: 'emnharmony3', correct: '' },
+    { file: 'emnharmony4', correct: '' },
+    { file: 'emnharmony5', correct: '' }
+  ];
+
+  var TAKES_PER_SECTION = 3;
+
+  // Cuántas veces puede escucharse cada audio de dictado.
+  var MAX_PLAYS = 2;
+
+  /* ==================================================================== */
+
+  var stage    = document.getElementById('fbStage');
+  var slides   = Array.prototype.slice.call(document.querySelectorAll('.fb-slide'));
+  var overlay  = document.getElementById('fbOverlay');
+  var form     = document.getElementById('fbForm');
+  var errorBox = document.getElementById('fbError');
+  var current  = 0;
+  var formDone = false;
+
+  /* ---------- Navegación entre slides ---------- */
+
+  function goTo(i) {
+    if (i < 0 || i >= slides.length) return;
+    if (i > 0 && REQUIRE_FORM && !formDone) { openForm(); return; }
+    slides[current].classList.remove('is-active');
+    slides[i].classList.add('is-active');
+    current = i;
+    stage.scrollTop = 0;
+    if (i === slides.length - 1) sendResults();
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-next]')) {
+      if (!canAdvance(slides[current])) return;
+      if (!stepForward(slides[current])) goTo(current + 1);
+    }
+    else if (e.target.closest('[data-prev]')) {
+      if (!stepBack(slides[current])) goTo(current - 1);
+    }
+    else if (e.target.closest('[data-open-form]')) {
+      if (REQUIRE_FORM) openForm(); else goTo(current + 1);
+    }
+    else if (e.target.closest('[data-close-form]')) closeForm();
+  });
+
+  /* ---------- Bloqueo por grabación ---------- */
+
+  function canAdvance(slide) {
+    var list = slide.querySelector('[data-take-list]');
+    if (!list || !list.dataset.total) return true;
+
+    var i   = parseInt(list.dataset.step || '0', 10);
+    var row = list.children[i];
+    if (!row) return true;
+
+    // Si grabó pero no descargó, no puede avanzar.
+    // Si no grabó nada, puede pasar de largo.
+    if (row.classList.contains('has-take') && !row.classList.contains('is-done')) {
+      showAlert(slide, 'Descarga tu grabación antes de continuar.');
+      return false;
+    }
+
+    clearAlert(slide);
+    return true;
+  }
+
+  function showAlert(slide, msg) {
+    var box = slide.querySelector('.fb-alert');
+    if (!box) {
+      box = document.createElement('p');
+      box.className = 'fb-alert';
+      var row = slide.querySelector('.fb-nav-row');
+      row.parentNode.insertBefore(box, row);
+    }
+    box.textContent = msg;
+    box.hidden = false;
+  }
+
+  function clearAlert(slide) {
+    var box = slide.querySelector('.fb-alert');
+    if (box) box.hidden = true;
+  }
+
+  /* ---------- Modal del formulario ---------- */
+
+  function openForm()  { overlay.hidden = false; document.body.classList.add('fb-locked'); }
+  function closeForm() { overlay.hidden = true;  document.body.classList.remove('fb-locked'); }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    errorBox.hidden = true;
+
+    document.getElementById('fLinkPiece').value = document.getElementById('linkPiece').value;
+    document.getElementById('fLinkImpro').value = document.getElementById('linkImpro').value;
+
+    var btn = document.getElementById('fbSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { Accept: 'application/json' }
+    })
+    .then(function (r) {
+      if (!r.ok) throw new Error('bad response');
+      formDone = true;
+      closeForm();
+      goTo(1);
+    })
+    .catch(function () {
+      errorBox.textContent = 'No pudimos enviar el formulario. Revisa tu conexión e inténtalo otra vez.';
+      errorBox.hidden = false;
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.textContent = 'Enviar y comenzar';
+    });
+  });
+
+  /* ---------- Límite de reproducciones ---------- */
+
+  function limitPlays(audio, label) {
+    var used = 0;
+    var counted = false;
+
+    audio.addEventListener('play', function () {
+      if (!counted) {
+        counted = true;
+        used++;
+        label.textContent = 'Reproducciones restantes: ' + Math.max(0, MAX_PLAYS - used);
+      }
+      if (used > MAX_PLAYS) {
+        audio.pause();
+      }
+    });
+
+    audio.addEventListener('ended', function () {
+      counted = false;
+      if (used >= MAX_PLAYS) lock();
+    });
+
+    audio.addEventListener('pause', function () {
+      counted = false;
+      if (used >= MAX_PLAYS && audio.currentTime >= audio.duration - 0.3) lock();
+    });
+
+    function lock() {
+      audio.controls = false;
+      audio.removeAttribute('controls');
+      label.textContent = 'Sin reproducciones restantes';
+      label.classList.add('is-spent');
+    }
+  }
+
+  /* ---------- Motor de sub-pasos (una tarjeta a la vez) ---------- */
+
+  function initSteps(list) {
+    var items = Array.prototype.slice.call(list.children);
+    if (!items.length) return;
+    items.forEach(function (el, i) { el.hidden = (i !== 0); });
+    list.dataset.step  = '0';
+    list.dataset.total = String(items.length);
+    updateCounter(list);
+  }
+
+  function updateCounter(list) {
+    var slide = list.closest('.fb-slide');
+    var badge = slide.querySelector('[data-counter]');
+    if (!badge) return;
+    var step = parseInt(list.dataset.step || '0', 10) + 1;
+    badge.textContent = step + ' / ' + list.dataset.total;
+    badge.hidden = false;
+  }
+
+  // Devuelve true si consumió el clic avanzando dentro del slide.
+  function stepForward(slide) {
+    var list = slide.querySelector('[data-take-list], [data-quiz-list]');
+    if (!list || !list.dataset.total) return false;
+
+    var i     = parseInt(list.dataset.step, 10);
+    var total = parseInt(list.dataset.total, 10);
+    if (i >= total - 1) return false;
+
+    list.children[i].hidden = true;
+    list.children[i + 1].hidden = false;
+    list.dataset.step = String(i + 1);
+    updateCounter(list);
+    stage.scrollTop = 0;
+    return true;
+  }
+
+  function stepBack(slide) {
+    var list = slide.querySelector('[data-take-list], [data-quiz-list]');
+    if (!list || !list.dataset.total) return false;
+
+    var i = parseInt(list.dataset.step, 10);
+    if (i <= 0) return false;
+
+    list.children[i].hidden = true;
+    list.children[i - 1].hidden = false;
+    list.dataset.step = String(i - 1);
+    updateCounter(list);
+    stage.scrollTop = 0;
+    return true;
+  }
+
+  /* ---------- Lectura a primera vista ---------- */
+
+  var sightTakes = document.getElementById('sightTakes');
+
+  document.getElementById('sightChips').addEventListener('click', function (e) {
+    var chip = e.target.closest('.fb-chip');
+    if (!chip) return;
+
+    Array.prototype.forEach.call(this.children, function (c) { c.classList.remove('is-on'); });
+    chip.classList.add('is-on');
+
+    var inst = chip.dataset.inst;
+    document.getElementById('fSheet').value = inst;
+
+    sightTakes.innerHTML = '';
+    for (var i = 1; i <= SHEETS_PER_INSTRUMENT; i++) {
+      sightTakes.appendChild(makeSheetTake(inst, i));
+    }
+    sightTakes.hidden = false;
+    initSteps(sightTakes);
+  });
+
+  function makeSheetTake(inst, index) {
+    var base = 'emn' + inst + index;
+    var src  = SHEET_PATH + base + SHEET_EXT;
+
+    var row = document.createElement('div');
+    row.className = 'fb-take fb-take--sheet';
+
+    var head = document.createElement('div');
+    head.className = 'fb-take__head fb-take__head--stack';
+    head.innerHTML =
+      '<p class="fb-take__sheetlabel">Partitura ' + index + '</p>' +
+      '<div class="fb-sheetwrap"><img src="' + src + '" alt="Partitura ' + index + '" oncontextmenu="return false"></div>';
+
+    row.appendChild(head);
+    row.appendChild(recorderFoot(row, base));
+    return row;
+  }
+
+  /* ---------- Grabación por tomas ---------- */
+
+  function recorderFoot(row, base) {
+    var recBtn = document.createElement('button');
+    recBtn.className = 'fb-btn fb-btn--rec';
+    recBtn.type = 'button';
+    recBtn.textContent = 'Grabar respuesta';
+
+    var dlBtn = document.createElement('button');
+    dlBtn.className = 'fb-btn fb-btn--ghost fb-btn--rec';
+    dlBtn.type = 'button';
+    dlBtn.textContent = 'Descargar audio';
+    dlBtn.hidden = true;
+
+    var status = document.createElement('span');
+    status.className = 'fb-take__status';
+
+    var recorder = null, chunks = [], blobUrl = null;
+
+    dlBtn.addEventListener('click', function () {
+      if (!blobUrl) return;
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = base + 'answ.webm';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      row.classList.add('is-done');
+      clearAlert(row.closest('.fb-slide'));
+      status.textContent = 'Descargado: ' + base + 'answ.webm';
+      dlBtn.textContent = 'Descargar otra vez';
+    });
+
+    recBtn.addEventListener('click', function () {
+      if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function (stream) {
+          chunks = [];
+          recorder = new MediaRecorder(stream);
+          recorder.ondataavailable = function (ev) { chunks.push(ev.data); };
+          recorder.onstop = function () {
+            stream.getTracks().forEach(function (t) { t.stop(); });
+
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
+            var blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+            blobUrl = URL.createObjectURL(blob);
+
+            row.classList.remove('is-recording', 'is-done');
+            row.classList.add('has-take');
+
+            dlBtn.hidden = false;
+            dlBtn.textContent = 'Descargar audio';
+            recBtn.textContent = 'Grabar otra vez';
+            status.textContent = 'Grabación lista. Descárgala para continuar.';
+          };
+          recorder.start();
+          row.classList.add('is-recording');
+          recBtn.textContent = 'Detener';
+          status.textContent = 'Grabando...';
+        })
+        .catch(function () {
+          status.textContent = 'No pudimos acceder al micrófono. Revisa los permisos del navegador.';
+        });
+    });
+
+    var foot = document.createElement('div');
+    foot.className = 'fb-take__foot';
+    foot.appendChild(recBtn);
+    foot.appendChild(dlBtn);
+    foot.appendChild(status);
+    return foot;
+  }
+
+  function buildTakes(slide) {
+    var kind = slide.dataset.ear;
+    var list = slide.querySelector('[data-take-list]');
+    if (!kind || kind === 'sight' || !list) return;
+
+    for (var i = 1; i <= TAKES_PER_SECTION; i++) {
+      list.appendChild(makeTake(kind, i));
+    }
+    initSteps(list);
+  }
+
+  function makeTake(kind, index) {
+    var base = 'emn' + kind + index;
+    var row  = document.createElement('div');
+    row.className = 'fb-take';
+
+    var head = document.createElement('div');
+    head.className = 'fb-take__head';
+    head.innerHTML = '<span class="fb-take__n">' + index + '</span>';
+
+    var audio = document.createElement('audio');
+    audio.controls = true;
+    audio.preload  = 'none';
+    audio.src      = AUDIO_PATH + base + AUDIO_EXT;
+    audio.className = 'fb-take__audio';
+    audio.setAttribute('controlsList', 'nodownload noplaybackrate');
+    head.appendChild(audio);
+
+    var plays = document.createElement('span');
+    plays.className = 'fb-take__plays';
+    plays.textContent = 'Reproducciones restantes: ' + MAX_PLAYS;
+    limitPlays(audio, plays);
+    head.appendChild(plays);
+
+    row.appendChild(head);
+    row.appendChild(recorderFoot(row, base));
+    return row;
+  }
+
+  /* ---------- Harmony: opción múltiple ---------- */
+
+  var harmonyAnswers = {};
+
+  (function buildHarmony() {
+    var list = document.querySelector('[data-quiz-list]');
+    if (!list) return;
+
+    HARMONY_QUESTIONS.forEach(function (q, i) {
+      var row = document.createElement('div');
+      row.className = 'fb-take';
+
+      var head = document.createElement('div');
+      head.className = 'fb-take__head';
+      head.innerHTML = '<span class="fb-take__n">' + (i + 1) + '</span>';
+
+      // El src apunta al archivo real, pero el nombre no se muestra en pantalla.
+      var audio = document.createElement('audio');
+      audio.controls = true;
+      audio.preload = 'none';
+      audio.className = 'fb-take__audio';
+      audio.setAttribute('controlsList', 'nodownload noplaybackrate');
+      audio.src = AUDIO_PATH + q.file + AUDIO_EXT;
+      head.appendChild(audio);
+
+      var plays = document.createElement('span');
+      plays.className = 'fb-take__plays';
+      plays.textContent = 'Reproducciones restantes: ' + MAX_PLAYS;
+      limitPlays(audio, plays);
+      head.appendChild(plays);
+
+      var opts = document.createElement('div');
+      opts.className = 'fb-chips fb-chips--quiz';
+
+      HARMONY_OPTIONS.forEach(function (label) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'fb-chip';
+        b.textContent = label;
+        b.addEventListener('click', function () {
+          Array.prototype.forEach.call(opts.children, function (c) { c.classList.remove('is-on'); });
+          b.classList.add('is-on');
+          harmonyAnswers[q.file] = label;
+          row.classList.add('is-done');
+          clearAlert(row.closest('.fb-slide'));
+        });
+        opts.appendChild(b);
+      });
+
+      row.appendChild(head);
+      row.appendChild(opts);
+      list.appendChild(row);
+    });
+
+    initSteps(list);
+  })();
+
+  /* ---------- Envío final ---------- */
+
+  var resultsSent = false;
+
+  function sendResults() {
+    if (resultsSent) return;
+    resultsSent = true;
+
+    var fd = new FormData();
+    fd.append('_subject', 'Simulacro completado — ' + (form.nombre.value || 'sin nombre'));
+    fd.append('nombre', form.nombre.value || '');
+    fd.append('email', form.email.value || '');
+    fd.append('instrumento_sight_reading', document.getElementById('fSheet').value || '');
+    fd.append('link_pieza', document.getElementById('linkPiece').value || '');
+    fd.append('link_improvisacion', document.getElementById('linkImpro').value || '');
+    fd.append('link_entrevista', document.getElementById('linkInterview').value || '');
+
+    HARMONY_QUESTIONS.forEach(function (q) {
+      var picked = harmonyAnswers[q.file] || '(sin responder)';
+      var line   = picked;
+      if (q.correct) {
+        line += ' | correcta: ' + q.correct +
+                ' | ' + (picked === q.correct ? 'OK' : 'ERROR');
+      }
+      fd.append('harmony_' + q.file, line);
+    });
+
+    fetch(form.action, {
+      method: 'POST',
+      body: fd,
+      headers: { Accept: 'application/json' }
+    }).catch(function () { resultsSent = false; });
+  }
+
+  slides.forEach(buildTakes);
+
+})();
+</script>
+</body>
+</html>

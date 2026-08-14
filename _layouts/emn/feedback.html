@@ -183,7 +183,7 @@
         <div class="fb-quiz-list" data-quiz-list></div>
         <div class="fb-nav-row">
           <button class="fb-btn fb-btn--ghost" data-prev>Atrás</button>
-          <button class="fb-btn" data-next>Siguiente</button>
+          <button class="fb-btn" data-next>Siguiente y terminar</button>
         </div>
       </div>
     </section>
@@ -202,8 +202,7 @@
           <a href="https://docs.google.com/forms/d/e/1FAIpQLSfDD6k86gFIK8cHV6R0lqiwrhgz_c2OgnVNRcTxLWqLjLYEQA/viewform" target="_blank" rel="noopener" class="fb-btn fb-btn--light fb-btn--bold">Subir mis grabaciones</a>
         </div>
 
-        <div class="fb-close-row">
-          <button class="fb-btn fb-btn--ghost fb-btn--onred" data-prev>Atrás</button>
+        <div class="fb-close-row fb-close-row--end">
           <div class="fb-close-links">
             <a href="https://academy.emnlatam.com/" target="_blank" rel="noopener" class="fb-underline">Conoce más de nosotros</a>
             <a href="https://www.instagram.com/emn.latam/" target="_blank" rel="noopener" aria-label="Instagram de EMN">
@@ -230,7 +229,7 @@
 
       <form id="fbForm" action="https://formspree.io/f/mwleqqqn" method="POST">
         <label class="fb-field">
-          <span>Nombre y apellido Completo</span>
+          <span>Nombre y apellido completo</span>
           <input type="text" name="nombre" required>
         </label>
 
@@ -240,7 +239,7 @@
         </label>
 
         <label class="fb-field">
-          <span>País de Origen</span>
+          <span>País de origen</span>
           <input type="text" name="pais" required>
         </label>
 
@@ -250,7 +249,7 @@
         </label>
 
         <label class="fb-field">
-          <span>Correo Electrónico</span>
+          <span>Correo</span>
           <input type="email" name="email" required>
         </label>
 
@@ -298,7 +297,14 @@
 
         <input type="hidden" name="link_pieza" id="fLinkPiece">
         <input type="hidden" name="link_improvisacion" id="fLinkImpro">
-        <input type="hidden" name="partitura_asignada" id="fSheet">
+        <input type="hidden" name="link_entrevista" id="fLinkInterview">
+        <input type="hidden" name="instrumento_sight_reading" id="fSheet">
+        <input type="hidden" name="harmony_1" id="fH1">
+        <input type="hidden" name="harmony_2" id="fH2">
+        <input type="hidden" name="harmony_3" id="fH3">
+        <input type="hidden" name="harmony_4" id="fH4">
+        <input type="hidden" name="harmony_5" id="fH5">
+        <input type="hidden" name="etapa" id="fEtapa" value="1 - registro">
 
         <p class="fb-form__error" id="fbError" hidden></p>
         <button type="submit" class="fb-btn" id="fbSubmit">Enviar y comenzar</button>
@@ -775,30 +781,37 @@
     if (resultsSent) return;
     resultsSent = true;
 
-    var fd = new FormData();
-    fd.append('_subject', 'Simulacro completado — ' + (form.nombre.value || 'sin nombre'));
-    fd.append('nombre', form.nombre.value || '');
-    fd.append('email', form.email.value || '');
-    fd.append('instrumento_sight_reading', document.getElementById('fSheet').value || '');
-    fd.append('link_pieza', document.getElementById('linkPiece').value || '');
-    fd.append('link_improvisacion', document.getElementById('linkImpro').value || '');
-    fd.append('link_entrevista', document.getElementById('linkInterview').value || '');
+    // Reutiliza el MISMO formulario del primer envio (que si funciona).
+    document.getElementById('fEtapa').value         = '2 - simulacro completado';
+    document.getElementById('fLinkPiece').value     = document.getElementById('linkPiece').value || '';
+    document.getElementById('fLinkImpro').value     = document.getElementById('linkImpro').value || '';
+    document.getElementById('fLinkInterview').value = document.getElementById('linkInterview').value || '';
 
-    HARMONY_QUESTIONS.forEach(function (q) {
+    HARMONY_QUESTIONS.forEach(function (q, i) {
+      var field = document.getElementById('fH' + (i + 1));
+      if (!field) return;
       var picked = harmonyAnswers[q.file] || '(sin responder)';
-      var line   = picked;
+      var line   = q.file + ': ' + picked;
       if (q.correct) {
         line += ' | correcta: ' + q.correct +
                 ' | ' + (picked === q.correct ? 'OK' : 'ERROR');
       }
-      fd.append('harmony_' + q.file, line);
+      field.value = line;
     });
 
     fetch(form.action, {
       method: 'POST',
-      body: fd,
+      body: new FormData(form),
       headers: { Accept: 'application/json' }
-    }).catch(function () { resultsSent = false; });
+    })
+    .then(function (r) {
+      if (!r.ok) throw new Error('bad response');
+      console.log('Resultados enviados a Formspree.');
+    })
+    .catch(function () {
+      resultsSent = false;
+      console.error('Fallo el envio de resultados.');
+    });
   }
 
   slides.forEach(buildTakes);

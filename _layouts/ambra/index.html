@@ -1,35 +1,811 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AMBRA Live Productions</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Set List — AMBRA Live Productions</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="/assets/css/ambra.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="wrap">
 
-  <div class="subpage">
-    <div class="logo-slot" id="logo-ambra"><img src="/assets/img/ambra-logo.png" alt="AMBRA Live Productions logo"></div>
-    <h1>AMBRA Live Productions</h1>
-    <p class="subtitle">Customized live music experiences for annual events.<br>by Zare Enterprises</p>
+<header class="top">
+  <p class="eyebrow">AMBRA Live Productions · Event Planning</p>
+  <h1>PA'LANTE 2026 — Set List</h1>
+  <p class="sub">Henri A. Termeer Square · Sept 10, 2026 · 6:30pm–10:30pm</p>
+</header>
 
-    <!-- Page content goes here. Tell Claude what this page should say
-         (services, past events, booking info, etc.) and it'll be added. -->
+<nav class="tabs" id="tabs">
+  <button class="tab-btn primary active" data-tab="table">Setlist</button>
+  <button class="tab-btn primary" data-tab="instrumentation">Instrumentation</button>
+  <button class="tab-btn primary" data-tab="band">Band</button>
+  <span class="tab-divider"></span>
+  <button class="tab-btn viz" data-tab="artist">By Artist</button>
+  <button class="tab-btn viz" data-tab="country">By Country</button>
+  <button class="tab-btn viz" data-tab="singer">By Singer</button>
+  <button class="tab-btn viz" data-tab="emotion">By Emotion</button>
+</nav>
 
-    <a class="back-link" href="/">← Back to Zare Enterprises</a>
+<main>
+
+  <div id="view-table">
+    <div class="toolbar">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint)" id="song-count">—</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" id="btn-new-set">+ Create new set</button>
+        <button class="btn" id="btn-add-song">+ Add song</button>
+      </div>
+    </div>
+    <div class="filter-bar" id="filter-bar">
+      <span class="label">Show:</span>
+      <label class="filter-chip active"><input type="checkbox" data-field="artist" checked> Artist</label>
+      <label class="filter-chip active"><input type="checkbox" data-field="country" checked> Country</label>
+      <label class="filter-chip active"><input type="checkbox" data-field="style" checked> Music style</label>
+      <button class="btn ghost small" id="btn-add-genre" style="margin-left:-6px">+ style</button>
+      <label class="filter-chip active"><input type="checkbox" data-field="version" checked> Customized version</label>
+      <label class="filter-chip active"><input type="checkbox" data-field="comments" checked> Comments</label>
+    </div>
+    <div id="sets-container">
+      <div class="status">Loading setlist…</div>
+    </div>
   </div>
 
-  <footer class="directory">
-    <div class="entry">
-      <h3>AMBRA Live Productions</h3>
-      <p>by Zare Enterprises</p>
-      <p><a href="mailto:info@ambralp.com">info@ambralp.com</a></p>
-      <p>Boston, US</p>
+  <div id="view-instrumentation" style="display:none">
+    <div class="set-block">
+      <div class="instr-head">
+        <span>Song</span><span>Tonality</span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
+      </div>
+      <div id="instr-container"></div>
     </div>
-  </footer>
+  </div>
 
+  <div id="view-band" style="display:none">
+    <div class="toolbar">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint)" id="band-count">—</span>
+      <button class="btn" id="btn-add-band">+ Add band member</button>
+    </div>
+    <div class="set-block">
+      <div class="band-head">
+        <span>Instrument</span><span>Artist</span><span>Comments</span><span></span>
+      </div>
+      <div id="band-container"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-faint);margin-top:10px">Tip: use <b>Singer</b> as the Instrument for vocalists — that's what makes them appear in the Singer dropdown under Instrumentation.</p>
+  </div>
+
+  <div id="view-artist" style="display:none" class="chart-wrap">
+    <h3>Songs by artist</h3>
+    <canvas id="chart-artist" height="260"></canvas>
+  </div>
+
+  <div id="view-country" style="display:none" class="chart-wrap">
+    <h3>Artists by country of origin</h3>
+    <canvas id="chart-country" height="260"></canvas>
+  </div>
+
+  <div id="view-singer" style="display:none" class="chart-wrap">
+    <h3>Songs by singer</h3>
+    <canvas id="chart-singer" height="260"></canvas>
+  </div>
+
+  <div id="view-emotion" style="display:none" class="chart-wrap">
+    <h3>Emotion distribution</h3>
+    <canvas id="chart-emotion" height="260"></canvas>
+  </div>
+
+</main>
+
+<!-- Add/Edit Song Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modal-title">Add song</h2>
+    <input type="hidden" id="song-id">
+    <div class="field"><label>Song</label><input id="f-name" placeholder="Song title"></div>
+    <div class="row2">
+      <div class="field"><label>Original artist</label><input id="f-artist"></div>
+      <div class="field"><label>Artist's country</label><input id="f-country"></div>
+    </div>
+    <div class="field">
+      <label>Emotion</label>
+      <select id="f-emotion">
+        <option value="baja">Low</option>
+        <option value="media" selected>Medium</option>
+        <option value="alta">High</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Music style</label>
+        <select id="f-genero"><option value="">— Select —</option></select>
+      </div>
+      <div class="field"><label>Arranger (optional)</label><input id="f-arranger"></div>
+    </div>
+    <div class="field"><label>Customized version</label><input id="f-youtube" placeholder="https://..."></div>
+    <div class="field"><label>Comments</label><textarea id="f-comments"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btn-cancel">Cancel</button>
+      <button class="btn danger" id="btn-delete" style="display:none">Delete</button>
+      <button class="btn" id="btn-save">Save</button>
+    </div>
+  </div>
 </div>
+
+<!-- Create Set Modal -->
+<div class="overlay" id="overlay-set">
+  <div class="modal">
+    <h2>Create new set</h2>
+    <div class="field"><label>Set name</label><input id="set-name" placeholder="SET 1, Cocktail Hour, Speeches…"></div>
+    <div class="field"><label>Select songs (in the order you want them)</label></div>
+    <div class="set-builder-list" id="set-builder-list"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btn-set-cancel">Cancel</button>
+      <button class="btn confirm" id="btn-set-confirm" disabled>Select songs first</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Band Member Modal -->
+<div class="overlay" id="overlay-band">
+  <div class="modal">
+    <h2 id="band-modal-title">Add band member</h2>
+    <input type="hidden" id="band-id">
+    <div class="row2">
+      <div class="field"><label>Instrument</label><input id="bf-instrument" list="instrument-options" placeholder="e.g. Trumpet, Singer"></div>
+      <div class="field"><label>Second instrument (optional)</label><input id="bf-second" list="instrument-options"></div>
+    </div>
+    <div class="field"><label>Artist</label><input id="bf-artist" placeholder="Full name"></div>
+    <div class="field"><label>Comments</label><textarea id="bf-comments"></textarea></div>
+    <datalist id="instrument-options"></datalist>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btn-band-cancel">Cancel</button>
+      <button class="btn danger" id="btn-band-delete" style="display:none">Delete</button>
+      <button class="btn" id="btn-band-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+
+const headers = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+let songs = [];
+let sets = [];
+let band = [];
+let songInstruments = []; // {id, song_id, instrument}
+let genres = [];
+let charts = {};
+let visibleFields = { artist:true, country:true, style:true, version:true, comments:true };
+let openPanel = null; // currently open expandable checklist
+
+function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeAttr(str){ return escapeHtml(str); }
+
+async function fetchSongs(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/songs?select=*&order=song_order.asc.nullslast`, { headers });
+  songs = res.ok ? await res.json() : [];
+}
+async function fetchSets(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets?select=*&order=set_order.asc.nullslast`, { headers });
+  sets = res.ok ? await res.json() : [];
+}
+async function fetchBand(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/band?select=*&order=artist_name.asc`, { headers });
+  band = res.ok ? await res.json() : [];
+}
+async function fetchSongInstruments(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/song_instruments?select=*`, { headers });
+  songInstruments = res.ok ? await res.json() : [];
+}
+async function fetchGenres(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/genres?select=*&order=name.asc`, { headers });
+  genres = res.ok ? await res.json() : [];
+}
+
+function instrumentOptions(){
+  const set = new Set();
+  band.forEach(b => { if(b.instrument) set.add(b.instrument.trim()); if(b.second_instrument) set.add(b.second_instrument.trim()); });
+  return Array.from(set).sort();
+}
+function singerOptions(){
+  return band.filter(b => (b.instrument||'').trim().toLowerCase() === 'singer').map(b => b.artist_name);
+}
+
+/* ---------- SETLIST TAB ---------- */
+
+function groupBySet(){
+  const groups = {};
+  sets.forEach(s => { groups[s.set_number] = []; });
+  const unassigned = [];
+  songs.forEach(s => {
+    if(s.set_number && groups.hasOwnProperty(s.set_number)) groups[s.set_number].push(s);
+    else unassigned.push(s);
+  });
+  return { groups, unassigned };
+}
+
+function renderSongRow(song, containerSetName){
+  const row = document.createElement('div');
+  row.className = 'song-row';
+  row.draggable = true;
+  row.dataset.songId = song.id;
+  row.dataset.origin = containerSetName;
+  const emo = song.emotion_level || 'media';
+  row.innerHTML = `
+    <div class="dimmer ${emo}"><i></i></div>
+    <div class="song-main">
+      <p class="title">${escapeHtml(song.song_name || 'Untitled')}</p>
+      <div class="meta">
+        ${visibleFields.artist && song.artist ? `<span><b>${escapeHtml(song.artist)}</b></span>` : ''}
+        ${visibleFields.country && song.artist_country ? `<span>${escapeHtml(song.artist_country)}</span>` : ''}
+        ${visibleFields.style && song.genero ? `<span>${escapeHtml(song.genero)}</span>` : ''}
+        ${visibleFields.version && song.youtube_link ? `<span><a href="${escapeAttr(song.youtube_link)}" target="_blank" style="color:var(--gold-bright)">customized version ↗</a></span>` : ''}
+        ${visibleFields.comments && song.comments ? `<span>${escapeHtml(song.comments)}</span>` : ''}
+      </div>
+    </div>
+    <div class="row-actions">
+      <button class="btn ghost small edit-btn" data-id="${song.id}">Edit</button>
+    </div>
+  `;
+  return row;
+}
+
+function renderTable(){
+  const container = document.getElementById('sets-container');
+  document.getElementById('song-count').textContent = `${songs.length} SONGS`;
+  container.innerHTML = '';
+  const { groups, unassigned } = groupBySet();
+
+  // Unassigned pool — always visible so songs can be dragged from/into it
+  const poolBlock = document.createElement('div');
+  poolBlock.className = 'set-block pool';
+  poolBlock.innerHTML = `<div class="set-head"><span class="name muted">Unassigned songs</span></div><div class="rows" data-set=""></div>`;
+  const poolRows = poolBlock.querySelector('.rows');
+  unassigned.forEach(song => poolRows.appendChild(renderSongRow(song, '')));
+  container.appendChild(poolBlock);
+
+  Object.keys(groups).forEach(setName => {
+    const setInfo = sets.find(s => s.set_number === setName);
+    const block = document.createElement('div');
+    block.className = 'set-block';
+    block.innerHTML = `
+      <div class="set-head">
+        <span class="name">${escapeHtml(setName)}</span>
+        <span class="dur">
+          <input type="text" data-set="${escapeAttr(setName)}" data-field="set_time" class="time-input" placeholder="time" value="${setInfo?.set_time ? setInfo.set_time.slice(0,5) : ''}">
+          <input type="text" data-set="${escapeAttr(setName)}" data-field="set_duration" placeholder="duration" value="${setInfo?.set_duration || ''}">
+          ${setInfo ? `<button class="del-set" data-set-id="${setInfo.id}" title="Delete set">✕</button>` : ''}
+        </span>
+      </div>
+      <div class="rows" data-set="${escapeAttr(setName)}"></div>
+    `;
+    const rowsDiv = block.querySelector('.rows');
+    groups[setName].forEach(song => rowsDiv.appendChild(renderSongRow(song, setName)));
+    container.appendChild(block);
+  });
+
+  document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openModal(songs.find(s => s.id === b.dataset.id));
+  }));
+  document.querySelectorAll('.set-head input').forEach(inp => {
+    inp.addEventListener('change', async () => { await saveSetField(inp.dataset.set, inp.dataset.field, inp.value); });
+  });
+  document.querySelectorAll('.del-set').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this set? Songs inside it will become unassigned.')) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${btn.dataset.setId}`, { method:'DELETE', headers });
+      await reload();
+    });
+  });
+
+  wireDragAndDrop();
+}
+
+async function saveSetField(setName, field, value){
+  const existing = sets.find(s => s.set_number === setName);
+  if(existing){
+    await fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${existing.id}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: value }) });
+  } else {
+    await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: setName, set_order: sets.length+1, [field]: value }) });
+  }
+  await fetchSets();
+}
+
+/* Drag and drop: a song already in a set can only be reordered within that same set.
+   An unassigned song can be dropped anywhere, including into a set. */
+let dragState = null;
+
+function wireDragAndDrop(){
+  document.querySelectorAll('.song-row').forEach(row => {
+    row.addEventListener('dragstart', (e) => {
+      dragState = { songId: row.dataset.songId, origin: row.dataset.origin };
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.song-row').forEach(r => r.classList.remove('drop-before','drop-after'));
+    });
+    row.addEventListener('dragover', (e) => {
+      if(!dragState) return;
+      const containerSet = row.closest('.rows').dataset.set;
+      const allowed = dragState.origin === '' || containerSet === dragState.origin;
+      if(!allowed) return;
+      e.preventDefault();
+      document.querySelectorAll('.song-row').forEach(r => r.classList.remove('drop-before','drop-after'));
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height/2;
+      row.classList.add(before ? 'drop-before' : 'drop-after');
+    });
+    row.addEventListener('drop', async (e) => {
+      if(!dragState) return;
+      const containerSet = row.closest('.rows').dataset.set;
+      const allowed = dragState.origin === '' || containerSet === dragState.origin;
+      if(!allowed) return;
+      e.preventDefault();
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height/2;
+      await handleDrop(dragState.songId, containerSet, row.dataset.songId, before);
+    });
+  });
+
+  document.querySelectorAll('.rows').forEach(container => {
+    container.addEventListener('dragover', (e) => {
+      if(!dragState) return;
+      const containerSet = container.dataset.set;
+      const allowed = dragState.origin === '' || containerSet === dragState.origin;
+      if(allowed) e.preventDefault();
+    });
+    container.addEventListener('drop', async (e) => {
+      if(!dragState) return;
+      if(e.target !== container) return; // handled by row-level drop
+      const containerSet = container.dataset.set;
+      const allowed = dragState.origin === '' || containerSet === dragState.origin;
+      if(!allowed) return;
+      e.preventDefault();
+      await handleDrop(dragState.songId, containerSet, null, false);
+    });
+  });
+}
+
+async function handleDrop(songId, targetSet, refSongId, before){
+  const { groups, unassigned } = groupBySet();
+  const targetList = targetSet === '' ? unassigned : groups[targetSet];
+  if(!targetList) return;
+  // remove dragged song from wherever it currently sits in targetList (if reordering within same list)
+  let list = targetList.filter(s => s.id !== songId);
+  const draggedSong = songs.find(s => s.id === songId);
+  if(!draggedSong) return;
+  let insertIndex = list.length;
+  if(refSongId){
+    const idx = list.findIndex(s => s.id === refSongId);
+    if(idx !== -1) insertIndex = before ? idx : idx + 1;
+  }
+  list.splice(insertIndex, 0, draggedSong);
+
+  const updates = list.map((s, i) => ({ id: s.id, song_order: i + 1, set_number: targetSet || null }));
+  await Promise.all(updates.map(u =>
+    fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${u.id}`, {
+      method:'PATCH', headers, body: JSON.stringify({ song_order: u.song_order, set_number: u.set_number })
+    })
+  ));
+  dragState = null;
+  await reload();
+}
+
+document.querySelectorAll('.filter-chip input').forEach(chk => {
+  chk.addEventListener('change', () => {
+    visibleFields[chk.dataset.field] = chk.checked;
+    chk.closest('.filter-chip').classList.toggle('active', chk.checked);
+    renderTable();
+  });
+});
+
+document.getElementById('btn-add-genre').addEventListener('click', async () => {
+  const name = prompt('New music style (e.g. Salsa, Merengue, Bachata):');
+  if(!name || !name.trim()) return;
+  if(genres.find(g => g.name.toLowerCase() === name.trim().toLowerCase())){ alert('That style already exists.'); return; }
+  await fetch(`${SUPABASE_URL}/rest/v1/genres`, { method:'POST', headers, body: JSON.stringify({ name: name.trim() }) });
+  await fetchGenres();
+  alert(`"${name.trim()}" added. Pick it from the dropdown when adding or editing a song.`);
+});
+
+/* ---------- CREATE SET MODAL ---------- */
+const overlaySet = document.getElementById('overlay-set');
+let setBuilderOrder = [];
+
+document.getElementById('btn-new-set').addEventListener('click', () => {
+  setBuilderOrder = [];
+  document.getElementById('set-name').value = '';
+  const { unassigned } = groupBySet();
+  const list = document.getElementById('set-builder-list');
+  if(unassigned.length === 0){
+    list.innerHTML = '<div class="none" style="padding:14px;color:var(--text-faint);font-size:12.5px;">No unassigned songs available. Add songs first, or remove them from other sets by dragging them out — wait, songs in a set can only move within it. Add new songs from Setlist to build a fresh set.</div>';
+  } else {
+    list.innerHTML = unassigned.map(s => `
+      <label>
+        <input type="checkbox" data-song-id="${s.id}">
+        <span class="order-badge" style="display:none"></span>
+        <span>${escapeHtml(s.song_name || 'Untitled')}</span>
+      </label>
+    `).join('');
+  }
+  updateSetConfirmBtn();
+  overlaySet.classList.add('open');
+});
+
+document.getElementById('set-builder-list').addEventListener('change', (e) => {
+  if(e.target.type !== 'checkbox') return;
+  const id = e.target.dataset.songId;
+  const badge = e.target.nextElementSibling;
+  if(e.target.checked){
+    setBuilderOrder.push(id);
+    badge.textContent = setBuilderOrder.length;
+    badge.style.display = 'inline-flex';
+  } else {
+    setBuilderOrder = setBuilderOrder.filter(x => x !== id);
+    badge.style.display = 'none';
+    // renumber remaining badges
+    document.querySelectorAll('#set-builder-list input[type=checkbox]:checked').forEach(cb => {
+      const idx = setBuilderOrder.indexOf(cb.dataset.songId);
+      cb.nextElementSibling.textContent = idx + 1;
+    });
+  }
+  updateSetConfirmBtn();
+});
+
+function updateSetConfirmBtn(){
+  const btn = document.getElementById('btn-set-confirm');
+  const hasName = document.getElementById('set-name').value.trim().length > 0;
+  const hasSongs = setBuilderOrder.length > 0;
+  if(hasSongs && hasName){
+    btn.disabled = false;
+    btn.textContent = `Confirm — group ${setBuilderOrder.length} song${setBuilderOrder.length>1?'s':''}`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = hasSongs ? 'Name your set' : 'Select songs first';
+  }
+}
+document.getElementById('set-name').addEventListener('input', updateSetConfirmBtn);
+document.getElementById('btn-set-cancel').addEventListener('click', () => overlaySet.classList.remove('open'));
+overlaySet.addEventListener('click', (e) => { if(e.target === overlaySet) overlaySet.classList.remove('open'); });
+
+document.getElementById('btn-set-confirm').addEventListener('click', async () => {
+  const name = document.getElementById('set-name').value.trim();
+  if(!name || setBuilderOrder.length === 0) return;
+  if(sets.find(s => s.set_number === name)){ alert('A set with that name already exists.'); return; }
+  await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: sets.length+1 }) });
+  await Promise.all(setBuilderOrder.map((id, i) =>
+    fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, {
+      method:'PATCH', headers, body: JSON.stringify({ set_number: name, song_order: i+1 })
+    })
+  ));
+  overlaySet.classList.remove('open');
+  await reload();
+});
+
+/* ---------- ADD/EDIT SONG MODAL ---------- */
+const overlay = document.getElementById('overlay');
+function populateGenreSelect(selected){
+  const sel = document.getElementById('f-genero');
+  let opts = genres.map(g => g.name);
+  if(selected && !opts.includes(selected)) opts.push(selected); // preserve legacy free-text values
+  sel.innerHTML = '<option value="">— Select —</option>' +
+    opts.map(name => `<option value="${escapeAttr(name)}" ${name === selected ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
+}
+function openModal(song){
+  document.getElementById('modal-title').textContent = song ? 'Edit song' : 'Add song';
+  document.getElementById('song-id').value = song?.id || '';
+  document.getElementById('f-name').value = song?.song_name || '';
+  document.getElementById('f-artist').value = song?.artist || '';
+  document.getElementById('f-country').value = song?.artist_country || '';
+  document.getElementById('f-emotion').value = song?.emotion_level || 'media';
+  populateGenreSelect(song?.genero || '');
+  document.getElementById('f-arranger').value = song?.arranger || '';
+  document.getElementById('f-youtube').value = song?.youtube_link || '';
+  document.getElementById('f-comments').value = song?.comments || '';
+  document.getElementById('btn-delete').style.display = song ? 'inline-block' : 'none';
+  overlay.classList.add('open');
+}
+function closeModal(){ overlay.classList.remove('open'); }
+
+document.getElementById('btn-add-song').addEventListener('click', () => openModal(null));
+document.getElementById('btn-cancel').addEventListener('click', closeModal);
+overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
+
+document.getElementById('btn-save').addEventListener('click', async () => {
+  const id = document.getElementById('song-id').value;
+  const payload = {
+    song_name: document.getElementById('f-name').value || null,
+    artist: document.getElementById('f-artist').value || null,
+    artist_country: document.getElementById('f-country').value || null,
+    emotion_level: document.getElementById('f-emotion').value,
+    genero: document.getElementById('f-genero').value || null,
+    arranger: document.getElementById('f-arranger').value || null,
+    youtube_link: document.getElementById('f-youtube').value || null,
+    comments: document.getElementById('f-comments').value || null,
+  };
+  if(!payload.song_name){ alert('Please add a song title.'); return; }
+
+  if(id){
+    await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+  } else {
+    payload.song_order = songs.length + 1;
+    payload.set_number = null;
+    await fetch(`${SUPABASE_URL}/rest/v1/songs`, { method:'POST', headers, body: JSON.stringify(payload) });
+  }
+  closeModal();
+  await reload();
+});
+
+document.getElementById('btn-delete').addEventListener('click', async () => {
+  const id = document.getElementById('song-id').value;
+  if(!id) return;
+  if(!confirm('Delete this song from the setlist?')) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, { method:'DELETE', headers });
+  closeModal();
+  await reload();
+});
+
+/* ---------- INSTRUMENTATION TAB ---------- */
+function closeOpenPanel(){
+  if(openPanel && openPanel.parentNode) openPanel.parentNode.removeChild(openPanel);
+  openPanel = null;
+}
+document.addEventListener('click', (e) => {
+  if(openPanel && !openPanel.contains(e.target) && !e.target.classList.contains('condensed-btn')){
+    closeOpenPanel();
+  }
+});
+
+function renderInstrumentation(){
+  const container = document.getElementById('instr-container');
+  if(songs.length === 0){
+    container.innerHTML = '<div class="empty-note" style="border:none;">No songs yet. Add songs from the Setlist tab first.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  songs.forEach(song => {
+    const row = document.createElement('div');
+    row.className = 'instr-row';
+
+    const currentSingers = (song.singers || '').split('/').map(s => s.trim()).filter(Boolean);
+    const currentInstruments = songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument);
+
+    row.innerHTML = `
+      <div class="song-label">${escapeHtml(song.song_name || 'Untitled')}<small>${escapeHtml(song.set_number || 'Unassigned')}</small></div>
+      <input type="text" data-id="${song.id}" data-field="tonality" value="${escapeAttr(song.tonality || '')}" placeholder="Original (C)">
+      <div class="expandable" data-kind="singers" data-song-id="${song.id}">
+        <button type="button" class="condensed-btn">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button>
+      </div>
+      <div class="expandable" data-kind="instruments" data-song-id="${song.id}">
+        <button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button>
+      </div>
+      <input type="text" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="Special guest">
+    `;
+    container.appendChild(row);
+  });
+
+  container.querySelectorAll('input[type=text]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${inp.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
+      });
+      await fetchSongs();
+    });
+  });
+
+  container.querySelectorAll('.condensed-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wrap = btn.closest('.expandable');
+      if(openPanel && openPanel.dataset.songId === wrap.dataset.songId && openPanel.dataset.kind === wrap.dataset.kind){
+        closeOpenPanel(); return;
+      }
+      closeOpenPanel();
+      openChecklistPanel(wrap);
+    });
+  });
+}
+
+function openChecklistPanel(wrap){
+  const songId = wrap.dataset.songId;
+  const kind = wrap.dataset.kind;
+  const song = songs.find(s => s.id === songId);
+  const panel = document.createElement('div');
+  panel.className = 'checklist-panel';
+  panel.dataset.songId = songId;
+  panel.dataset.kind = kind;
+
+  if(kind === 'singers'){
+    const options = singerOptions();
+    const current = new Set((song.singers || '').split('/').map(s => s.trim()).filter(Boolean));
+    panel.innerHTML = options.length ? options.map(name => `
+      <label><input type="checkbox" value="${escapeAttr(name)}" ${current.has(name) ? 'checked' : ''}> ${escapeHtml(name)}</label>
+    `).join('') : '<div class="none">No band members marked as Singer yet. Add them in the Band tab.</div>';
+    panel.addEventListener('change', async (e) => {
+      if(e.target.type !== 'checkbox') return;
+      const checked = Array.from(panel.querySelectorAll('input:checked')).map(i => i.value);
+      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${songId}`, {
+        method:'PATCH', headers, body: JSON.stringify({ singers: checked.join('/') || null })
+      });
+      await fetchSongs();
+      openPanel = null;
+      renderInstrumentation();
+    });
+  } else {
+    const options = instrumentOptions();
+    const current = new Set(songInstruments.filter(si => si.song_id === songId).map(si => si.instrument));
+    panel.innerHTML = options.length ? options.map(name => `
+      <label><input type="checkbox" value="${escapeAttr(name)}" ${current.has(name) ? 'checked' : ''}> ${escapeHtml(name)}</label>
+    `).join('') : '<div class="none">No instruments defined yet. Add band members in the Band tab first.</div>';
+    panel.addEventListener('change', async (e) => {
+      if(e.target.type !== 'checkbox') return;
+      const instrument = e.target.value;
+      if(e.target.checked){
+        await fetch(`${SUPABASE_URL}/rest/v1/song_instruments`, { method:'POST', headers, body: JSON.stringify({ song_id: songId, instrument }) });
+      } else {
+        const existing = songInstruments.find(si => si.song_id === songId && si.instrument === instrument);
+        if(existing) await fetch(`${SUPABASE_URL}/rest/v1/song_instruments?id=eq.${existing.id}`, { method:'DELETE', headers });
+      }
+      await fetchSongInstruments();
+      openPanel = null;
+      renderInstrumentation();
+    });
+  }
+
+  wrap.appendChild(panel);
+  openPanel = panel;
+}
+
+/* ---------- BAND TAB ---------- */
+const overlayBand = document.getElementById('overlay-band');
+
+function renderBand(){
+  document.getElementById('band-count').textContent = `${band.length} MEMBERS`;
+  const list = document.getElementById('instrument-options');
+  list.innerHTML = instrumentOptions().map(o => `<option value="${escapeAttr(o)}">`).join('');
+
+  const container = document.getElementById('band-container');
+  if(band.length === 0){
+    container.innerHTML = '<div class="empty-note" style="border:none;">No band members yet. Click "Add band member" to start.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  band.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'band-row';
+    row.innerHTML = `
+      <span class="instrument-cell">${escapeHtml(b.instrument || '—')}${b.second_instrument ? `<span class="second">${escapeHtml(b.second_instrument)}</span>` : ''}</span>
+      <span>${escapeHtml(b.artist_name || '—')}</span>
+      <span style="color:var(--text-muted)">${escapeHtml(b.comments || '')}</span>
+      <button class="edit-pencil" data-id="${b.id}" title="Edit">✎</button>
+    `;
+    row.querySelector('.edit-pencil').addEventListener('click', () => openBandModal(b));
+    container.appendChild(row);
+  });
+}
+
+function openBandModal(b){
+  document.getElementById('band-modal-title').textContent = b ? 'Edit band member' : 'Add band member';
+  document.getElementById('band-id').value = b?.id || '';
+  document.getElementById('bf-instrument').value = b?.instrument || '';
+  document.getElementById('bf-second').value = b?.second_instrument || '';
+  document.getElementById('bf-artist').value = b?.artist_name || '';
+  document.getElementById('bf-comments').value = b?.comments || '';
+  document.getElementById('btn-band-delete').style.display = b ? 'inline-block' : 'none';
+  overlayBand.classList.add('open');
+}
+document.getElementById('btn-add-band').addEventListener('click', () => openBandModal(null));
+document.getElementById('btn-band-cancel').addEventListener('click', () => overlayBand.classList.remove('open'));
+overlayBand.addEventListener('click', (e) => { if(e.target === overlayBand) overlayBand.classList.remove('open'); });
+
+document.getElementById('btn-band-save').addEventListener('click', async () => {
+  const id = document.getElementById('band-id').value;
+  const payload = {
+    instrument: document.getElementById('bf-instrument').value || null,
+    second_instrument: document.getElementById('bf-second').value || null,
+    artist_name: document.getElementById('bf-artist').value || null,
+    comments: document.getElementById('bf-comments').value || null,
+  };
+  if(!payload.instrument || !payload.artist_name){ alert('Instrument and Artist are required.'); return; }
+  if(id){
+    await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+  } else {
+    await fetch(`${SUPABASE_URL}/rest/v1/band`, { method:'POST', headers, body: JSON.stringify(payload) });
+  }
+  overlayBand.classList.remove('open');
+  await fetchBand();
+  renderBand();
+});
+document.getElementById('btn-band-delete').addEventListener('click', async () => {
+  const id = document.getElementById('band-id').value;
+  if(!id) return;
+  if(!confirm('Remove this band member?')) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${id}`, { method:'DELETE', headers });
+  overlayBand.classList.remove('open');
+  await fetchBand();
+  renderBand();
+});
+
+/* ---------- TABS ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['table','instrumentation','band','artist','country','singer','emotion'].forEach(v => {
+      document.getElementById('view-'+v).style.display = (v === btn.dataset.tab) ? 'block' : 'none';
+    });
+    if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
+    else if(btn.dataset.tab === 'band') renderBand();
+    else if(!['table'].includes(btn.dataset.tab)) renderChart(btn.dataset.tab);
+  });
+});
+
+/* ---------- CHARTS ---------- */
+function countBy(field){
+  const counts = {};
+  songs.forEach(s => {
+    let val = s[field];
+    if(!val) return;
+    val.split('/').forEach(v => {
+      v = v.trim();
+      if(!v) return;
+      counts[v] = (counts[v]||0) + 1;
+    });
+  });
+  return counts;
+}
+
+function renderChart(kind){
+  const cfgMap = {
+    artist: { field:'artist', canvas:'chart-artist', color: '#D9722C' },
+    country: { field:'artist_country', canvas:'chart-country', color: '#C23B3B' },
+    singer: { field:'singers', canvas:'chart-singer', color: '#F2914D' },
+  };
+  if(kind === 'emotion'){
+    const counts = { baja:0, media:0, alta:0 };
+    songs.forEach(s => { const e = s.emotion_level || 'media'; counts[e] = (counts[e]||0)+1; });
+    const ctx = document.getElementById('chart-emotion');
+    if(charts.emotion) charts.emotion.destroy();
+    charts.emotion = new Chart(ctx, {
+      type:'doughnut',
+      data:{ labels:['Low','Medium','High'], datasets:[{ data:[counts.baja,counts.media,counts.alta], backgroundColor:['#6E2A2A','#C23B3B','#FF3B30'], borderWidth:0 }] },
+      options:{ plugins:{ legend:{ labels:{ color:'#F3ECE1', font:{family:'Inter'} } } } }
+    });
+    return;
+  }
+  const cfg = cfgMap[kind];
+  const counts = countBy(cfg.field);
+  const ctx = document.getElementById(cfg.canvas);
+  if(charts[kind]) charts[kind].destroy();
+  charts[kind] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:Object.keys(counts), datasets:[{ label:'Songs', data:Object.values(counts), backgroundColor:cfg.color, borderRadius:5 }] },
+    options:{
+      indexAxis:'y',
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ ticks:{ color:'#B4A492', font:{family:'IBM Plex Mono', size:11} }, grid:{ color:'#3a2e22' } },
+        y:{ ticks:{ color:'#F3ECE1', font:{family:'Inter', size:12} }, grid:{ display:false } }
+      }
+    }
+  });
+}
+
+async function reload(){
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres()]);
+  renderTable();
+}
+reload();
+</script>
 </body>
 </html>

@@ -19,23 +19,26 @@
 
 <nav class="tabs" id="tabs">
   <button class="tab-btn primary active" data-tab="table">Setlist</button>
-  <button class="tab-btn primary" data-tab="instrumentation">Instrumentation</button>
+  <button class="tab-btn primary" data-tab="instrumentation">Lineup</button>
   <button class="tab-btn primary" data-tab="band">Band</button>
   <button class="tab-btn primary" data-tab="schedule">Schedule</button>
-  <span class="tab-divider"></span>
-  <button class="tab-btn viz" data-tab="artist">By Artist</button>
-  <button class="tab-btn viz" data-tab="country">By Country</button>
-  <button class="tab-btn viz" data-tab="singer">By Singer</button>
-  <button class="tab-btn viz" data-tab="emotion">By Emotion</button>
 </nav>
 
 <main>
 
   <div id="view-table">
     <div class="toolbar">
-      <span class="mono-label" id="song-count">—</span>
+      <div class="view-by-bar">
+        <span class="mono-label">View by:</span>
+        <button class="pill active" data-view="table">☰ Setlist</button>
+        <button class="pill" data-view="artist">🎤 Artist</button>
+        <button class="pill" data-view="country">🌐 Country</button>
+        <button class="pill" data-view="genre">🎵 Genre</button>
+        <button class="pill" data-view="emotion">♡ Emotion</button>
+      </div>
       <div class="toolbar-actions">
         <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="btn-new-set">+ Create new set</button>
           <button class="btn" id="btn-add-song">+ Add song</button>
         </div>
         <div class="filters-anchor">
@@ -44,11 +47,14 @@
             <div class="filter-section">
               <span class="label">Show:</span>
               <div class="filter-chips-wrap">
-                <label class="filter-chip active"><input type="checkbox" data-field="arranger" checked> Arranger</label>
-                <label class="filter-chip active"><input type="checkbox" data-field="tonality" checked> Tonality</label>
-                <label class="filter-chip active"><input type="checkbox" data-field="version" checked> Customized version</label>
-                <label class="filter-chip active"><input type="checkbox" data-field="guests" checked> Special guest</label>
-                <label class="filter-chip active"><input type="checkbox" data-field="comments" checked> Comments</label>
+                <label class="filter-chip active"><input type="checkbox" data-field="song" checked> Song</label>
+                <label class="filter-chip active"><input type="checkbox" data-field="genre" checked> Genre</label>
+                <label class="filter-chip active"><input type="checkbox" data-field="country" checked> Country</label>
+                <label class="filter-chip active"><input type="checkbox" data-field="duration" checked> Duration</label>
+                <label class="filter-chip"><input type="checkbox" data-field="arranger"> Arranger</label>
+                <label class="filter-chip"><input type="checkbox" data-field="version"> Customized version</label>
+                <label class="filter-chip"><input type="checkbox" data-field="guests"> Special guest</label>
+                <label class="filter-chip"><input type="checkbox" data-field="comments"> Comments</label>
               </div>
             </div>
             <div class="filter-section">
@@ -60,15 +66,46 @@
         </div>
       </div>
     </div>
-    <div id="sets-container">
-      <div class="status">Loading setlist…</div>
+
+    <div id="setlist-table-view">
+      <div id="sets-container">
+        <div class="status">Loading setlist…</div>
+      </div>
+    </div>
+
+    <div id="setlist-chart-view" style="display:none">
+      <div id="chart-artist-wrap" class="chart-wrap" style="display:none">
+        <h3>Songs by artist</h3>
+        <canvas id="chart-artist" height="140"></canvas>
+        <div class="chart-list" id="list-artist"></div>
+      </div>
+      <div id="chart-country-wrap" class="chart-wrap" style="display:none">
+        <h3>Artists by country of origin</h3>
+        <canvas id="chart-country" height="140"></canvas>
+        <div class="chart-list" id="list-country"></div>
+      </div>
+      <div id="chart-genre-wrap" class="chart-wrap" style="display:none">
+        <h3>Songs by genre</h3>
+        <canvas id="chart-genre" height="140"></canvas>
+        <div class="chart-list" id="list-genre"></div>
+      </div>
+      <div id="chart-emotion-wrap" style="display:none">
+        <div class="chart-wrap">
+          <h3>Emotional arc of the show</h3>
+          <canvas id="chart-emotion-timeline" height="90"></canvas>
+        </div>
+        <div class="chart-wrap small-chart">
+          <h3>Emotion distribution</h3>
+          <canvas id="chart-emotion" height="60"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 
   <div id="view-instrumentation" style="display:none">
     <div class="set-block">
       <div class="instr-head">
-        <span>Song</span><span>Tonality</span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
+        <span>Song</span><span>Tonality<span class="header-note">Original</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
       </div>
       <div id="instr-container"></div>
     </div>
@@ -93,43 +130,13 @@
 
   <div id="view-schedule" style="display:none">
     <div class="toolbar">
-      <span class="mono-label">Run of show — 8:00am to midnight</span>
-      <button class="btn" id="btn-new-set-schedule">+ Create new set</button>
+      <span class="mono-label">Run of show — read-only view of your Setlist times</span>
     </div>
-    <div class="schedule-wrap">
+    <div class="schedule-wrap compact">
       <div class="schedule-ruler" id="schedule-ruler"></div>
       <div class="schedule-track" id="schedule-track"></div>
     </div>
     <div id="schedule-unscheduled"></div>
-  </div>
-
-  <div id="view-artist" style="display:none" class="chart-wrap">
-    <h3>Songs by artist</h3>
-    <canvas id="chart-artist" height="140"></canvas>
-    <div class="chart-list" id="list-artist"></div>
-  </div>
-
-  <div id="view-country" style="display:none" class="chart-wrap">
-    <h3>Artists by country of origin</h3>
-    <canvas id="chart-country" height="140"></canvas>
-    <div class="chart-list" id="list-country"></div>
-  </div>
-
-  <div id="view-singer" style="display:none" class="chart-wrap">
-    <h3>Songs by singer</h3>
-    <canvas id="chart-singer" height="140"></canvas>
-    <div class="chart-list" id="list-singer"></div>
-  </div>
-
-  <div id="view-emotion" style="display:none">
-    <div class="chart-wrap">
-      <h3>Emotional arc of the show</h3>
-      <canvas id="chart-emotion-timeline" height="90"></canvas>
-    </div>
-    <div class="chart-wrap small-chart">
-      <h3>Emotion distribution</h3>
-      <canvas id="chart-emotion" height="60"></canvas>
-    </div>
   </div>
 
 </main>
@@ -216,7 +223,7 @@ let songInstruments = [];
 let genres = [];
 let instrumentCatalog = [];
 let charts = {};
-let visibleFields = { arranger:true, tonality:true, version:true, guests:true, comments:true };
+let visibleFields = { song:true, genre:true, country:true, duration:true, arranger:false, version:false, guests:false, comments:false };
 let openPanel = null;
 let singerSortOrder = [];
 
@@ -269,6 +276,14 @@ function groupBySet(){
   return { groups, unassigned };
 }
 
+function getActiveInfoColumns(){
+  return [
+    { key:'genre', label:'Genre' },
+    { key:'country', label:'Country' },
+    { key:'duration', label:'Duration' },
+  ].filter(c => visibleFields[c.key]);
+}
+
 function renderSongRow(song, containerSetName, draggableOn){
   const row = document.createElement('div');
   row.className = 'song-row';
@@ -276,41 +291,36 @@ function renderSongRow(song, containerSetName, draggableOn){
   row.dataset.songId = song.id;
   row.dataset.origin = containerSetName;
   const emo = song.emotion_level || 'media';
-  const singersArr = (song.singers || '').split('/').map(s => s.trim()).filter(Boolean);
-  let singerColorCss = '', singerBorderCss = '';
-  if(singersArr.length > 1){
-    singerColorCss = hexToRgba(MULTI_SINGER_COLOR, 0.22);
-    singerBorderCss = MULTI_SINGER_COLOR;
-  } else if(singersArr.length === 1){
-    singerColorCss = hexToRgba(singerColor(singersArr[0]), 0.22);
-    singerBorderCss = singerColor(singersArr[0]);
-  }
-  const singerLabel = singersArr.length ? singersArr.join(', ') : 'Select singer(s)';
-  const tonalityDisplay = formatTonality(song);
+  const activeCols = getActiveInfoColumns();
+  const gridCols = `2fr repeat(${activeCols.length || 1}, 1fr)`;
+
+  const cellsHtml = activeCols.map(c => {
+    if(c.key === 'genre'){
+      return `<div class="cell combobox-field small-combo">
+        <input class="inline-edit genre-edit" data-id="${song.id}" value="${escapeAttr(song.genero || '')}" placeholder="Genre" autocomplete="off">
+        <div class="combo-panel" style="display:none"></div>
+      </div>`;
+    }
+    if(c.key === 'country'){
+      return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="artist_country" value="${escapeAttr(song.artist_country || '')}" placeholder="Country">`;
+    }
+    return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="duration" value="${escapeAttr(song.duration || '')}" placeholder="Duration">`;
+  }).join('');
 
   row.innerHTML = `
     <div class="dimmer ${emo}"><i></i></div>
-    <div class="song-main">
-      <input class="inline-edit title-edit" data-id="${song.id}" data-field="song_name" value="${escapeAttr(song.song_name || '')}" placeholder="Song title">
-      <input class="inline-edit artist-edit" data-id="${song.id}" data-field="artist" value="${escapeAttr(song.artist || '')}" placeholder="Artist">
-      <div class="aligned-info">
-        <div class="combobox-field small-combo">
-          <input class="inline-edit genre-edit" data-id="${song.id}" value="${escapeAttr(song.genero || '')}" placeholder="Style" autocomplete="off">
-          <div class="combo-panel" style="display:none"></div>
-        </div>
-        <input class="inline-edit info-edit" data-id="${song.id}" data-field="artist_country" value="${escapeAttr(song.artist_country || '')}" placeholder="Country">
-        <div class="expandable" data-kind="singers" data-song-id="${song.id}">
-          <button type="button" class="condensed-btn singer-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${escapeHtml(singerLabel)}</button>
-        </div>
-        <input class="inline-edit info-edit" data-id="${song.id}" data-field="duration" value="${escapeAttr(song.duration || '')}" placeholder="Duration">
+    <div class="song-grid-row" style="grid-template-columns:${gridCols}">
+      <div class="cell song-cell">
+        <input class="inline-edit title-edit" data-id="${song.id}" data-field="song_name" value="${escapeAttr(song.song_name || '')}" placeholder="Song title">
+        ${visibleFields.song ? `<input class="inline-edit artist-edit" data-id="${song.id}" data-field="artist" value="${escapeAttr(song.artist || '')}" placeholder="Artist">` : ''}
       </div>
-      <div class="caption-line">
-        ${visibleFields.arranger && song.arranger ? `<span>${escapeHtml(song.arranger)}</span>` : ''}
-        ${visibleFields.tonality && tonalityDisplay ? `<span>${escapeHtml(tonalityDisplay)}</span>` : ''}
-        ${visibleFields.version && song.youtube_link ? `<span><a href="${escapeAttr(song.youtube_link)}" target="_blank">customized version ↗</a></span>` : ''}
-        ${visibleFields.comments && song.comments ? `<span>${escapeHtml(song.comments)}</span>` : ''}
-        ${visibleFields.guests && song.guests ? `<span class="guest-tag">✦ ${escapeHtml(song.guests)}</span>` : ''}
-      </div>
+      ${cellsHtml}
+    </div>
+    <div class="caption-line">
+      ${visibleFields.arranger && song.arranger ? `<span>${escapeHtml(song.arranger)}</span>` : ''}
+      ${visibleFields.version && song.youtube_link ? `<span><a href="${escapeAttr(song.youtube_link)}" target="_blank">customized version ↗</a></span>` : ''}
+      ${visibleFields.comments && song.comments ? `<span>${escapeHtml(song.comments)}</span>` : ''}
+      ${visibleFields.guests && song.guests ? `<span class="guest-tag">✦ ${escapeHtml(song.guests)}</span>` : ''}
     </div>
     <div class="row-actions">
       <button class="btn ghost small edit-btn" data-id="${song.id}">Edit</button>
@@ -334,7 +344,10 @@ function formatTonality(song){
 function columnHeader(){
   const h = document.createElement('div');
   h.className = 'aligned-header';
-  h.innerHTML = `<span></span><span class="col-labels"><span>Style</span><span>Country</span><span>Singer</span><span>Duration</span></span><span></span>`;
+  const activeCols = getActiveInfoColumns();
+  const gridCols = `2fr repeat(${activeCols.length || 1}, 1fr)`;
+  const labels = `<span>Song</span>` + activeCols.map(c => `<span>${c.label}</span>`).join('');
+  h.innerHTML = `<span></span><span class="col-labels" style="grid-template-columns:${gridCols}">${labels}</span><span></span>`;
   return h;
 }
 
@@ -627,7 +640,7 @@ function renderColorSwatches(){
   });
 }
 
-document.getElementById('btn-new-set-schedule').addEventListener('click', () => {
+document.getElementById('btn-new-set').addEventListener('click', () => {
   setBuilderOrder = [];
   document.getElementById('set-name').value = '';
   selectedSetColor = SET_COLOR_PALETTE[1];
@@ -1126,25 +1139,37 @@ function parseDurationMinutes(str){
 }
 
 function renderSchedule(){
-  const PX_PER_HOUR = 64;
-  const START_HOUR = 8;
-  const END_HOUR = 24;
-  const totalHeight = (END_HOUR - START_HOUR) * PX_PER_HOUR;
+  const scheduledSets = sets.filter(s => s.set_time);
+  let startHour = 8, endHour = 24;
+  if(scheduledSets.length){
+    const times = scheduledSets.map(s => {
+      const [hh, mm] = s.set_time.split(':').map(Number);
+      return hh + mm/60;
+    });
+    const durEndTimes = scheduledSets.map(s => {
+      const [hh, mm] = s.set_time.split(':').map(Number);
+      return hh + mm/60 + parseDurationMinutes(s.set_duration)/60;
+    });
+    startHour = Math.max(0, Math.floor(Math.min(...times)) - 1);
+    endHour = Math.min(24, Math.ceil(Math.max(...durEndTimes)) + 1);
+  }
+  const PX_PER_HOUR = 46;
+  const totalHeight = (endHour - startHour) * PX_PER_HOUR;
 
   const ruler = document.getElementById('schedule-ruler');
   ruler.style.height = totalHeight + 'px';
   let rulerHtml = '';
-  for(let h = START_HOUR; h <= END_HOUR; h++){
-    const label = h === 24 ? '12:00am' : h > 12 ? `${h-12}:00pm` : h === 12 ? '12:00pm' : `${h}:00am`;
-    rulerHtml += `<div class="ruler-mark" style="top:${(h-START_HOUR)*PX_PER_HOUR}px">${label}</div>`;
+  for(let h = startHour; h <= endHour; h++){
+    const label = h === 24 || h === 0 ? '12:00am' : h > 12 ? `${h-12}:00pm` : h === 12 ? '12:00pm' : `${h}:00am`;
+    rulerHtml += `<div class="ruler-mark" style="top:${(h-startHour)*PX_PER_HOUR}px">${label}</div>`;
   }
   ruler.innerHTML = rulerHtml;
 
   const track = document.getElementById('schedule-track');
   track.style.height = totalHeight + 'px';
   track.innerHTML = '';
-  for(let h = START_HOUR; h <= END_HOUR; h++){
-    track.innerHTML += `<div class="track-line" style="top:${(h-START_HOUR)*PX_PER_HOUR}px"></div>`;
+  for(let h = startHour; h <= endHour; h++){
+    track.innerHTML += `<div class="track-line" style="top:${(h-startHour)*PX_PER_HOUR}px"></div>`;
   }
 
   const unscheduledEl = document.getElementById('schedule-unscheduled');
@@ -1154,11 +1179,10 @@ function renderSchedule(){
   sets.forEach(s => {
     if(!s.set_time){ unscheduled.push(s); return; }
     const [hh, mm] = s.set_time.split(':').map(Number);
-    const startMinutes = (hh * 60 + mm) - START_HOUR * 60;
-    if(startMinutes < 0 || startMinutes > (END_HOUR - START_HOUR) * 60) { unscheduled.push(s); return; }
+    const startMinutes = (hh * 60 + mm) - startHour * 60;
     const durMin = parseDurationMinutes(s.set_duration);
     const top = (startMinutes / 60) * PX_PER_HOUR;
-    const height = Math.max((durMin / 60) * PX_PER_HOUR, 22);
+    const height = Math.max((durMin / 60) * PX_PER_HOUR, 20);
     const block = document.createElement('div');
     block.className = 'schedule-block';
     block.style.top = top + 'px';
@@ -1171,7 +1195,7 @@ function renderSchedule(){
   });
 
   if(unscheduled.length){
-    unscheduledEl.innerHTML = `<p class="hint" style="margin-top:20px">Not scheduled yet (no time set): ${unscheduled.map(s => escapeHtml(s.set_number)).join(', ')} — set a time for them in the Setlist tab.</p>`;
+    unscheduledEl.innerHTML = `<p class="hint" style="margin-top:16px">Not scheduled yet (no time set): ${unscheduled.map(s => escapeHtml(s.set_number)).join(', ')} — set a time for them in the Setlist tab.</p>`;
   }
 }
 
@@ -1179,13 +1203,26 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['table','instrumentation','band','schedule','artist','country','singer','emotion'].forEach(v => {
+    ['table','instrumentation','band','schedule'].forEach(v => {
       document.getElementById('view-'+v).style.display = (v === btn.dataset.tab) ? 'block' : 'none';
     });
     if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
     else if(btn.dataset.tab === 'band') renderBand();
     else if(btn.dataset.tab === 'schedule') renderSchedule();
-    else if(!['table'].includes(btn.dataset.tab)) renderChart(btn.dataset.tab);
+  });
+});
+
+document.querySelectorAll('.view-by-bar .pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.view-by-bar .pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    const view = pill.dataset.view;
+    document.getElementById('setlist-table-view').style.display = view === 'table' ? 'block' : 'none';
+    document.getElementById('setlist-chart-view').style.display = view === 'table' ? 'none' : 'block';
+    ['artist','country','genre','emotion'].forEach(v => {
+      document.getElementById('chart-'+v+'-wrap').style.display = (v === view) ? 'block' : 'none';
+    });
+    if(view !== 'table') renderChart(view);
   });
 });
 
@@ -1270,7 +1307,7 @@ function renderChart(kind){
   }
   if(kind === 'artist') renderChartWithList('artist','artist','chart-artist','list-artist', '#D98A3D');
   if(kind === 'country') renderChartWithList('country','artist_country','chart-country','list-country', '#B23F3A');
-  if(kind === 'singer') renderChartWithList('singer','singers','chart-singer','list-singer', '#7FA6A0');
+  if(kind === 'genre') renderChartWithList('genre','genero','chart-genre','list-genre', '#7FA6A0');
 }
 
 async function reload(){

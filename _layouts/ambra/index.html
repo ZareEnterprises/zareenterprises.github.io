@@ -21,6 +21,7 @@
   <button class="tab-btn primary active" data-tab="table">Setlist</button>
   <button class="tab-btn primary" data-tab="instrumentation">Instrumentation</button>
   <button class="tab-btn primary" data-tab="band">Band</button>
+  <button class="tab-btn primary" data-tab="schedule">Schedule</button>
   <span class="tab-divider"></span>
   <button class="tab-btn viz" data-tab="artist">By Artist</button>
   <button class="tab-btn viz" data-tab="country">By Country</button>
@@ -35,7 +36,6 @@
       <span class="mono-label" id="song-count">—</span>
       <div class="toolbar-actions">
         <div style="display:flex;gap:8px">
-          <button class="btn ghost" id="btn-new-set">+ Create new set</button>
           <button class="btn" id="btn-add-song">+ Add song</button>
         </div>
         <div class="filters-anchor">
@@ -68,7 +68,7 @@
   <div id="view-instrumentation" style="display:none">
     <div class="set-block">
       <div class="instr-head">
-        <span>Song</span><span>Tonality <span class="header-note">(check = Original)</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
+        <span>Song</span><span>Tonality</span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
       </div>
       <div id="instr-container"></div>
     </div>
@@ -89,6 +89,18 @@
       </div>
     </div>
     <p class="hint">Tip: use <b>Singer</b> as the Instrument for vocalists — that's what makes them appear in the Singer dropdown under Instrumentation. Adding an instrument on the left creates a row on the right, ready for you to type who plays it.</p>
+  </div>
+
+  <div id="view-schedule" style="display:none">
+    <div class="toolbar">
+      <span class="mono-label">Run of show — 8:00am to midnight</span>
+      <button class="btn" id="btn-new-set-schedule">+ Create new set</button>
+    </div>
+    <div class="schedule-wrap">
+      <div class="schedule-ruler" id="schedule-ruler"></div>
+      <div class="schedule-track" id="schedule-track"></div>
+    </div>
+    <div id="schedule-unscheduled"></div>
   </div>
 
   <div id="view-artist" style="display:none" class="chart-wrap">
@@ -615,7 +627,7 @@ function renderColorSwatches(){
   });
 }
 
-document.getElementById('btn-new-set').addEventListener('click', () => {
+document.getElementById('btn-new-set-schedule').addEventListener('click', () => {
   setBuilderOrder = [];
   document.getElementById('set-name').value = '';
   selectedSetColor = SET_COLOR_PALETTE[1];
@@ -853,8 +865,8 @@ function renderInstrumentation(){
     row.innerHTML = `
       <div class="song-label">${escapeHtml(song.song_name || 'Untitled')}<small>${escapeHtml(song.set_number || 'Unassigned')}</small></div>
       <div class="tonality-cell">
-        <input type="checkbox" data-id="${song.id}" data-field="tonality_original" ${isOriginal ? 'checked' : ''} title="Original">
         <input type="text" data-id="${song.id}" data-field="tonality" value="${escapeAttr(song.tonality || '')}" placeholder="Key, e.g. C, Em">
+        <input type="checkbox" data-id="${song.id}" data-field="tonality_original" ${isOriginal ? 'checked' : ''} title="Original">
       </div>
       <div class="expandable" data-kind="singers" data-song-id="${song.id}">
         <button type="button" class="condensed-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button>
@@ -1006,8 +1018,11 @@ function renderCatalogColumns(){
     const res = await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog`, { method:'POST', headers, body: JSON.stringify({ name, section }) });
     if(!res.ok){ alert('Could not add that instrument (it may already exist).'); return; }
     await fetchInstrumentCatalog();
-    // auto-create a member row ready to be filled in
-    await fetch(`${SUPABASE_URL}/rest/v1/band`, { method:'POST', headers, body: JSON.stringify({ instrument: name, family: section, member_order: band.length + 1 }) });
+    const bandRes = await fetch(`${SUPABASE_URL}/rest/v1/band`, { method:'POST', headers, body: JSON.stringify({ instrument: name, family: section, member_order: band.length + 1 }) });
+    if(!bandRes.ok){
+      const errText = await bandRes.text();
+      alert('Instrument was added, but could not create its member row:\n' + errText);
+    }
     await fetchBand();
     renderCatalogColumns();
     renderMemberList();
@@ -1094,16 +1109,82 @@ function renderBand(){
   renderMemberList();
 }
 
-/* ============ TABS ============ */
+/* ============ SCHEDULE TAB ============ */
+function parseDurationMinutes(str){
+  if(!str) return 30;
+  const s = str.toLowerCase();
+  let total = 0;
+  const h = s.match(/(\d+(\.\d+)?)\s*h/);
+  const m = s.match(/(\d+)\s*min/);
+  if(h) total += parseFloat(h[1]) * 60;
+  if(m) total += parseInt(m[1], 10);
+  if(!h && !m){
+    const plain = s.match(/^(\d+)$/);
+    if(plain) total = parseInt(plain[1], 10);
+  }
+  return total > 0 ? total : 30;
+}
+
+function renderSchedule(){
+  const PX_PER_HOUR = 64;
+  const START_HOUR = 8;
+  const END_HOUR = 24;
+  const totalHeight = (END_HOUR - START_HOUR) * PX_PER_HOUR;
+
+  const ruler = document.getElementById('schedule-ruler');
+  ruler.style.height = totalHeight + 'px';
+  let rulerHtml = '';
+  for(let h = START_HOUR; h <= END_HOUR; h++){
+    const label = h === 24 ? '12:00am' : h > 12 ? `${h-12}:00pm` : h === 12 ? '12:00pm' : `${h}:00am`;
+    rulerHtml += `<div class="ruler-mark" style="top:${(h-START_HOUR)*PX_PER_HOUR}px">${label}</div>`;
+  }
+  ruler.innerHTML = rulerHtml;
+
+  const track = document.getElementById('schedule-track');
+  track.style.height = totalHeight + 'px';
+  track.innerHTML = '';
+  for(let h = START_HOUR; h <= END_HOUR; h++){
+    track.innerHTML += `<div class="track-line" style="top:${(h-START_HOUR)*PX_PER_HOUR}px"></div>`;
+  }
+
+  const unscheduledEl = document.getElementById('schedule-unscheduled');
+  unscheduledEl.innerHTML = '';
+  const unscheduled = [];
+
+  sets.forEach(s => {
+    if(!s.set_time){ unscheduled.push(s); return; }
+    const [hh, mm] = s.set_time.split(':').map(Number);
+    const startMinutes = (hh * 60 + mm) - START_HOUR * 60;
+    if(startMinutes < 0 || startMinutes > (END_HOUR - START_HOUR) * 60) { unscheduled.push(s); return; }
+    const durMin = parseDurationMinutes(s.set_duration);
+    const top = (startMinutes / 60) * PX_PER_HOUR;
+    const height = Math.max((durMin / 60) * PX_PER_HOUR, 22);
+    const block = document.createElement('div');
+    block.className = 'schedule-block';
+    block.style.top = top + 'px';
+    block.style.height = height + 'px';
+    block.style.background = hexToRgba(s.color || '#D98A3D', 0.85);
+    block.style.borderColor = s.color || '#D98A3D';
+    const songCount = songs.filter(sg => sg.set_number === s.set_number).length;
+    block.innerHTML = `<b>${escapeHtml(s.set_number)}</b><span>${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
+    track.appendChild(block);
+  });
+
+  if(unscheduled.length){
+    unscheduledEl.innerHTML = `<p class="hint" style="margin-top:20px">Not scheduled yet (no time set): ${unscheduled.map(s => escapeHtml(s.set_number)).join(', ')} — set a time for them in the Setlist tab.</p>`;
+  }
+}
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['table','instrumentation','band','artist','country','singer','emotion'].forEach(v => {
+    ['table','instrumentation','band','schedule','artist','country','singer','emotion'].forEach(v => {
       document.getElementById('view-'+v).style.display = (v === btn.dataset.tab) ? 'block' : 'none';
     });
     if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
     else if(btn.dataset.tab === 'band') renderBand();
+    else if(btn.dataset.tab === 'schedule') renderSchedule();
     else if(!['table'].includes(btn.dataset.tab)) renderChart(btn.dataset.tab);
   });
 });

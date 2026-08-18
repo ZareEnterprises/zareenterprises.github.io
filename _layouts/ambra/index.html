@@ -72,7 +72,7 @@
         <div class="toolbar">
           <span class="mono-label">Run of show — read-only view of your Setlist times</span>
         </div>
-        <div class="schedule-wrap compact">
+        <div class="schedule-wrap">
           <div class="schedule-ruler" id="schedule-ruler"></div>
           <div class="schedule-track" id="schedule-track"></div>
         </div>
@@ -110,11 +110,15 @@
     <div class="toolbar">
       <span class="mono-label">Lineup</span>
       <div class="filters-anchor">
-        <button class="filters-link" id="btn-lineup-filters-toggle">Columns ▾</button>
+        <button class="filters-link" id="btn-lineup-filters-toggle">Filters ▾</button>
         <div class="filters-dropdown" id="lineup-filters-dropdown" style="display:none">
           <div class="filter-section">
             <span class="label">Show columns:</span>
             <div class="filter-chips-wrap">
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="tonality" checked> Tonality</label>
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="singers" checked> Singers</label>
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="instruments" checked> Instruments</label>
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="guests" checked> Special guests</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="arranger" checked> Arranger</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="version" checked> Customized version</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="comments" checked> Comments</label>
@@ -163,7 +167,37 @@
       <button class="tech-subtab lights" data-sub="lights">💡 Lights</button>
     </div>
     <div id="tech-panel-audio" class="tech-panel">
-      <div class="empty-note">Audio planning is coming soon.</div>
+      <div class="audio-subtabs">
+        <button class="pill active" data-audio-sub="requirements">Audio Requirements</button>
+        <button class="pill" data-audio-sub="inputlist">Input List</button>
+        <button class="pill" data-audio-sub="speakers">Speakers Coverage</button>
+      </div>
+
+      <div id="audio-panel-requirements" class="audio-subpanel">
+        <div class="set-block audio-centered">
+          <div class="req-head"><span>Item</span><span>Model</span><span>Amount</span><span></span></div>
+          <div id="audio-req-rows"></div>
+          <button class="btn ghost small" id="btn-add-req-row" style="margin:12px 20px">+ Add row</button>
+        </div>
+      </div>
+
+      <div id="audio-panel-inputlist" class="audio-subpanel" style="display:none">
+        <div class="set-block">
+          <div class="input-list-head">
+            <span>#</span><span>Instrument</span><span>Mic</span><span>48?</span><span>Stand or Clip</span><span>Snake Input</span><span></span>
+          </div>
+          <div id="input-list-rows"></div>
+          <button class="btn ghost small" id="btn-add-input-row" style="margin:12px 20px">+ Add row</button>
+        </div>
+      </div>
+
+      <div id="audio-panel-speakers" class="audio-subpanel" style="display:none">
+        <div class="toolbar">
+          <span class="mono-label">Speakers Coverage</span>
+          <button class="btn" id="btn-add-speaker-table">+ Add table</button>
+        </div>
+        <div id="speaker-tables-wrap"></div>
+      </div>
     </div>
     <div id="tech-panel-stage" class="tech-panel" style="display:none">
       <div class="empty-note">Stage planning is coming soon.</div>
@@ -213,8 +247,17 @@
         <div class="color-swatches" id="color-swatches"></div>
       </div>
     </div>
-    <div class="field"><label>Select songs (optional — you can leave this empty for breaks, sound setup, speeches, etc.)</label></div>
-    <div class="set-builder-list" id="set-builder-list"></div>
+    <div class="field"><label>Type</label>
+      <div class="set-type-toggle">
+        <button type="button" class="set-type-btn active" id="btn-type-songs" data-type="songs">🎵 Songs</button>
+        <button type="button" class="set-type-btn" id="btn-type-interlude" data-type="interlude">🎤 Interlude</button>
+      </div>
+    </div>
+    <div id="songs-picker-wrap">
+      <div class="field"><label>Select songs (optional — you can leave this empty for breaks, sound setup, speeches, etc.)</label></div>
+      <div class="set-builder-list" id="set-builder-list"></div>
+    </div>
+    <p class="hint" id="interlude-hint" style="display:none">This set will use Description / Mics needed / To whom / Props rows instead of songs — you'll add them after creating the set.</p>
     <div class="modal-actions">
       <button class="btn ghost" id="btn-set-cancel">Cancel</button>
       <button class="btn confirm" id="btn-set-confirm" disabled>Name your set</button>
@@ -244,6 +287,11 @@ let songs = [];
 let sets = [];
 let band = [];
 let songInstruments = [];
+let interludeItems = [];
+let audioRequirements = [];
+let inputListRows = [];
+let speakerTables = [];
+let speakerItems = [];
 let genres = [];
 let instrumentCatalog = [];
 let charts = {};
@@ -269,6 +317,26 @@ async function fetchBand(){
 async function fetchSongInstruments(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/song_instruments?select=*`, { headers });
   songInstruments = res.ok ? await res.json() : [];
+}
+async function fetchInterludeItems(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?select=*&order=item_order.asc.nullslast`, { headers });
+  interludeItems = res.ok ? await res.json() : [];
+}
+async function fetchAudioRequirements(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements?select=*&order=item_order.asc.nullslast`, { headers });
+  audioRequirements = res.ok ? await res.json() : [];
+}
+async function fetchInputList(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/input_list?select=*&order=channel_number.asc.nullslast`, { headers });
+  inputListRows = res.ok ? await res.json() : [];
+}
+async function fetchSpeakerTables(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?select=*&order=table_order.asc.nullslast`, { headers });
+  speakerTables = res.ok ? await res.json() : [];
+}
+async function fetchSpeakerItems(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/speaker_items?select=*&order=item_order.asc.nullslast`, { headers });
+  speakerItems = res.ok ? await res.json() : [];
 }
 async function fetchGenres(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/genres?select=*&order=name.asc`, { headers });
@@ -304,6 +372,7 @@ function getActiveInfoColumns(){
   return [
     { key:'genre', label:'Genre' },
     { key:'country', label:'Country' },
+    { key:'guests', label:'Special guest' },
     { key:'duration', label:'Duration' },
   ].filter(c => visibleFields[c.key]);
 }
@@ -316,7 +385,6 @@ function renderSongRow(song, containerSetName, draggableOn){
   row.dataset.origin = containerSetName;
   const emo = song.emotion_level || 'media';
   const activeCols = getActiveInfoColumns();
-  const gridCols = `2fr repeat(${activeCols.length || 1}, 1fr)`;
 
   const cellsHtml = activeCols.map(c => {
     if(c.key === 'genre'){
@@ -328,10 +396,15 @@ function renderSongRow(song, containerSetName, draggableOn){
     if(c.key === 'country'){
       return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="artist_country" value="${escapeAttr(song.artist_country || '')}" placeholder="Country">`;
     }
-    return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="duration" value="${escapeAttr(song.duration || '')}" placeholder="Duration">`;
+    if(c.key === 'guests'){
+      return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="—">`;
+    }
+    return `<input class="inline-edit info-edit cell duration-cell" data-id="${song.id}" data-field="duration" value="${escapeAttr(song.duration || '')}" placeholder="—">`;
   }).join('');
+  const gridCols = ['2fr', ...activeCols.map(c => c.key === 'duration' ? '64px' : '1fr')].join(' ');
 
   row.innerHTML = `
+    <span class="drag-handle" title="Drag to reorder">⠿</span>
     <div class="dimmer ${emo}" data-song-id="${song.id}"><i></i><span class="fader-dot ${emo}"></span></div>
     <div class="song-grid-row" style="grid-template-columns:${gridCols}">
       <div class="cell song-cell">
@@ -340,12 +413,8 @@ function renderSongRow(song, containerSetName, draggableOn){
       </div>
       ${cellsHtml}
     </div>
-    <div class="caption-line">
-      ${visibleFields.guests && song.guests ? `<span class="guest-tag">✦ ${escapeHtml(song.guests)}</span>` : ''}
-    </div>
     <div class="row-actions">
       <button class="edit-pencil row-edit-pencil" data-id="${song.id}" title="Edit">✎</button>
-      <span class="drag-handle" title="Drag to reorder">⠿</span>
     </div>
   `;
   return row;
@@ -367,17 +436,21 @@ function columnHeader(){
   const h = document.createElement('div');
   h.className = 'aligned-header';
   const activeCols = getActiveInfoColumns();
-  const gridCols = `2fr repeat(${activeCols.length || 1}, 1fr)`;
-  const labels = `<span>Song</span>` + activeCols.map(c => `<span>${c.label}</span>`).join('');
-  h.innerHTML = `<span></span><span class="col-labels" style="grid-template-columns:${gridCols}">${labels}</span><span></span>`;
+  const gridCols = ['2fr', ...activeCols.map(c => c.key === 'duration' ? '64px' : '1fr')].join(' ');
+  const labels = `<span>Song</span>` + activeCols.map(c => `<span>${c.key === 'duration' ? 'Duration (min)' : c.label}</span>`).join('');
+  h.innerHTML = `<span></span><span></span><span class="col-labels" style="grid-template-columns:${gridCols}">${labels}</span><span></span>`;
   return h;
 }
 
 function renderTable(){
+  renderSingerChips();
+  renderSetsContainer();
+}
+
+function renderSetsContainer(){
   const container = document.getElementById('sets-container');
   document.getElementById('song-count').textContent = `${songs.length} SONGS`;
   container.innerHTML = '';
-  renderSingerChips();
 
   if(singerSortOrder.length > 0){
     renderSingerSortedView(container);
@@ -414,16 +487,45 @@ function renderTable(){
         </span>
         ${setInfo ? `<button class="del-set" data-set-id="${setInfo.id}" title="Delete set">✕</button>` : ''}
       </div>
-      <div class="rows" data-set="${escapeAttr(setName)}"></div>
+      <div class="rows" data-set="${escapeAttr(setName)}" ${setInfo?.set_type === 'interlude' ? 'data-type="interlude"' : ''}></div>
     `;
     const rowsDiv = block.querySelector('.rows');
-    if(groups[setName].length){
+    if(setInfo?.set_type === 'interlude'){
+      renderInterludeRows(rowsDiv, setInfo);
+    } else if(groups[setName].length){
       rowsDiv.appendChild(columnHeader());
       groups[setName].forEach(song => rowsDiv.appendChild(renderSongRow(song, setName)));
     }
     withRail.appendChild(block);
     railWrap.appendChild(withRail);
   });
+
+  // Closing time marker for the last scheduled set
+  const timedSets = sets.filter(s => s.set_time);
+  if(timedSets.length){
+    const last = timedSets.reduce((latest, s) => {
+      const [hh, mm] = s.set_time.split(':').map(Number);
+      const end = hh * 60 + mm + parseDurationMinutes(s.set_duration);
+      return end > latest.end ? { end, set: s } : latest;
+    }, { end: -1, set: null }).set;
+    if(last){
+      const [hh, mm] = last.set_time.split(':').map(Number);
+      const endMinutes = hh * 60 + mm + parseDurationMinutes(last.set_duration);
+      const endH = Math.floor(endMinutes / 60) % 24;
+      const endM = endMinutes % 60;
+      const label = `${endH === 0 ? 12 : endH > 12 ? endH - 12 : endH}:${String(endM).padStart(2,'0')}${endH >= 12 ? 'pm' : 'am'}`;
+      const endRow = document.createElement('div');
+      endRow.className = 'set-with-rail';
+      endRow.innerHTML = `
+        <div class="rail-end">
+          <span class="rail-dot"></span>
+          <b class="rail-time">${label}</b>
+          <span class="rail-end-label">Show ends</span>
+        </div>
+      `;
+      railWrap.appendChild(endRow);
+    }
+  }
   container.appendChild(railWrap);
 
   // Unassigned pool goes BELOW the sets
@@ -589,8 +691,9 @@ function renderSingerChips(){
       const name = chk.dataset.singer;
       if(chk.checked) singerSortOrder.push(name);
       else singerSortOrder = singerSortOrder.filter(n => n !== name);
+      chk.closest('.filter-chip').classList.toggle('active', chk.checked);
       document.getElementById('btn-clear-singer-sort').style.display = singerSortOrder.length ? 'inline-block' : 'none';
-      renderTable();
+      renderSetsContainer();
     });
   });
 }
@@ -748,6 +851,7 @@ function wireDragAndDrop(){
   });
 
   document.querySelectorAll('.rows').forEach(container => {
+    if(container.dataset.type === 'interlude') return;
     container.addEventListener('dragover', (e) => { if(dragState) e.preventDefault(); });
     container.addEventListener('drop', async (e) => {
       if(!dragState || e.target !== container) return;
@@ -806,6 +910,7 @@ const overlaySet = document.getElementById('overlay-set');
 let setBuilderOrder = [];
 
 let selectedSetColor = SET_COLOR_PALETTE[1];
+let selectedSetType = 'songs';
 
 function renderColorSwatches(){
   const wrap = document.getElementById('color-swatches');
@@ -820,10 +925,32 @@ function renderColorSwatches(){
   });
 }
 
+document.getElementById('btn-type-songs').addEventListener('click', () => {
+  selectedSetType = 'songs';
+  document.getElementById('btn-type-songs').classList.add('active');
+  document.getElementById('btn-type-interlude').classList.remove('active');
+  document.getElementById('songs-picker-wrap').style.display = 'block';
+  document.getElementById('interlude-hint').style.display = 'none';
+  updateSetConfirmBtn();
+});
+document.getElementById('btn-type-interlude').addEventListener('click', () => {
+  selectedSetType = 'interlude';
+  document.getElementById('btn-type-interlude').classList.add('active');
+  document.getElementById('btn-type-songs').classList.remove('active');
+  document.getElementById('songs-picker-wrap').style.display = 'none';
+  document.getElementById('interlude-hint').style.display = 'block';
+  updateSetConfirmBtn();
+});
+
 document.getElementById('btn-new-set').addEventListener('click', () => {
   setBuilderOrder = [];
   document.getElementById('set-name').value = '';
   selectedSetColor = SET_COLOR_PALETTE[1];
+  selectedSetType = 'songs';
+  document.getElementById('btn-type-songs').classList.add('active');
+  document.getElementById('btn-type-interlude').classList.remove('active');
+  document.getElementById('songs-picker-wrap').style.display = 'block';
+  document.getElementById('interlude-hint').style.display = 'none';
   renderColorSwatches();
   const { unassigned } = groupBySet();
   const list = document.getElementById('set-builder-list');
@@ -866,7 +993,8 @@ function updateSetConfirmBtn(){
   const hasName = document.getElementById('set-name').value.trim().length > 0;
   if(hasName){
     btn.disabled = false;
-    btn.textContent = setBuilderOrder.length ? `Confirm — group ${setBuilderOrder.length} song${setBuilderOrder.length>1?'s':''}` : 'Create empty set';
+    if(selectedSetType === 'interlude') btn.textContent = 'Create interlude set';
+    else btn.textContent = setBuilderOrder.length ? `Confirm — group ${setBuilderOrder.length} song${setBuilderOrder.length>1?'s':''}` : 'Create empty set';
   } else {
     btn.disabled = true;
     btn.textContent = 'Name your set';
@@ -883,13 +1011,13 @@ document.getElementById('btn-set-confirm').addEventListener('click', async () =>
   if(sets.find(s => s.set_number === name)){ alert('A set with that name already exists.'); return; }
   const minOrder = sets.length ? Math.min(...sets.map(s => s.set_order ?? 0)) : 1;
   const newOrder = minOrder - 1;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: newOrder, color }) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: newOrder, color, set_type: selectedSetType }) });
   if(!res.ok){
     const errText = await res.text();
     alert('Could not create the set:\n' + errText);
     return;
   }
-  if(setBuilderOrder.length){
+  if(selectedSetType === 'songs' && setBuilderOrder.length){
     await Promise.all(setBuilderOrder.map((id, i) =>
       fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, { method:'PATCH', headers, body: JSON.stringify({ set_number: name, song_order: i+1 }) })
     ));
@@ -1023,22 +1151,130 @@ async function ensureDefaultInstruments(song){
   await fetchSongInstruments();
 }
 
+function renderInterludeRows(container, setInfo){
+  container.innerHTML = `
+    <div class="interlude-head">
+      <span>Description</span><span>Mics needed</span><span>To whom</span><span>Props</span><span></span>
+    </div>
+    <div class="interlude-rows" data-set-id="${setInfo.id}"></div>
+    <button class="btn ghost small btn-add-interlude-row" data-set-id="${setInfo.id}" style="margin:12px 20px">+ Add row</button>
+  `;
+  const rowsDiv = container.querySelector('.interlude-rows');
+  const items = interludeItems.filter(it => it.set_id === setInfo.id).sort((a,b) => (a.item_order||0) - (b.item_order||0));
+
+  if(items.length === 0){
+    rowsDiv.innerHTML = '<div class="empty-note" style="border:none;padding:18px;">No items yet — click "+ Add row" to start.</div>';
+  }
+
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'interlude-row';
+    row.draggable = false;
+    row.dataset.itemId = item.id;
+    row.innerHTML = `
+      <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <input type="text" data-id="${item.id}" data-field="description" value="${escapeAttr(item.description || '')}" placeholder="Description">
+      <input type="text" data-id="${item.id}" data-field="mics_needed" value="${escapeAttr(item.mics_needed || '')}" placeholder="Mics needed">
+      <input type="text" data-id="${item.id}" data-field="to_whom" value="${escapeAttr(item.to_whom || '')}" placeholder="To whom">
+      <input type="text" data-id="${item.id}" data-field="props" value="${escapeAttr(item.props || '')}" placeholder="Props">
+      <button class="interlude-remove-btn" title="Remove">✕</button>
+    `;
+    rowsDiv.appendChild(row);
+  });
+
+  rowsDiv.querySelectorAll('input[type=text]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${inp.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
+      });
+      await fetchInterludeItems();
+    });
+  });
+  rowsDiv.querySelectorAll('.interlude-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('.interlude-row');
+      await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${row.dataset.itemId}`, { method:'DELETE', headers });
+      await fetchInterludeItems();
+      renderInterludeRows(container, setInfo);
+    });
+  });
+
+  wireInterludeDragAndDrop(rowsDiv, setInfo, container);
+
+  const addBtn = container.querySelector('.btn-add-interlude-row');
+  addBtn.addEventListener('click', async () => {
+    const currentItems = interludeItems.filter(it => it.set_id === setInfo.id);
+    await fetch(`${SUPABASE_URL}/rest/v1/interlude_items`, {
+      method:'POST', headers, body: JSON.stringify({ set_id: setInfo.id, item_order: currentItems.length + 1 })
+    });
+    await fetchInterludeItems();
+    renderInterludeRows(container, setInfo);
+  });
+}
+
+let interludeDragState = null;
+function wireInterludeDragAndDrop(rowsDiv, setInfo, container){
+  rowsDiv.querySelectorAll('.interlude-row').forEach(row => {
+    let handleActive = false;
+    const handle = row.querySelector('.drag-handle');
+    handle.addEventListener('mousedown', () => { handleActive = true; });
+    document.addEventListener('mouseup', () => { handleActive = false; });
+    row.draggable = true;
+    row.addEventListener('dragstart', (e) => {
+      if(!handleActive){ e.preventDefault(); return; }
+      interludeDragState = row.dataset.itemId;
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragover', (e) => { if(interludeDragState) e.preventDefault(); });
+    row.addEventListener('drop', async (e) => {
+      if(!interludeDragState || interludeDragState === row.dataset.itemId) return;
+      e.preventDefault();
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      let list = interludeItems.filter(it => it.set_id === setInfo.id && it.id !== interludeDragState).sort((a,b) => (a.item_order||0) - (b.item_order||0));
+      const dragged = interludeItems.find(it => it.id === interludeDragState);
+      const idx = list.findIndex(it => it.id === row.dataset.itemId);
+      const insertIndex = idx === -1 ? list.length : (before ? idx : idx + 1);
+      list.splice(insertIndex, 0, dragged);
+      await Promise.all(list.map((it, i) =>
+        fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${it.id}`, { method:'PATCH', headers, body: JSON.stringify({ item_order: i + 1 }) })
+      ));
+      interludeDragState = null;
+      await fetchInterludeItems();
+      renderInterludeRows(container, setInfo);
+    });
+  });
+}
+
 function parseSetNumber(setName){
   if(!setName) return null;
   const m = setName.trim().match(/^set\s*(\d{1,2})$/i);
   return m ? parseInt(m[1], 10) : null;
 }
 
-let lineupVisibleCols = { arranger:true, version:true, comments:true };
+let lineupVisibleCols = { tonality:true, singers:true, instruments:true, guests:true, arranger:true, version:true, comments:true };
+
+function getLineupColumns(){
+  const cols = [];
+  if(lineupVisibleCols.tonality){
+    cols.push({ key:'tonality_check', width:'50px', label:'Original' });
+    cols.push({ key:'tonality_text', width:'.9fr', label:'Tonality' });
+  }
+  if(lineupVisibleCols.singers) cols.push({ key:'singers', width:'1fr', label:'Singer(s)' });
+  if(lineupVisibleCols.instruments) cols.push({ key:'instruments', width:'1fr', label:'Instruments' });
+  if(lineupVisibleCols.guests) cols.push({ key:'guests', width:'.9fr', label:'Special guest' });
+  if(lineupVisibleCols.arranger) cols.push({ key:'arranger', width:'1fr', label:'Arranger' });
+  if(lineupVisibleCols.version) cols.push({ key:'version', width:'1fr', label:'Customized version' });
+  if(lineupVisibleCols.comments) cols.push({ key:'comments', width:'1fr', label:'Comments' });
+  return cols;
+}
 
 function updateInstrHead(){
   const head = document.getElementById('instr-head-row');
-  head.innerHTML = `<span>Song</span><span>Tonality<span class="header-note">Original</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>` +
-    (lineupVisibleCols.arranger ? '<span>Arranger</span>' : '') +
-    (lineupVisibleCols.version ? '<span>Customized version</span>' : '') +
-    (lineupVisibleCols.comments ? '<span>Comments</span>' : '');
-  const colCount = 5 + Object.values(lineupVisibleCols).filter(Boolean).length;
-  head.style.gridTemplateColumns = `1.1fr .9fr 1fr 1fr .9fr ${'1fr '.repeat(colCount-5)}`.trim();
+  const cols = getLineupColumns();
+  head.style.gridTemplateColumns = `1.3fr ${cols.map(c => c.width).join(' ')}`;
+  head.innerHTML = `<span>Song</span>` + cols.map(c => `<span>${c.label}</span>`).join('');
 }
 
 document.getElementById('btn-lineup-filters-toggle').addEventListener('click', (e) => {
@@ -1068,8 +1304,8 @@ function renderInstrumentation(){
     return;
   }
   container.innerHTML = '';
-  const colCount = 5 + Object.values(lineupVisibleCols).filter(Boolean).length;
-  const gridCols = `1.1fr .9fr 1fr 1fr .9fr ${'1fr '.repeat(colCount-5)}`.trim();
+  const cols = getLineupColumns();
+  const gridCols = `1.3fr ${cols.map(c => c.width).join(' ')}`;
   const orderedSongs = [...songs].sort((a, b) => {
     const na = parseSetNumber(a.set_number), nb = parseSetNumber(b.set_number);
     if(na !== null && nb !== null) return na - nb || (a.song_order||0) - (b.song_order||0);
@@ -1089,22 +1325,21 @@ function renderInstrumentation(){
     const currentInstruments = songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument);
     const isOriginal = song.tonality_original !== false;
 
+    const cellsHtml = cols.map(c => {
+      if(c.key === 'tonality_check') return `<input type="checkbox" data-id="${song.id}" data-field="tonality_original" ${isOriginal ? 'checked' : ''} title="Original">`;
+      if(c.key === 'tonality_text') return `<input type="text" class="tonality-text-input" data-id="${song.id}" data-field="tonality" value="${escapeAttr(song.tonality || '')}" placeholder="Key, e.g. C, Em">`;
+      if(c.key === 'singers') return `<div class="expandable" data-kind="singers" data-song-id="${song.id}"><button type="button" class="condensed-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button></div>`;
+      if(c.key === 'instruments') return `<div class="expandable" data-kind="instruments" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button></div>`;
+      if(c.key === 'guests') return `<input type="text" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="Special guest">`;
+      if(c.key === 'arranger') return `<input type="text" data-id="${song.id}" data-field="arranger" value="${escapeAttr(song.arranger || '')}" placeholder="Arranger">`;
+      if(c.key === 'version') return `<input type="text" data-id="${song.id}" data-field="youtube_link" value="${escapeAttr(song.youtube_link || '')}" placeholder="https://...">`;
+      if(c.key === 'comments') return `<input type="text" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="Comments">`;
+      return '';
+    }).join('');
+
     row.innerHTML = `
       <div class="song-label">${escapeHtml(song.song_name || 'Untitled')}<small>${escapeHtml(song.set_number || 'Unassigned')}</small></div>
-      <div class="tonality-cell">
-        <input type="text" data-id="${song.id}" data-field="tonality" value="${escapeAttr(song.tonality || '')}" placeholder="Key, e.g. C, Em">
-        <input type="checkbox" data-id="${song.id}" data-field="tonality_original" ${isOriginal ? 'checked' : ''} title="Original">
-      </div>
-      <div class="expandable" data-kind="singers" data-song-id="${song.id}">
-        <button type="button" class="condensed-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button>
-      </div>
-      <div class="expandable" data-kind="instruments" data-song-id="${song.id}">
-        <button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button>
-      </div>
-      <input type="text" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="Special guest">
-      ${lineupVisibleCols.arranger ? `<input type="text" data-id="${song.id}" data-field="arranger" value="${escapeAttr(song.arranger || '')}" placeholder="Arranger">` : ''}
-      ${lineupVisibleCols.version ? `<input type="text" data-id="${song.id}" data-field="youtube_link" value="${escapeAttr(song.youtube_link || '')}" placeholder="https://...">` : ''}
-      ${lineupVisibleCols.comments ? `<input type="text" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="Comments">` : ''}
+      ${cellsHtml}
     `;
     container.appendChild(row);
   });
@@ -1248,12 +1483,6 @@ function renderCatalogColumns(){
     const res = await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog`, { method:'POST', headers, body: JSON.stringify({ name, section }) });
     if(!res.ok){ alert('Could not add that instrument (it may already exist).'); return; }
     await fetchInstrumentCatalog();
-    const bandRes = await fetch(`${SUPABASE_URL}/rest/v1/band`, { method:'POST', headers, body: JSON.stringify({ instrument: name, family: section, member_order: band.length + 1 }) });
-    if(!bandRes.ok){
-      const errText = await bandRes.text();
-      alert('Instrument was added, but could not create its member row:\n' + errText);
-    }
-    await fetchBand();
     renderCatalogColumns();
     renderMemberList();
   }
@@ -1271,6 +1500,7 @@ function renderCatalogColumns(){
       await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog?id=eq.${btn.dataset.id}`, { method:'DELETE', headers });
       await fetchInstrumentCatalog();
       renderCatalogColumns();
+      renderMemberList();
     });
   });
 
@@ -1278,27 +1508,36 @@ function renderCatalogColumns(){
   if(list) list.innerHTML = instrumentOptions().map(o => `<option value="${escapeAttr(o)}">`).join('');
 }
 
+/* Member list is a pure visualizer of the instrument catalog: one row per
+   catalog instrument, always visible, whether or not a band record exists yet. */
 function renderMemberList(){
-  document.getElementById('band-count').textContent = `${band.length} MEMBERS`;
   const container = document.getElementById('member-list');
-  if(band.length === 0){
-    container.innerHTML = '<div class="empty-note" style="border:none;">Add an instrument on the left to create your first member row.</div>';
+  document.getElementById('band-count').textContent = `${instrumentCatalog.length} INSTRUMENTS`;
+  if(instrumentCatalog.length === 0){
+    container.innerHTML = '<div class="empty-note" style="border:none;">Add an instrument on the left — it will show up here right away, ready for a name.</div>';
     return;
   }
   container.innerHTML = '';
-  band.sort((a,b) => (a.member_order||0) - (b.member_order||0)).forEach(b => {
+  const orderedCatalog = [...instrumentCatalog].sort((a, b) => {
+    const sa = SECTIONS.indexOf(a.section), sb = SECTIONS.indexOf(b.section);
+    return (sa === -1 ? 99 : sa) - (sb === -1 ? 99 : sb) || a.name.localeCompare(b.name);
+  });
+  orderedCatalog.forEach(cat => {
+    const existing = band.find(b => (b.instrument || '').toLowerCase() === cat.name.toLowerCase());
     const row = document.createElement('div');
     row.className = 'member-row';
+    row.dataset.instrument = cat.name;
+    row.dataset.bandId = existing?.id || '';
     row.innerHTML = `
       <div class="member-row-main">
-        <span class="member-instrument">${escapeHtml(b.instrument || '—')}</span>
-        <input type="text" class="member-artist-input" data-id="${b.id}" value="${escapeAttr(b.artist_name || '')}" placeholder="Type artist name…">
+        <span class="member-instrument">${escapeHtml(cat.name)}</span>
+        <input type="text" class="member-artist-input" value="${escapeAttr(existing?.artist_name || '')}" placeholder="Type artist name…">
         <button class="edit-pencil" title="Second instrument / comments">✎</button>
-        <button class="member-remove-btn" title="Remove">✕</button>
+        <button class="member-remove-btn" title="Clear this person">✕</button>
       </div>
       <div class="member-row-expand" style="display:none">
-        <input type="text" class="member-second-input" data-id="${b.id}" value="${escapeAttr(b.second_instrument || '')}" placeholder="Second instrument (optional)" list="instrument-options">
-        <input type="text" class="member-comments-input" data-id="${b.id}" value="${escapeAttr(b.comments || '')}" placeholder="Comments (optional)">
+        <input type="text" class="member-second-input" value="${escapeAttr(existing?.second_instrument || '')}" placeholder="Second instrument (optional)" list="instrument-options">
+        <input type="text" class="member-comments-input" value="${escapeAttr(existing?.comments || '')}" placeholder="Comments (optional)">
       </div>
     `;
     row.querySelector('.edit-pencil').addEventListener('click', () => {
@@ -1306,31 +1545,35 @@ function renderMemberList(){
       exp.style.display = exp.style.display === 'none' ? 'flex' : 'none';
     });
     row.querySelector('.member-remove-btn').addEventListener('click', async () => {
-      if(!confirm('Remove this band member?')) return;
-      await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${b.id}`, { method:'DELETE', headers });
+      if(!row.dataset.bandId) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${row.dataset.bandId}`, { method:'DELETE', headers });
       await fetchBand();
       renderMemberList();
     });
     container.appendChild(row);
   });
 
+  async function upsertMember(row, field, value){
+    if(row.dataset.bandId){
+      await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${row.dataset.bandId}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: value || null }) });
+    } else {
+      const payload = { instrument: row.dataset.instrument, [field]: value || null };
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/band`, { method:'POST', headers, body: JSON.stringify(payload) });
+      if(!res.ok){ alert('Could not save that: ' + await res.text()); return; }
+      const created = await res.json();
+      row.dataset.bandId = created[0]?.id || '';
+    }
+    await fetchBand();
+  }
+
   container.querySelectorAll('.member-artist-input').forEach(inp => {
-    inp.addEventListener('change', async () => {
-      await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${inp.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ artist_name: inp.value || null }) });
-      await fetchBand();
-    });
+    inp.addEventListener('change', () => upsertMember(inp.closest('.member-row'), 'artist_name', inp.value));
   });
   container.querySelectorAll('.member-second-input').forEach(inp => {
-    inp.addEventListener('change', async () => {
-      await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${inp.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ second_instrument: inp.value || null }) });
-      await fetchBand();
-    });
+    inp.addEventListener('change', () => upsertMember(inp.closest('.member-row'), 'second_instrument', inp.value));
   });
   container.querySelectorAll('.member-comments-input').forEach(inp => {
-    inp.addEventListener('change', async () => {
-      await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${inp.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ comments: inp.value || null }) });
-      await fetchBand();
-    });
+    inp.addEventListener('change', () => upsertMember(inp.closest('.member-row'), 'comments', inp.value));
   });
 }
 
@@ -1418,6 +1661,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
     if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
     else if(btn.dataset.tab === 'band') renderBand();
+    else if(btn.dataset.tab === 'technical') renderAudioRequirements();
   });
 });
 
@@ -1442,8 +1686,250 @@ document.querySelectorAll('.tech-subtab').forEach(btn => {
     btn.classList.add('active');
     document.querySelectorAll('.tech-panel').forEach(p => p.style.display = 'none');
     document.getElementById('tech-panel-' + btn.dataset.sub).style.display = 'block';
+    if(btn.dataset.sub === 'audio') renderAudioRequirements();
   });
 });
+
+document.querySelectorAll('.audio-subtabs .pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.audio-subtabs .pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    document.querySelectorAll('.audio-subpanel').forEach(p => p.style.display = 'none');
+    document.getElementById('audio-panel-' + pill.dataset.audioSub).style.display = 'block';
+    if(pill.dataset.audioSub === 'requirements') renderAudioRequirements();
+    else if(pill.dataset.audioSub === 'inputlist') renderInputList();
+    else if(pill.dataset.audioSub === 'speakers') renderSpeakerTables();
+  });
+});
+
+/* ============ AUDIO REQUIREMENTS ============ */
+function renderAudioRequirements(){
+  const container = document.getElementById('audio-req-rows');
+  container.innerHTML = '';
+  if(audioRequirements.length === 0){
+    container.innerHTML = '<div class="empty-note" style="border:none;">No items yet — click "+ Add row" to start.</div>';
+  }
+  audioRequirements.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'req-row';
+    row.innerHTML = `
+      <input type="text" data-id="${item.id}" data-field="item" value="${escapeAttr(item.item || '')}" placeholder="Item">
+      <input type="text" data-id="${item.id}" data-field="model" value="${escapeAttr(item.model || '')}" placeholder="Model">
+      <input type="text" data-id="${item.id}" data-field="amount" value="${escapeAttr(item.amount || '')}" placeholder="Amount">
+      <button class="req-remove-btn" title="Remove">✕</button>
+    `;
+    row.querySelector('.req-remove-btn').addEventListener('click', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements?id=eq.${item.id}`, { method:'DELETE', headers });
+      await fetchAudioRequirements();
+      renderAudioRequirements();
+    });
+    container.appendChild(row);
+  });
+  container.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements?id=eq.${inp.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
+      });
+      await fetchAudioRequirements();
+    });
+  });
+}
+document.getElementById('btn-add-req-row').addEventListener('click', async () => {
+  await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements`, {
+    method:'POST', headers, body: JSON.stringify({ item_order: audioRequirements.length + 1 })
+  });
+  await fetchAudioRequirements();
+  renderAudioRequirements();
+});
+
+/* ============ INPUT LIST ============ */
+const STAND_CLIP_COLORS = { 'Stand':'#4A7FB5', 'Clip':'#8C6FB5', '-':'#7C7768' };
+
+function renderInputList(){
+  const container = document.getElementById('input-list-rows');
+  container.innerHTML = '';
+  const ordered = [...inputListRows].sort((a,b) => (a.channel_number||0) - (b.channel_number||0));
+  ordered.forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'input-list-row';
+    const standVal = row.stand_or_clip || '';
+    el.innerHTML = `
+      <button class="channel-num-dot" data-id="${row.id}" style="background:${row.color ? hexToRgba(row.color,0.28) : 'var(--bg)'};border-color:${row.color || 'var(--line)'};color:${row.color || 'var(--text)'}">${row.channel_number ?? ''}</button>
+      <input type="text" data-id="${row.id}" data-field="instrument" value="${escapeAttr(row.instrument || '')}" placeholder="Instrument">
+      <input type="text" data-id="${row.id}" data-field="mic" value="${escapeAttr(row.mic || '')}" placeholder="Mic">
+      <input type="checkbox" data-id="${row.id}" data-field="is_48v" ${row.is_48v ? 'checked' : ''}>
+      <select data-id="${row.id}" data-field="stand_or_clip" class="stand-select" style="color:${STAND_CLIP_COLORS[standVal] || 'var(--text-muted)'}">
+        <option value="" ${!standVal ? 'selected' : ''}>—</option>
+        <option value="Stand" ${standVal==='Stand'?'selected':''}>Stand</option>
+        <option value="Clip" ${standVal==='Clip'?'selected':''}>Clip</option>
+        <option value="-" ${standVal==='-'?'selected':''}>-</option>
+      </select>
+      <input type="text" data-id="${row.id}" data-field="snake_input" value="${escapeAttr(row.snake_input || '')}" placeholder="—">
+      <button class="input-remove-btn" data-id="${row.id}" title="Remove">✕</button>
+    `;
+    container.appendChild(el);
+  });
+
+  container.querySelectorAll('input[type=text]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/input_list?id=eq.${inp.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
+      });
+      await fetchInputList();
+    });
+  });
+  container.querySelectorAll('input[type=checkbox]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/input_list?id=eq.${chk.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ is_48v: chk.checked })
+      });
+      await fetchInputList();
+    });
+  });
+  container.querySelectorAll('.stand-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      sel.style.color = STAND_CLIP_COLORS[sel.value] || 'var(--text-muted)';
+      await fetch(`${SUPABASE_URL}/rest/v1/input_list?id=eq.${sel.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ stand_or_clip: sel.value || null })
+      });
+      await fetchInputList();
+    });
+  });
+  container.querySelectorAll('.input-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/input_list?id=eq.${btn.dataset.id}`, { method:'DELETE', headers });
+      await fetchInputList();
+      renderInputList();
+    });
+  });
+  container.querySelectorAll('.channel-num-dot').forEach(dot => {
+    dot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.color-popover').forEach(p => p.remove());
+      const pop = document.createElement('div');
+      pop.className = 'color-popover';
+      pop.style.position = 'fixed';
+      const rect = dot.getBoundingClientRect();
+      pop.style.top = (rect.bottom + 6) + 'px';
+      pop.style.left = rect.left + 'px';
+      pop.innerHTML = SET_COLOR_PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}"></button>`).join('');
+      document.body.appendChild(pop);
+      pop.querySelectorAll('.swatch').forEach(sw => {
+        sw.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          await fetch(`${SUPABASE_URL}/rest/v1/input_list?id=eq.${dot.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ color: sw.dataset.color }) });
+          pop.remove();
+          await fetchInputList();
+          renderInputList();
+        });
+      });
+    });
+  });
+}
+document.addEventListener('click', () => document.querySelectorAll('.color-popover').forEach(p => p.remove()));
+
+document.getElementById('btn-add-input-row').addEventListener('click', async () => {
+  const maxCh = inputListRows.reduce((m, r) => Math.max(m, r.channel_number || 0), 0);
+  await fetch(`${SUPABASE_URL}/rest/v1/input_list`, {
+    method:'POST', headers, body: JSON.stringify({ channel_number: maxCh + 1 })
+  });
+  await fetchInputList();
+  renderInputList();
+});
+
+/* ============ SPEAKERS COVERAGE ============ */
+function renderSpeakerTables(){
+  const wrap = document.getElementById('speaker-tables-wrap');
+  wrap.innerHTML = '';
+  if(speakerTables.length === 0){
+    wrap.innerHTML = '<div class="empty-note">No tables yet — click "+ Add table" to start.</div>';
+    return;
+  }
+  speakerTables.forEach(tbl => {
+    const items = speakerItems.filter(it => it.table_id === tbl.id).sort((a,b) => (a.item_order||0)-(b.item_order||0));
+    const block = document.createElement('div');
+    block.className = 'set-block audio-centered';
+    block.innerHTML = `
+      <div class="set-head">
+        <span class="name editable-name" contenteditable="true" data-table-id="${tbl.id}">${escapeHtml(tbl.name || 'Untitled')}</span>
+        <button class="del-set" data-table-id="${tbl.id}" title="Delete table">✕</button>
+      </div>
+      <div class="speaker-head"><span>Number</span><span>Name</span><span>Model</span><span></span></div>
+      <div class="speaker-rows" data-table-id="${tbl.id}"></div>
+      <button class="btn ghost small btn-add-speaker-row" data-table-id="${tbl.id}" style="margin:12px 20px">+ Add row</button>
+    `;
+    const rowsDiv = block.querySelector('.speaker-rows');
+    if(items.length === 0){
+      rowsDiv.innerHTML = '<div class="empty-note" style="border:none;padding:16px;">No items yet.</div>';
+    }
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'speaker-row';
+      row.innerHTML = `
+        <input type="text" data-id="${item.id}" data-field="number" value="${escapeAttr(item.number || '')}" placeholder="Number">
+        <input type="text" data-id="${item.id}" data-field="name" value="${escapeAttr(item.name || '')}" placeholder="Name">
+        <input type="text" data-id="${item.id}" data-field="model" value="${escapeAttr(item.model || '')}" placeholder="Model">
+        <button class="speaker-remove-btn" data-id="${item.id}" title="Remove">✕</button>
+      `;
+      rowsDiv.appendChild(row);
+    });
+    wrap.appendChild(block);
+  });
+
+  wrap.querySelectorAll('.speaker-row input').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/speaker_items?id=eq.${inp.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
+      });
+      await fetchSpeakerItems();
+    });
+  });
+  wrap.querySelectorAll('.speaker-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/speaker_items?id=eq.${btn.dataset.id}`, { method:'DELETE', headers });
+      await fetchSpeakerItems();
+      renderSpeakerTables();
+    });
+  });
+  wrap.querySelectorAll('.btn-add-speaker-row').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const currentItems = speakerItems.filter(it => it.table_id === btn.dataset.tableId);
+      await fetch(`${SUPABASE_URL}/rest/v1/speaker_items`, {
+        method:'POST', headers, body: JSON.stringify({ table_id: btn.dataset.tableId, item_order: currentItems.length + 1 })
+      });
+      await fetchSpeakerItems();
+      renderSpeakerTables();
+    });
+  });
+  wrap.querySelectorAll('.editable-name[data-table-id]').forEach(nameEl => {
+    nameEl.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); } });
+    nameEl.addEventListener('blur', async () => {
+      const newName = nameEl.textContent.trim();
+      if(!newName) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?id=eq.${nameEl.dataset.tableId}`, { method:'PATCH', headers, body: JSON.stringify({ name: newName }) });
+      await fetchSpeakerTables();
+    });
+  });
+  wrap.querySelectorAll('.del-set[data-table-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(!confirm('Delete this speaker table and all its rows?')) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?id=eq.${btn.dataset.tableId}`, { method:'DELETE', headers });
+      await fetchSpeakerTables();
+      await fetchSpeakerItems();
+      renderSpeakerTables();
+    });
+  });
+}
+document.getElementById('btn-add-speaker-table').addEventListener('click', async () => {
+  const name = prompt('Name for this speaker table (e.g. "Option 1: Stage Only"):');
+  if(!name || !name.trim()) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables`, {
+    method:'POST', headers, body: JSON.stringify({ name: name.trim(), table_order: speakerTables.length + 1 })
+  });
+  await fetchSpeakerTables();
+  renderSpeakerTables();
+});
+
 
 /* ============ CHARTS ============ */
 function songsByField(field){
@@ -1530,7 +2016,7 @@ function renderChart(kind){
 }
 
 async function reload(){
-  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog()]);
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems()]);
   renderTable();
 }
 reload();

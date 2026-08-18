@@ -200,10 +200,50 @@
       </div>
     </div>
     <div id="tech-panel-stage" class="tech-panel" style="display:none">
-      <div class="empty-note">Stage planning is coming soon.</div>
+      <div class="stage-layout">
+        <div class="stage-controls">
+          <div class="row2">
+            <div class="field"><label>Unit</label>
+              <select id="stage-unit"><option value="ft">ft / in</option><option value="m">m</option></select>
+            </div>
+            <div class="field"><label>Precision</label>
+              <select id="stage-precision"><option value="0">Whole numbers</option><option value="1" selected>0.1</option><option value="2">0.01</option></select>
+            </div>
+          </div>
+          <div class="field"><label>Label</label><input type="text" id="rect-label" placeholder="e.g. Main stage"></div>
+          <div class="row2">
+            <div class="field"><label>Length</label><input type="number" id="rect-length" placeholder="e.g. 20"></div>
+            <div class="field"><label>Width</label><input type="number" id="rect-width" placeholder="e.g. 16"></div>
+          </div>
+          <div class="field"><label>Height (optional)</label><input type="number" id="rect-height" placeholder="not used in 2D"></div>
+          <button class="btn" id="btn-add-rect">+ Create rectangle</button>
+          <div id="rect-list"></div>
+        </div>
+        <div class="stage-visualizer-wrap">
+          <div class="stage-visualizer" id="stage-visualizer"></div>
+          <div class="stage-zoom-row">
+            <span class="mono-label">Zoom</span>
+            <input type="range" id="stage-zoom" min="50" max="200" value="100">
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">STAGE PLOT</h2>
+      <div class="stage-plot-box">
+        <div id="stage-plot-display" class="stage-plot-display"></div>
+        <input type="file" id="stage-plot-input" accept="image/*" style="display:none">
+        <button class="btn ghost" id="btn-upload-plot">Upload image (max 100KB)</button>
+      </div>
+      <div style="text-align:center;margin-top:22px">
+        <!-- Fill in the real link when the 3D viewer is ready -->
+        <a href="" id="btn-3d-view" class="btn" target="_blank" rel="noopener">View in Interactive 3D</a>
+      </div>
     </div>
     <div id="tech-panel-lights" class="tech-panel" style="display:none">
-      <div class="empty-note">Lights planning is coming soon.</div>
+      <div class="toolbar">
+        <span class="mono-label">Linked from Setlist — read-only except Backdrop Color, Stage Lights & Comments</span>
+      </div>
+      <div id="lights-container"></div>
     </div>
   </div>
 
@@ -292,6 +332,9 @@ let audioRequirements = [];
 let inputListRows = [];
 let speakerTables = [];
 let speakerItems = [];
+let stageRectangles = [];
+let stageSettings = null;
+let stageZoom = 1;
 let genres = [];
 let instrumentCatalog = [];
 let charts = {};
@@ -337,6 +380,15 @@ async function fetchSpeakerTables(){
 async function fetchSpeakerItems(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/speaker_items?select=*&order=item_order.asc.nullslast`, { headers });
   speakerItems = res.ok ? await res.json() : [];
+}
+async function fetchStageRectangles(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_rectangles?select=*`, { headers });
+  stageRectangles = res.ok ? await res.json() : [];
+}
+async function fetchStageSettings(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_settings?select=*&limit=1`, { headers });
+  const arr = res.ok ? await res.json() : [];
+  stageSettings = arr[0] || null;
 }
 async function fetchGenres(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/genres?select=*&order=name.asc`, { headers });
@@ -610,8 +662,9 @@ function wireSetEditing(){
 
 let setDragState = null;
 function wireSetDragAndDrop(){
-  document.querySelectorAll('.set-block:not(.pool)').forEach(block => {
+  document.querySelectorAll('#sets-container .set-block:not(.pool)').forEach(block => {
     const head = block.querySelector('.set-head');
+    if(!head) return;
     head.draggable = true;
     head.addEventListener('dragstart', (e) => {
       setDragState = block.dataset.setNumber;
@@ -1601,14 +1654,15 @@ function parseDurationMinutes(str){
 function renderSchedule(){
   const startHour = 8, endHour = 24;
   const PX_PER_HOUR = 46;
-  const totalHeight = (endHour - startHour) * PX_PER_HOUR;
+  const PAD = 20;
+  const totalHeight = (endHour - startHour) * PX_PER_HOUR + PAD * 2;
 
   const ruler = document.getElementById('schedule-ruler');
   ruler.style.height = totalHeight + 'px';
   let rulerHtml = '';
   for(let h = startHour; h <= endHour; h++){
     const label = h === 24 || h === 0 ? '12:00am' : h > 12 ? `${h-12}:00pm` : h === 12 ? '12:00pm' : `${h}:00am`;
-    rulerHtml += `<div class="ruler-mark" style="top:${(h-startHour)*PX_PER_HOUR}px">${label}</div>`;
+    rulerHtml += `<div class="ruler-mark" style="top:${PAD + (h-startHour)*PX_PER_HOUR}px">${label}</div>`;
   }
   ruler.innerHTML = rulerHtml;
 
@@ -1616,7 +1670,7 @@ function renderSchedule(){
   track.style.height = totalHeight + 'px';
   track.innerHTML = '';
   for(let h = startHour; h <= endHour; h++){
-    track.innerHTML += `<div class="track-line" style="top:${(h-startHour)*PX_PER_HOUR}px"></div>`;
+    track.innerHTML += `<div class="track-line" style="top:${PAD + (h-startHour)*PX_PER_HOUR}px"></div>`;
   }
 
   const unscheduledEl = document.getElementById('schedule-unscheduled');
@@ -1628,7 +1682,7 @@ function renderSchedule(){
     const [hh, mm] = s.set_time.split(':').map(Number);
     const startMinutes = (hh * 60 + mm) - startHour * 60;
     const durMin = parseDurationMinutes(s.set_duration);
-    const top = (startMinutes / 60) * PX_PER_HOUR;
+    const top = PAD + (startMinutes / 60) * PX_PER_HOUR;
     const height = Math.max((durMin / 60) * PX_PER_HOUR, 20);
     const block = document.createElement('div');
     block.className = 'schedule-block';
@@ -1637,10 +1691,9 @@ function renderSchedule(){
     block.style.background = hexToRgba(s.color || '#D98A3D', 0.85);
     block.style.borderColor = s.color || '#D98A3D';
     const songCount = songs.filter(sg => sg.set_number === s.set_number).length;
-    const label = `${s.set_number} - ${s.set_time.slice(0,5)} - ${s.set_duration || '—'}${songCount ? ` - ${songCount} songs` : ''}`;
     if(height < 34){
       block.classList.add('narrow');
-      block.innerHTML = `<span class="narrow-label">${escapeHtml(label)}</span>`;
+      block.innerHTML = `<span class="narrow-line"><b>${escapeHtml(s.set_number)}</b> · ${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
     } else {
       block.innerHTML = `<b>${escapeHtml(s.set_number)}</b><span>${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
     }
@@ -1680,6 +1733,233 @@ document.querySelectorAll('.view-by-bar .pill').forEach(pill => {
   });
 });
 
+/* ============ STAGE TAB ============ */
+function unitLabel(){ return document.getElementById('stage-unit').value === 'm' ? 'm' : 'ft'; }
+function precisionDigits(){ return parseInt(document.getElementById('stage-precision').value, 10) || 0; }
+function fmtNum(n){ return Number(n).toFixed(precisionDigits()); }
+
+function renderStage(){
+  renderRectList();
+  renderStageVisualizer();
+  renderStagePlot();
+}
+
+function renderRectList(){
+  const list = document.getElementById('rect-list');
+  if(stageRectangles.length === 0){
+    list.innerHTML = '<div class="empty-note" style="border:none;padding:14px 0;">No rectangles yet.</div>';
+    return;
+  }
+  list.innerHTML = stageRectangles.map(r => `
+    <div class="rect-list-item" data-id="${r.id}">
+      <span class="rect-swatch" style="background:${r.color || 'var(--gold)'}"></span>
+      <span class="rect-label-text">${escapeHtml(r.label || 'Rectangle')}</span>
+      <span class="rect-dims">${fmtNum(r.length)} × ${fmtNum(r.width)} ${r.unit || 'ft'}</span>
+      <button class="rect-remove-btn" data-id="${r.id}">✕</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('.rect-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/stage_rectangles?id=eq.${btn.dataset.id}`, { method:'DELETE', headers });
+      await fetchStageRectangles();
+      renderStage();
+    });
+  });
+}
+
+function renderStageVisualizer(){
+  const vis = document.getElementById('stage-visualizer');
+  vis.innerHTML = '';
+  if(stageRectangles.length === 0){
+    vis.innerHTML = '<div class="empty-note" style="border:none;">Create a rectangle to see it here.</div>';
+    return;
+  }
+  const visW = vis.clientWidth || 500;
+  const visH = vis.clientHeight || 400;
+  const maxDim = Math.max(...stageRectangles.map(r => Math.max(r.length || 1, r.width || 1)));
+  const baseScale = (0.6 * Math.min(visW, visH)) / maxDim;
+  const scale = baseScale * stageZoom;
+
+  stageRectangles.forEach(r => {
+    const el = document.createElement('div');
+    el.className = 'stage-rect';
+    el.dataset.id = r.id;
+    const w = (r.length || 1) * scale;
+    const h = (r.width || 1) * scale;
+    el.style.width = w + 'px';
+    el.style.height = h + 'px';
+    el.style.left = ((r.pos_x || 50) / 100 * visW) - w/2 + 'px';
+    el.style.top = ((r.pos_y || 50) / 100 * visH) - h/2 + 'px';
+    el.style.background = hexToRgba(r.color || '#D98A3D', 0.28);
+    el.style.borderColor = r.color || '#D98A3D';
+    el.innerHTML = `<span>${escapeHtml(r.label || 'Rectangle')}</span>`;
+    vis.appendChild(el);
+
+    let dragging = false, offX = 0, offY = 0;
+    el.addEventListener('mousedown', (e) => {
+      dragging = true;
+      const rect = el.getBoundingClientRect();
+      offX = e.clientX - rect.left;
+      offY = e.clientY - rect.top;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if(!dragging) return;
+      const visRect = vis.getBoundingClientRect();
+      let x = e.clientX - visRect.left - offX + w/2;
+      let y = e.clientY - visRect.top - offY + h/2;
+      x = Math.max(0, Math.min(visW, x));
+      y = Math.max(0, Math.min(visH, y));
+      el.style.left = (x - w/2) + 'px';
+      el.style.top = (y - h/2) + 'px';
+      r.pos_x = (x / visW) * 100;
+      r.pos_y = (y / visH) * 100;
+    });
+    document.addEventListener('mouseup', async () => {
+      if(!dragging) return;
+      dragging = false;
+      await fetch(`${SUPABASE_URL}/rest/v1/stage_rectangles?id=eq.${r.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ pos_x: r.pos_x, pos_y: r.pos_y })
+      });
+    });
+  });
+}
+
+document.getElementById('btn-add-rect').addEventListener('click', async () => {
+  const label = document.getElementById('rect-label').value.trim() || 'Rectangle';
+  const length = parseFloat(document.getElementById('rect-length').value) || 10;
+  const width = parseFloat(document.getElementById('rect-width').value) || 10;
+  const height = parseFloat(document.getElementById('rect-height').value) || null;
+  const unit = document.getElementById('stage-unit').value;
+  const color = SET_COLOR_PALETTE[stageRectangles.length % SET_COLOR_PALETTE.length];
+  await fetch(`${SUPABASE_URL}/rest/v1/stage_rectangles`, {
+    method:'POST', headers, body: JSON.stringify({ label, length, width, height, unit, color, pos_x: 50, pos_y: 50 })
+  });
+  document.getElementById('rect-label').value = '';
+  document.getElementById('rect-length').value = '';
+  document.getElementById('rect-width').value = '';
+  document.getElementById('rect-height').value = '';
+  await fetchStageRectangles();
+  renderStage();
+});
+
+document.getElementById('stage-unit').addEventListener('change', renderRectList);
+document.getElementById('stage-precision').addEventListener('change', renderRectList);
+
+document.getElementById('stage-zoom').addEventListener('input', (e) => {
+  stageZoom = parseInt(e.target.value, 10) / 100;
+  renderStageVisualizer();
+});
+document.getElementById('stage-visualizer').addEventListener('wheel', (e) => {
+  e.preventDefault();
+  stageZoom = Math.max(0.5, Math.min(2, stageZoom - e.deltaY * 0.001));
+  document.getElementById('stage-zoom').value = Math.round(stageZoom * 100);
+  renderStageVisualizer();
+});
+
+function renderStagePlot(){
+  const display = document.getElementById('stage-plot-display');
+  if(stageSettings?.plot_image_base64){
+    display.innerHTML = `<img src="${stageSettings.plot_image_base64}" alt="Stage plot">`;
+  } else {
+    display.innerHTML = '<div class="empty-note" style="border:none;">No stage plot uploaded yet.</div>';
+  }
+}
+document.getElementById('btn-upload-plot').addEventListener('click', () => {
+  document.getElementById('stage-plot-input').click();
+});
+document.getElementById('stage-plot-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 100 * 1024){
+    alert('That image is over 100KB. Please choose a smaller file.');
+    e.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result;
+    if(stageSettings?.id){
+      await fetch(`${SUPABASE_URL}/rest/v1/stage_settings?id=eq.${stageSettings.id}`, { method:'PATCH', headers, body: JSON.stringify({ plot_image_base64: base64 }) });
+    } else {
+      await fetch(`${SUPABASE_URL}/rest/v1/stage_settings`, { method:'POST', headers, body: JSON.stringify({ plot_image_base64: base64 }) });
+    }
+    await fetchStageSettings();
+    renderStagePlot();
+  };
+  reader.readAsDataURL(file);
+});
+
+/* ============ LIGHTS TAB ============ */
+function renderLights(){
+  const container = document.getElementById('lights-container');
+  container.innerHTML = '';
+  const songSets = sets.filter(s => s.set_type !== 'interlude').sort((a,b) => (a.set_order||0) - (b.set_order||0));
+
+  let cueCounter = 0;
+  songSets.forEach(setInfo => {
+    const setSongs = songs.filter(s => s.set_number === setInfo.set_number).sort((a,b) => (a.song_order||0) - (b.song_order||0));
+    if(setSongs.length === 0) return;
+
+    const withRail = document.createElement('div');
+    withRail.className = 'set-with-rail';
+    withRail.innerHTML = `
+      <div class="set-time-rail">
+        <span class="rail-dot" style="background:${setInfo.color || 'var(--gold)'}"></span>
+        <b class="rail-time">${setInfo.set_time ? setInfo.set_time.slice(0,5) : '—'}</b>
+        <small class="rail-dur">${escapeHtml(setInfo.set_duration || '')}</small>
+      </div>
+    `;
+    const block = document.createElement('div');
+    block.className = 'set-block';
+    if(setInfo.color) block.style.borderLeftColor = setInfo.color;
+    block.innerHTML = `
+      <div class="set-head"><span class="name" style="${setInfo.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setInfo.set_number)}</span></div>
+      <div class="lights-head">
+        <span>Cue#</span><span>Song</span><span>Special guest</span><span>Backdrop color</span><span>Stage lights</span><span>Comments</span>
+      </div>
+      <div class="lights-rows"></div>
+    `;
+    const rowsDiv = block.querySelector('.lights-rows');
+    setSongs.forEach(song => {
+      cueCounter++;
+      const emo = song.emotion_level || 'media';
+      const row = document.createElement('div');
+      row.className = 'lights-row';
+      row.innerHTML = `
+        <span class="cue-number">${cueCounter}</span>
+        <div class="lights-song-cell">
+          <div class="dimmer small ${emo}"><i></i><span class="fader-dot small ${emo}"></span></div>
+          <div>
+            <p class="lights-song-title">${escapeHtml(song.song_name || 'Untitled')}</p>
+            ${song.artist ? `<p class="lights-song-artist">${escapeHtml(song.artist)}</p>` : ''}
+          </div>
+        </div>
+        <span class="lights-readonly">${escapeHtml(song.guests || '—')}</span>
+        <input type="text" data-id="${song.id}" data-field="backdrop_color" value="${escapeAttr(song.backdrop_color || '')}" placeholder="—">
+        <input type="text" data-id="${song.id}" data-field="stage_lights" value="${escapeAttr(song.stage_lights || '')}" placeholder="—">
+        <input type="text" data-id="${song.id}" data-field="light_comments" value="${escapeAttr(song.light_comments || '')}" placeholder="—">
+      `;
+      rowsDiv.appendChild(row);
+    });
+    withRail.appendChild(block);
+    container.appendChild(withRail);
+  });
+
+  if(cueCounter === 0){
+    container.innerHTML = '<div class="empty-note">No songs in your Setlist yet.</div>';
+  }
+
+  container.querySelectorAll('input[type=text]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${inp.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
+      });
+      await fetchSongs();
+    });
+  });
+}
+
 document.querySelectorAll('.tech-subtab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tech-subtab').forEach(b => b.classList.remove('active'));
@@ -1687,6 +1967,8 @@ document.querySelectorAll('.tech-subtab').forEach(btn => {
     document.querySelectorAll('.tech-panel').forEach(p => p.style.display = 'none');
     document.getElementById('tech-panel-' + btn.dataset.sub).style.display = 'block';
     if(btn.dataset.sub === 'audio') renderAudioRequirements();
+    else if(btn.dataset.sub === 'stage') renderStage();
+    else if(btn.dataset.sub === 'lights') renderLights();
   });
 });
 
@@ -2016,7 +2298,7 @@ function renderChart(kind){
 }
 
 async function reload(){
-  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems()]);
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings()]);
   renderTable();
 }
 reload();

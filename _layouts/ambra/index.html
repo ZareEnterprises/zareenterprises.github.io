@@ -12,7 +12,7 @@
 <body>
 
 <header class="top">
-  <p class="eyebrow">AMBRA Live Productions · Event Planning</p>
+  <p class="eyebrow">Event Planning for The Boston Foundation</p>
   <h1>PA'LANTE 2026</h1>
   <p class="sub">Henri A. Termeer Square · Sept 10, 2026 · 6:30pm–10:30pm</p>
 </header>
@@ -21,7 +21,7 @@
   <button class="tab-btn primary active" data-tab="table">Setlist</button>
   <button class="tab-btn primary" data-tab="instrumentation">Lineup</button>
   <button class="tab-btn primary" data-tab="band">Band</button>
-  <button class="tab-btn primary" data-tab="schedule">Schedule</button>
+  <button class="tab-btn primary" data-tab="technical">Technical</button>
 </nav>
 
 <main>
@@ -31,13 +31,15 @@
       <div class="view-by-bar">
         <span class="mono-label">View by:</span>
         <button class="pill active" data-view="table">☰ Setlist</button>
+        <button class="pill" data-view="schedule">🕐 Schedule</button>
         <button class="pill" data-view="artist">🎤 Artist</button>
         <button class="pill" data-view="country">🌐 Country</button>
         <button class="pill" data-view="genre">🎵 Genre</button>
         <button class="pill" data-view="emotion">♡ Emotion</button>
       </div>
       <div class="toolbar-actions">
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="mono-label" id="song-count">—</span>
           <button class="btn ghost" id="btn-new-set">+ Create new set</button>
           <button class="btn" id="btn-add-song">+ Add song</button>
         </div>
@@ -47,20 +49,12 @@
             <div class="filter-section">
               <span class="label">Show:</span>
               <div class="filter-chips-wrap">
-                <label class="filter-chip active"><input type="checkbox" data-field="song" checked> Song</label>
+                <label class="filter-chip active"><input type="checkbox" data-field="song" checked> Artist</label>
                 <label class="filter-chip active"><input type="checkbox" data-field="genre" checked> Genre</label>
                 <label class="filter-chip active"><input type="checkbox" data-field="country" checked> Country</label>
                 <label class="filter-chip active"><input type="checkbox" data-field="duration" checked> Duration</label>
-                <label class="filter-chip"><input type="checkbox" data-field="arranger"> Arranger</label>
-                <label class="filter-chip"><input type="checkbox" data-field="version"> Customized version</label>
                 <label class="filter-chip"><input type="checkbox" data-field="guests"> Special guest</label>
-                <label class="filter-chip"><input type="checkbox" data-field="comments"> Comments</label>
               </div>
-            </div>
-            <div class="filter-section">
-              <span class="label">Sort by singer:</span>
-              <div class="filter-chips-wrap" id="singer-chips"></div>
-              <button class="btn ghost small" id="btn-clear-singer-sort" style="display:none;margin-top:8px">Clear sort</button>
             </div>
           </div>
         </div>
@@ -74,6 +68,16 @@
     </div>
 
     <div id="setlist-chart-view" style="display:none">
+      <div id="chart-schedule-wrap" style="display:none">
+        <div class="toolbar">
+          <span class="mono-label">Run of show — read-only view of your Setlist times</span>
+        </div>
+        <div class="schedule-wrap compact">
+          <div class="schedule-ruler" id="schedule-ruler"></div>
+          <div class="schedule-track" id="schedule-track"></div>
+        </div>
+        <div id="schedule-unscheduled"></div>
+      </div>
       <div id="chart-artist-wrap" class="chart-wrap" style="display:none">
         <h3>Songs by artist</h3>
         <canvas id="chart-artist" height="140"></canvas>
@@ -103,8 +107,29 @@
   </div>
 
   <div id="view-instrumentation" style="display:none">
+    <div class="toolbar">
+      <span class="mono-label">Lineup</span>
+      <div class="filters-anchor">
+        <button class="filters-link" id="btn-lineup-filters-toggle">Columns ▾</button>
+        <div class="filters-dropdown" id="lineup-filters-dropdown" style="display:none">
+          <div class="filter-section">
+            <span class="label">Show columns:</span>
+            <div class="filter-chips-wrap">
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="arranger" checked> Arranger</label>
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="version" checked> Customized version</label>
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="comments" checked> Comments</label>
+            </div>
+          </div>
+          <div class="filter-section">
+            <span class="label">Sort Setlist by singer:</span>
+            <div class="filter-chips-wrap" id="singer-chips"></div>
+            <button class="btn ghost small" id="btn-clear-singer-sort" style="display:none;margin-top:8px">Clear sort</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="set-block">
-      <div class="instr-head">
+      <div class="instr-head" id="instr-head-row">
         <span>Song</span><span>Tonality<span class="header-note">Original</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
       </div>
       <div id="instr-container"></div>
@@ -128,15 +153,24 @@
     <p class="hint">Tip: use <b>Singer</b> as the Instrument for vocalists — that's what makes them appear in the Singer dropdown under Instrumentation. Adding an instrument on the left creates a row on the right, ready for you to type who plays it.</p>
   </div>
 
-  <div id="view-schedule" style="display:none">
+  <div id="view-technical" style="display:none">
     <div class="toolbar">
-      <span class="mono-label">Run of show — read-only view of your Setlist times</span>
+      <span class="mono-label">Technical planning</span>
     </div>
-    <div class="schedule-wrap compact">
-      <div class="schedule-ruler" id="schedule-ruler"></div>
-      <div class="schedule-track" id="schedule-track"></div>
+    <div class="tech-subtabs">
+      <button class="tech-subtab active audio" data-sub="audio">🔊 Audio</button>
+      <button class="tech-subtab stage" data-sub="stage">🎭 Stage</button>
+      <button class="tech-subtab lights" data-sub="lights">💡 Lights</button>
     </div>
-    <div id="schedule-unscheduled"></div>
+    <div id="tech-panel-audio" class="tech-panel">
+      <div class="empty-note">Audio planning is coming soon.</div>
+    </div>
+    <div id="tech-panel-stage" class="tech-panel" style="display:none">
+      <div class="empty-note">Stage planning is coming soon.</div>
+    </div>
+    <div id="tech-panel-lights" class="tech-panel" style="display:none">
+      <div class="empty-note">Lights planning is coming soon.</div>
+    </div>
   </div>
 
 </main>
@@ -152,25 +186,15 @@
       <div class="field"><label>Artist's country</label><input id="f-country"></div>
     </div>
     <div class="row2">
-      <div class="field"><label>Emotion</label>
-        <select id="f-emotion">
-          <option value="baja">Low</option>
-          <option value="media" selected>Medium</option>
-          <option value="alta">High</option>
-        </select>
-      </div>
-      <div class="field"><label>Duration</label><input id="f-duration" placeholder="e.g. 3:30"></div>
-    </div>
-    <div class="row2">
       <div class="field combobox-field">
         <label>Music style</label>
         <input id="f-genero" placeholder="Type to search or add…" autocomplete="off">
         <div class="combo-panel" id="genero-combo-panel" style="display:none"></div>
       </div>
-      <div class="field"><label>Arranger (optional)</label><input id="f-arranger"></div>
+      <div class="field"><label>Duration</label><input id="f-duration" placeholder="e.g. 3:30"></div>
     </div>
-    <div class="field"><label>Customized version</label><input id="f-youtube" placeholder="https://..."></div>
-    <div class="field"><label>Comments</label><textarea id="f-comments"></textarea></div>
+    <div class="field"><label>Special guest</label><input id="f-guests" placeholder="Optional"></div>
+    <p class="hint" style="margin-top:0">Emotion is set by dragging the fader dot on the song row. Arranger, comments, and the customized version link are edited from the Lineup tab.</p>
     <div class="modal-actions">
       <button class="btn ghost" id="btn-cancel">Cancel</button>
       <button class="btn danger" id="btn-delete" style="display:none">Delete</button>
@@ -308,7 +332,7 @@ function renderSongRow(song, containerSetName, draggableOn){
   }).join('');
 
   row.innerHTML = `
-    <div class="dimmer ${emo}"><i></i></div>
+    <div class="dimmer ${emo}" data-song-id="${song.id}"><i></i><span class="fader-dot ${emo}"></span></div>
     <div class="song-grid-row" style="grid-template-columns:${gridCols}">
       <div class="cell song-cell">
         <input class="inline-edit title-edit" data-id="${song.id}" data-field="song_name" value="${escapeAttr(song.song_name || '')}" placeholder="Song title">
@@ -317,13 +341,11 @@ function renderSongRow(song, containerSetName, draggableOn){
       ${cellsHtml}
     </div>
     <div class="caption-line">
-      ${visibleFields.arranger && song.arranger ? `<span>${escapeHtml(song.arranger)}</span>` : ''}
-      ${visibleFields.version && song.youtube_link ? `<span><a href="${escapeAttr(song.youtube_link)}" target="_blank">customized version ↗</a></span>` : ''}
-      ${visibleFields.comments && song.comments ? `<span>${escapeHtml(song.comments)}</span>` : ''}
       ${visibleFields.guests && song.guests ? `<span class="guest-tag">✦ ${escapeHtml(song.guests)}</span>` : ''}
     </div>
     <div class="row-actions">
-      <button class="btn ghost small edit-btn" data-id="${song.id}">Edit</button>
+      <button class="edit-pencil row-edit-pencil" data-id="${song.id}" title="Edit">✎</button>
+      <span class="drag-handle" title="Drag to reorder">⠿</span>
     </div>
   `;
   return row;
@@ -363,20 +385,34 @@ function renderTable(){
   }
 
   const { groups, unassigned } = groupBySet();
+  const railWrap = document.createElement('div');
+  railWrap.className = 'setlist-rail-wrap';
 
   Object.keys(groups).forEach(setName => {
     const setInfo = sets.find(s => s.set_number === setName);
+    const withRail = document.createElement('div');
+    withRail.className = 'set-with-rail';
+
+    const rail = document.createElement('div');
+    rail.className = 'set-time-rail';
+    rail.innerHTML = `
+      <span class="rail-dot" style="background:${setInfo?.color || 'var(--gold)'}"></span>
+      <b class="rail-time">${setInfo?.set_time ? setInfo.set_time.slice(0,5) : '—'}</b>
+      <small class="rail-dur">${escapeHtml(setInfo?.set_duration || '')}</small>
+    `;
+    withRail.appendChild(rail);
+
     const block = document.createElement('div');
     block.className = 'set-block';
+    block.dataset.setNumber = setName;
     if(setInfo?.color) block.style.borderLeftColor = setInfo.color;
     block.innerHTML = `
-      <div class="set-head" style="${setInfo?.color ? `background:${hexToRgba(setInfo.color,0.14)}` : ''}">
-        <span class="name" style="${setInfo?.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setName)}</span>
-        <span class="dur">
-          <input type="text" data-set="${escapeAttr(setName)}" data-field="set_time" class="time-input" placeholder="time" value="${setInfo?.set_time ? setInfo.set_time.slice(0,5) : ''}">
-          <input type="text" data-set="${escapeAttr(setName)}" data-field="set_duration" placeholder="duration" value="${setInfo?.set_duration || ''}">
-          ${setInfo ? `<button class="del-set" data-set-id="${setInfo.id}" title="Delete set">✕</button>` : ''}
+      <div class="set-head">
+        <span class="name-wrap">
+          <button class="set-color-dot" data-set="${escapeAttr(setName)}" style="background:${setInfo?.color || 'var(--line)'}" title="Change color"></button>
+          <span class="name editable-name" contenteditable="true" data-set="${escapeAttr(setName)}" style="${setInfo?.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setName)}</span>
         </span>
+        ${setInfo ? `<button class="del-set" data-set-id="${setInfo.id}" title="Delete set">✕</button>` : ''}
       </div>
       <div class="rows" data-set="${escapeAttr(setName)}"></div>
     `;
@@ -385,8 +421,10 @@ function renderTable(){
       rowsDiv.appendChild(columnHeader());
       groups[setName].forEach(song => rowsDiv.appendChild(renderSongRow(song, setName)));
     }
-    container.appendChild(block);
+    withRail.appendChild(block);
+    railWrap.appendChild(withRail);
   });
+  container.appendChild(railWrap);
 
   // Unassigned pool goes BELOW the sets
   const poolBlock = document.createElement('div');
@@ -402,6 +440,108 @@ function renderTable(){
   wireRowActions();
   wireExpandables();
   wireDragAndDrop();
+  wireEmotionFaders();
+  wireSetEditing();
+  wireSetDragAndDrop();
+}
+
+function wireSetEditing(){
+  document.querySelectorAll('.editable-name').forEach(nameEl => {
+    nameEl.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); } });
+    nameEl.addEventListener('blur', async () => {
+      const oldName = nameEl.dataset.set;
+      const newName = nameEl.textContent.trim();
+      if(!newName || newName === oldName) { nameEl.textContent = oldName; return; }
+      if(sets.find(s => s.set_number === newName)){ alert('A set with that name already exists.'); nameEl.textContent = oldName; return; }
+      const setInfo = sets.find(s => s.set_number === oldName);
+      if(!setInfo) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${setInfo.id}`, { method:'PATCH', headers, body: JSON.stringify({ set_number: newName }) });
+      const affected = songs.filter(s => s.set_number === oldName);
+      await Promise.all(affected.map(s =>
+        fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${s.id}`, { method:'PATCH', headers, body: JSON.stringify({ set_number: newName }) })
+      ));
+      await reload();
+    });
+  });
+
+  document.querySelectorAll('.rail-time').forEach(el => {
+    el.setAttribute('contenteditable', 'true');
+    el.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); el.blur(); } });
+    el.addEventListener('blur', async () => {
+      const withRail = el.closest('.set-with-rail');
+      const setName = withRail.querySelector('.set-block').dataset.setNumber;
+      const value = el.textContent.trim();
+      await saveSetField(setName, 'set_time', value === '—' ? '' : value);
+      renderTable();
+    });
+  });
+  document.querySelectorAll('.rail-dur').forEach(el => {
+    el.setAttribute('contenteditable', 'true');
+    el.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); el.blur(); } });
+    el.addEventListener('blur', async () => {
+      const withRail = el.closest('.set-with-rail');
+      const setName = withRail.querySelector('.set-block').dataset.setNumber;
+      await saveSetField(setName, 'set_duration', el.textContent.trim());
+    });
+  });
+
+  document.querySelectorAll('.set-color-dot').forEach(dot => {
+    dot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.color-popover').forEach(p => p.remove());
+      const pop = document.createElement('div');
+      pop.className = 'color-popover';
+      pop.innerHTML = SET_COLOR_PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}"></button>`).join('');
+      dot.parentElement.appendChild(pop);
+      pop.querySelectorAll('.swatch').forEach(sw => {
+        sw.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          await saveSetField(dot.dataset.set, 'color', sw.dataset.color);
+          pop.remove();
+          renderTable();
+        });
+      });
+    });
+  });
+  document.addEventListener('click', () => document.querySelectorAll('.color-popover').forEach(p => p.remove()));
+}
+
+let setDragState = null;
+function wireSetDragAndDrop(){
+  document.querySelectorAll('.set-block:not(.pool)').forEach(block => {
+    const head = block.querySelector('.set-head');
+    head.draggable = true;
+    head.addEventListener('dragstart', (e) => {
+      setDragState = block.dataset.setNumber;
+      block.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    head.addEventListener('dragend', () => block.classList.remove('dragging'));
+    block.addEventListener('dragover', (e) => { if(setDragState) e.preventDefault(); });
+    block.addEventListener('drop', async (e) => {
+      if(!setDragState || setDragState === block.dataset.setNumber) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = block.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      await reorderSets(setDragState, block.dataset.setNumber, before);
+      setDragState = null;
+    });
+  });
+}
+
+async function reorderSets(draggedName, targetName, before){
+  let list = sets.filter(s => s.set_number !== draggedName);
+  const dragged = sets.find(s => s.set_number === draggedName);
+  if(!dragged) return;
+  const idx = list.findIndex(s => s.set_number === targetName);
+  const insertIndex = idx === -1 ? list.length : (before ? idx : idx + 1);
+  list.splice(insertIndex, 0, dragged);
+  await Promise.all(list.map((s, i) =>
+    fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${s.id}`, { method:'PATCH', headers, body: JSON.stringify({ set_order: i + 1 }) })
+  ));
+  await fetchSets();
+  renderTable();
 }
 
 function renderSingerSortedView(container){
@@ -432,6 +572,7 @@ function renderSingerSortedView(container){
   container.appendChild(block);
   wireRowActions();
   wireExpandables();
+  wireEmotionFaders();
 }
 
 function renderSingerChips(){
@@ -494,8 +635,40 @@ function wireInlineGenreCombo(input, panel){
   });
 }
 
+function wireEmotionFaders(){
+  document.querySelectorAll('.dimmer').forEach(dimmer => {
+    let dragging = false;
+    function tierFromEvent(e){
+      const rect = dimmer.getBoundingClientRect();
+      const relY = 1 - Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1);
+      return relY < 0.34 ? 'baja' : relY < 0.67 ? 'media' : 'alta';
+    }
+    function applyTier(tier){
+      dimmer.className = 'dimmer ' + tier;
+      const dot = dimmer.querySelector('.fader-dot');
+      if(dot) dot.className = 'fader-dot ' + tier;
+      dimmer.dataset.pendingTier = tier;
+    }
+    dimmer.addEventListener('mousedown', (e) => {
+      dragging = true;
+      applyTier(tierFromEvent(e));
+      e.preventDefault();
+    });
+    dimmer.addEventListener('mousemove', (e) => { if(dragging) applyTier(tierFromEvent(e)); });
+    document.addEventListener('mouseup', async () => {
+      if(!dragging) return;
+      dragging = false;
+      const tier = dimmer.dataset.pendingTier;
+      if(tier){
+        await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${dimmer.dataset.songId}`, { method:'PATCH', headers, body: JSON.stringify({ emotion_level: tier }) });
+        await fetchSongs();
+      }
+    });
+  });
+}
+
 function wireRowActions(){
-  document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', (e) => {
+  document.querySelectorAll('.row-edit-pencil').forEach(b => b.addEventListener('click', (e) => {
     e.stopPropagation();
     openModal(songs.find(s => s.id === b.dataset.id));
   }));
@@ -539,8 +712,15 @@ async function saveSetField(setName, field, value){
 let dragState = null;
 
 function wireDragAndDrop(){
-  document.querySelectorAll('.song-row[draggable=true]').forEach(row => {
+  document.querySelectorAll('.song-row').forEach(row => {
+    let handleActive = false;
+    const handle = row.querySelector('.drag-handle');
+    if(handle){
+      handle.addEventListener('mousedown', () => { handleActive = true; });
+      document.addEventListener('mouseup', () => { handleActive = false; });
+    }
     row.addEventListener('dragstart', (e) => {
+      if(!handleActive){ e.preventDefault(); return; }
       dragState = { songId: row.dataset.songId, origin: row.dataset.origin };
       row.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -701,7 +881,9 @@ document.getElementById('btn-set-confirm').addEventListener('click', async () =>
   const color = selectedSetColor;
   if(!name) return;
   if(sets.find(s => s.set_number === name)){ alert('A set with that name already exists.'); return; }
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: sets.length+1, color }) });
+  const minOrder = sets.length ? Math.min(...sets.map(s => s.set_order ?? 0)) : 1;
+  const newOrder = minOrder - 1;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: newOrder, color }) });
   if(!res.ok){
     const errText = await res.text();
     alert('Could not create the set:\n' + errText);
@@ -756,12 +938,9 @@ function openModal(song){
   document.getElementById('f-name').value = song?.song_name || '';
   document.getElementById('f-artist').value = song?.artist || '';
   document.getElementById('f-country').value = song?.artist_country || '';
-  document.getElementById('f-emotion').value = song?.emotion_level || 'media';
   document.getElementById('f-duration').value = song?.duration || '';
   generoInput.value = song?.genero || '';
-  document.getElementById('f-arranger').value = song?.arranger || '';
-  document.getElementById('f-youtube').value = song?.youtube_link || '';
-  document.getElementById('f-comments').value = song?.comments || '';
+  document.getElementById('f-guests').value = song?.guests || '';
   document.getElementById('btn-delete').style.display = song ? 'inline-block' : 'none';
   overlay.classList.add('open');
 }
@@ -777,12 +956,9 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     song_name: document.getElementById('f-name').value || null,
     artist: document.getElementById('f-artist').value || null,
     artist_country: document.getElementById('f-country').value || null,
-    emotion_level: document.getElementById('f-emotion').value,
     duration: document.getElementById('f-duration').value || null,
     genero: generoInput.value || null,
-    arranger: document.getElementById('f-arranger').value || null,
-    youtube_link: document.getElementById('f-youtube').value || null,
-    comments: document.getElementById('f-comments').value || null,
+    guests: document.getElementById('f-guests').value || null,
   };
   if(!payload.song_name){ alert('Please add a song title.'); return; }
 
@@ -791,6 +967,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   } else {
     payload.song_order = songs.length + 1;
     payload.set_number = null;
+    payload.emotion_level = 'media';
     await fetch(`${SUPABASE_URL}/rest/v1/songs`, { method:'POST', headers, body: JSON.stringify(payload) });
   }
   closeModal();
@@ -852,13 +1029,47 @@ function parseSetNumber(setName){
   return m ? parseInt(m[1], 10) : null;
 }
 
+let lineupVisibleCols = { arranger:true, version:true, comments:true };
+
+function updateInstrHead(){
+  const head = document.getElementById('instr-head-row');
+  head.innerHTML = `<span>Song</span><span>Tonality<span class="header-note">Original</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>` +
+    (lineupVisibleCols.arranger ? '<span>Arranger</span>' : '') +
+    (lineupVisibleCols.version ? '<span>Customized version</span>' : '') +
+    (lineupVisibleCols.comments ? '<span>Comments</span>' : '');
+  const colCount = 5 + Object.values(lineupVisibleCols).filter(Boolean).length;
+  head.style.gridTemplateColumns = `1.1fr .9fr 1fr 1fr .9fr ${'1fr '.repeat(colCount-5)}`.trim();
+}
+
+document.getElementById('btn-lineup-filters-toggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const dd = document.getElementById('lineup-filters-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('lineup-filters-dropdown');
+  if(dd && dd.style.display !== 'none' && !dd.contains(e.target) && e.target.id !== 'btn-lineup-filters-toggle'){
+    dd.style.display = 'none';
+  }
+});
+document.querySelectorAll('#lineup-filters-dropdown input[data-lineup-field]').forEach(chk => {
+  chk.addEventListener('change', () => {
+    lineupVisibleCols[chk.dataset.lineupField] = chk.checked;
+    chk.closest('.filter-chip').classList.toggle('active', chk.checked);
+    renderInstrumentation();
+  });
+});
+
 function renderInstrumentation(){
   const container = document.getElementById('instr-container');
+  updateInstrHead();
   if(songs.length === 0){
     container.innerHTML = '<div class="empty-note">No songs yet. Add songs from the Setlist tab first.</div>';
     return;
   }
   container.innerHTML = '';
+  const colCount = 5 + Object.values(lineupVisibleCols).filter(Boolean).length;
+  const gridCols = `1.1fr .9fr 1fr 1fr .9fr ${'1fr '.repeat(colCount-5)}`.trim();
   const orderedSongs = [...songs].sort((a, b) => {
     const na = parseSetNumber(a.set_number), nb = parseSetNumber(b.set_number);
     if(na !== null && nb !== null) return na - nb || (a.song_order||0) - (b.song_order||0);
@@ -869,6 +1080,9 @@ function renderInstrumentation(){
   orderedSongs.forEach(song => {
     const row = document.createElement('div');
     row.className = 'instr-row';
+    row.style.gridTemplateColumns = gridCols;
+    const setInfo = sets.find(s => s.set_number === song.set_number);
+    if(setInfo?.color) row.style.borderLeft = `3px solid ${setInfo.color}`;
     const currentSingers = (song.singers || '').split('/').map(s => s.trim()).filter(Boolean);
     const singerColorCss = currentSingers.length ? hexToRgba(singerColor(currentSingers[0]), 0.22) : '';
     const singerBorderCss = currentSingers.length ? singerColor(currentSingers[0]) : '';
@@ -888,6 +1102,9 @@ function renderInstrumentation(){
         <button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button>
       </div>
       <input type="text" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="Special guest">
+      ${lineupVisibleCols.arranger ? `<input type="text" data-id="${song.id}" data-field="arranger" value="${escapeAttr(song.arranger || '')}" placeholder="Arranger">` : ''}
+      ${lineupVisibleCols.version ? `<input type="text" data-id="${song.id}" data-field="youtube_link" value="${escapeAttr(song.youtube_link || '')}" placeholder="https://...">` : ''}
+      ${lineupVisibleCols.comments ? `<input type="text" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="Comments">` : ''}
     `;
     container.appendChild(row);
   });
@@ -1139,20 +1356,7 @@ function parseDurationMinutes(str){
 }
 
 function renderSchedule(){
-  const scheduledSets = sets.filter(s => s.set_time);
-  let startHour = 8, endHour = 24;
-  if(scheduledSets.length){
-    const times = scheduledSets.map(s => {
-      const [hh, mm] = s.set_time.split(':').map(Number);
-      return hh + mm/60;
-    });
-    const durEndTimes = scheduledSets.map(s => {
-      const [hh, mm] = s.set_time.split(':').map(Number);
-      return hh + mm/60 + parseDurationMinutes(s.set_duration)/60;
-    });
-    startHour = Math.max(0, Math.floor(Math.min(...times)) - 1);
-    endHour = Math.min(24, Math.ceil(Math.max(...durEndTimes)) + 1);
-  }
+  const startHour = 8, endHour = 24;
   const PX_PER_HOUR = 46;
   const totalHeight = (endHour - startHour) * PX_PER_HOUR;
 
@@ -1190,7 +1394,13 @@ function renderSchedule(){
     block.style.background = hexToRgba(s.color || '#D98A3D', 0.85);
     block.style.borderColor = s.color || '#D98A3D';
     const songCount = songs.filter(sg => sg.set_number === s.set_number).length;
-    block.innerHTML = `<b>${escapeHtml(s.set_number)}</b><span>${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
+    const label = `${s.set_number} - ${s.set_time.slice(0,5)} - ${s.set_duration || '—'}${songCount ? ` - ${songCount} songs` : ''}`;
+    if(height < 34){
+      block.classList.add('narrow');
+      block.innerHTML = `<span class="narrow-label">${escapeHtml(label)}</span>`;
+    } else {
+      block.innerHTML = `<b>${escapeHtml(s.set_number)}</b><span>${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
+    }
     track.appendChild(block);
   });
 
@@ -1203,12 +1413,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['table','instrumentation','band','schedule'].forEach(v => {
+    ['table','instrumentation','band','technical'].forEach(v => {
       document.getElementById('view-'+v).style.display = (v === btn.dataset.tab) ? 'block' : 'none';
     });
     if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
     else if(btn.dataset.tab === 'band') renderBand();
-    else if(btn.dataset.tab === 'schedule') renderSchedule();
   });
 });
 
@@ -1219,10 +1428,20 @@ document.querySelectorAll('.view-by-bar .pill').forEach(pill => {
     const view = pill.dataset.view;
     document.getElementById('setlist-table-view').style.display = view === 'table' ? 'block' : 'none';
     document.getElementById('setlist-chart-view').style.display = view === 'table' ? 'none' : 'block';
-    ['artist','country','genre','emotion'].forEach(v => {
+    ['schedule','artist','country','genre','emotion'].forEach(v => {
       document.getElementById('chart-'+v+'-wrap').style.display = (v === view) ? 'block' : 'none';
     });
-    if(view !== 'table') renderChart(view);
+    if(view === 'schedule') renderSchedule();
+    else if(view !== 'table') renderChart(view);
+  });
+});
+
+document.querySelectorAll('.tech-subtab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tech-subtab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tech-panel').forEach(p => p.style.display = 'none');
+    document.getElementById('tech-panel-' + btn.dataset.sub).style.display = 'block';
   });
 });
 

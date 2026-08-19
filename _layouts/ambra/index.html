@@ -51,12 +51,16 @@
       <div class="filter-section">
         <span class="label">Technical:</span>
         <div class="filter-chips-wrap">
-          <button class="pill small" data-pin="tech:audio">Audio</button>
+          <button class="pill small" data-pin="tech:audio">Sound</button>
           <button class="pill small" data-pin="tech:stage">Stage</button>
           <button class="pill small" data-pin="tech:lights">Lightning</button>
         </div>
       </div>
     </div>
+  </span>
+  <span class="nav-spotify-anchor">
+    <button class="pill" id="spotify-toggle-btn">🎧 Spotify</button>
+    <div class="nav-spotify-panel" id="nav-spotify-panel" style="display:none"></div>
   </span>
 </nav>
 
@@ -66,20 +70,19 @@
     <div class="toolbar">
       <div class="view-by-bar">
         <span class="mono-label">View by:</span>
-        <button class="pill active" data-view="table">Setlist</button>
-        <button class="pill" data-view="schedule">Schedule</button>
+        <button class="pill active" data-view="table">☰ Setlist</button>
+        <button class="pill" data-view="schedule">🕐 Schedule</button>
       </div>
       <div class="view-by-bar stats-by-bar">
         <span class="mono-label">Statistics by:</span>
-        <button class="pill" data-view="country">Country</button>
-        <button class="pill" data-view="genre">Genre</button>
-        <button class="pill" data-view="emotion">Emotion</button>
+        <button class="pill" data-view="country">🌐 Country</button>
+        <button class="pill" data-view="genre">🎵 Genre</button>
+        <button class="pill" data-view="emotion">♡ Emotion</button>
       </div>
       <div class="toolbar-actions">
         <div style="display:flex;gap:8px;align-items:center">
           <span class="mono-label" id="song-count">—</span>
           <button class="btn ghost" id="btn-new-set">+ Create new set</button>
-          <button class="btn" id="btn-add-song">+ Add song</button>
         </div>
         <div class="filters-anchor">
           <button class="filters-link" id="btn-filters-toggle">Filters ▾</button>
@@ -101,7 +104,6 @@
     </div>
 
     <div id="setlist-table-view">
-      <div id="spotify-embed-box"></div>
       <div id="sets-container">
         <div class="status">Loading setlist…</div>
       </div>
@@ -147,8 +149,8 @@
   </div>
 
   <div id="view-instrumentation" style="display:none">
-    <div class="toolbar">
-      <div id="music-sheets-box"></div>
+    <div class="toolbar" style="justify-content:flex-end">
+      <div id="music-sheets-box" style="margin-right:10px"></div>
       <div class="filters-anchor">
         <button class="filters-link" id="btn-lineup-filters-toggle">Filters ▾</button>
         <div class="filters-dropdown" id="lineup-filters-dropdown" style="display:none">
@@ -221,24 +223,24 @@
       <label class="filter-chip" style="margin:14px 0"><input type="checkbox" id="rehearsal-show-all"> Show them all (availability heatmap)</label>
       <div class="heatmap-legend">
         <span class="legend-item"><span class="legend-dot" style="background:#5DBE7A"></span>100% available</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#4A7FB5"></span>80–99%</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#8C6FB5"></span>50–79%</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#4A7FB5"></span>80–99% available</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#8C6FB5"></span>50–79% available</span>
       </div>
 
       <div id="rehearsal-grid-wrap"></div>
 
       <div id="rehearsal-best-times"></div>
 
-      <div class="rehearsal-dates-box">
-        <div class="toolbar">
-          <span class="mono-label">Rehearsal dates</span>
+      <div class="rehearsal-dates-box wide">
+        <div class="rehearsal-dates-title-row">
+          <h2 class="section-title" style="margin:0">REHEARSAL DATES</h2>
           <button class="btn ghost small" id="btn-add-rehearsal-date">+ Add date</button>
         </div>
-        <div id="rehearsal-dates-list"></div>
-        <div class="rehearsal-date-row event-date-row">
-          <span class="rehearsal-date-label">Event</span>
-          <span class="rehearsal-date-value" id="rehearsal-event-date-value">—</span>
-          <span class="rehearsal-date-value" id="rehearsal-event-time-value">—</span>
+        <div id="rehearsal-dates-list" class="rehearsal-dates-grid"></div>
+        <div class="rehearsal-date-card event-date-card">
+          <div class="rd-card-label">Event</div>
+          <div class="rd-card-date" id="rehearsal-event-date-value">—</div>
+          <div class="rd-card-time" id="rehearsal-event-time-value">—</div>
         </div>
       </div>
     </div>
@@ -249,9 +251,9 @@
       <span class="mono-label">Technical planning</span>
     </div>
     <div class="tech-subtabs">
-      <button class="tech-subtab active audio" data-sub="audio">🔊 Audio</button>
+      <button class="tech-subtab active audio" data-sub="audio">🔊 Sound</button>
       <button class="tech-subtab stage" data-sub="stage">🎭 Stage</button>
-      <button class="tech-subtab lights" data-sub="lights">💡 Lights</button>
+      <button class="tech-subtab lights" data-sub="lights">💡 Lightning</button>
     </div>
     <div id="tech-panel-audio" class="tech-panel">
       <div class="audio-subtabs">
@@ -357,6 +359,14 @@
 
 </main>
 
+<footer class="site-footer">
+  <span>&copy; All rights reserved by AMBRA Live Productions LLC.</span>
+  <span class="footer-links">
+    <a href="https://ambraproductions.us/" target="_blank" rel="noopener" title="Website">🌐</a>
+    <a href="https://www.instagram.com/ambra.us/" target="_blank" rel="noopener" title="Instagram">📷</a>
+  </span>
+</footer>
+
 <!-- Add/Edit Song Modal -->
 <div class="overlay" id="overlay">
   <div class="modal">
@@ -388,13 +398,19 @@
 <!-- Create Set Modal -->
 <div class="overlay" id="overlay-set">
   <div class="modal">
-    <h2>Create new set</h2>
+    <div class="modal-title-row">
+      <h2>Create new set</h2>
+      <div class="color-swatches small" id="color-swatches"></div>
+    </div>
     <div class="row2">
       <div class="field"><label>Set name</label><input id="set-name" placeholder="SET 1, Sound Check, Speeches…"></div>
-      <div class="field"><label>Start time (optional)</label><input type="time" id="set-start-time" step="60"></div>
-    </div>
-    <div class="field"><label>Color</label>
-      <div class="color-swatches" id="color-swatches"></div>
+      <div class="field"><label>Start time (optional)</label>
+        <div class="time-select-row">
+          <select id="set-start-hour"><option value="">--</option></select>
+          <span>:</span>
+          <select id="set-start-minute"><option value="">--</option></select>
+        </div>
+      </div>
     </div>
     <div class="field"><label>Type</label>
       <div class="set-type-toggle">
@@ -620,7 +636,7 @@ function renderSongRow(song, containerSetName, draggableOn){
       ${cellsHtml}
     </div>
     <div class="row-actions">
-      <button class="edit-pencil row-edit-pencil" data-id="${song.id}" title="Edit">✎</button>
+      <button class="row-remove-btn" data-id="${song.id}" title="Delete">✕</button>
     </div>
   `;
   return row;
@@ -649,13 +665,12 @@ function columnHeader(){
 }
 
 function renderTable(){
-  renderSpotifyEmbedBox();
   renderSingerChips();
   renderSetsContainer();
 }
 
 function renderSpotifyEmbedBox(){
-  const box = document.getElementById('spotify-embed-box');
+  const box = document.getElementById('nav-spotify-panel');
   if(spotifyEmbed?.link){
     const match = spotifyEmbed.link.match(/playlist\/([a-zA-Z0-9]+)|track\/([a-zA-Z0-9]+)|album\/([a-zA-Z0-9]+)/);
     let embedUrl = null;
@@ -665,17 +680,17 @@ function renderSpotifyEmbedBox(){
       else if(match[3]) embedUrl = `https://open.spotify.com/embed/album/${match[3]}`;
     }
     box.innerHTML = embedUrl
-      ? `<div class="spotify-embed-wrap"><iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button></div>`
-      : `<div class="spotify-embed-wrap"><p class="hint">Could not read that Spotify link.</p><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button></div>`;
-    document.getElementById('btn-spotify-edit').addEventListener('click', async () => {
-      const link = prompt('Spotify playlist/track/album link (leave empty to remove):', spotifyEmbed.link || '');
-      if(link === null) return;
-      await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?id=eq.${spotifyEmbed.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: link.trim() || null }) });
-      await fetchSpotifyEmbed();
-      renderSpotifyEmbedBox();
+      ? `<iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button>`
+      : `<p class="hint">Could not read that Spotify link.</p><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button>`;
+    document.getElementById('btn-spotify-edit').addEventListener('click', () => {
+      openSmallLinkPopup(document.getElementById('btn-spotify-edit'), spotifyEmbed.link || '', async (link) => {
+        await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?id=eq.${spotifyEmbed.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: link || null }) });
+        await fetchSpotifyEmbed();
+        renderSpotifyEmbedBox();
+      });
     });
   } else {
-    box.innerHTML = `<div class="spotify-embed-wrap"><input type="text" id="spotify-link-input" placeholder="Paste a Spotify playlist/track/album link…"><button class="btn small" id="btn-spotify-save">Save</button></div>`;
+    box.innerHTML = `<input type="text" id="spotify-link-input" placeholder="Paste a Spotify playlist/track/album link…"><button class="btn small" id="btn-spotify-save">Save</button>`;
     document.getElementById('btn-spotify-save').addEventListener('click', async () => {
       const link = document.getElementById('spotify-link-input').value.trim();
       if(!link) return;
@@ -722,6 +737,7 @@ function renderSetsContainer(){
         ${setInfo ? `<button class="del-set" data-set-id="${setInfo.id}" title="Delete set">✕</button>` : ''}
       </div>
       <div class="rows" data-set="${escapeAttr(setName)}" ${setInfo?.set_type === 'interlude' ? 'data-type="interlude"' : ''}></div>
+      ${setInfo?.set_type === 'interlude' ? '' : `<button class="btn ghost small btn-add-song-inline" data-target-set="${escapeAttr(setName)}" style="margin:12px 20px">+ Add</button>`}
     `;
     const rowsDiv = block.querySelector('.rows');
     if(setInfo?.set_type === 'interlude'){
@@ -753,7 +769,7 @@ function renderSetsContainer(){
   // Unassigned pool goes BELOW the sets
   const poolBlock = document.createElement('div');
   poolBlock.className = 'set-block pool' + (unassigned.length === 0 ? ' empty-hidden' : '');
-  poolBlock.innerHTML = `<div class="set-head"><span class="name muted">Unassigned songs</span></div><div class="rows" data-set=""></div>`;
+  poolBlock.innerHTML = `<div class="set-head"><span class="name muted">Unassigned songs</span></div><div class="rows" data-set=""></div><button class="btn ghost small btn-add-song-inline" data-target-set="" style="margin:12px 20px">+ Add</button>`;
   const poolRows = poolBlock.querySelector('.rows');
   if(unassigned.length){
     poolRows.appendChild(columnHeader());
@@ -790,10 +806,12 @@ function wireSetEditing(){
 
   function parseTimeInput(str){
   if(!str || str === '—') return '';
+  console.log(str)
   str = str.trim().toLowerCase();
-  let m = str.match(/^(\d{1,2}):(\d{2})$/);
-  if(m) return `${String(m[1]).padStart(2,'0')}:${m[2]}`;
-  m = str.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
+  let m = str.match(/^(\d{1,2}):(\d{2})$/); // 1 o 2 num delante, 2 despues de :
+  if(m) return `${String(m[1]).padStart(2,'0')}:${m[2]}`; 
+  m = str.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);// 2 num : 2 num
+  console.log(m)
   if(m){
     let h = parseInt(m[1], 10);
     const mins = m[2] || '00';
@@ -845,6 +863,7 @@ document.querySelectorAll('.rail-time').forEach(el => {
       pop.innerHTML = `<button type="button" class="swatch swatch-clear" data-color="" title="Remove color">✕</button>` +
         SET_COLOR_PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}"></button>`).join('');
       document.body.appendChild(pop);
+      pop.addEventListener('click', (ev) => ev.stopPropagation());
       clampPopoverToViewport(pop, dot);
       pop.querySelectorAll('.swatch').forEach(sw => {
         sw.addEventListener('click', async (ev) => {
@@ -1023,9 +1042,15 @@ function wireEmotionFaders(){
 }
 
 function wireRowActions(){
-  document.querySelectorAll('.row-edit-pencil').forEach(b => b.addEventListener('click', (e) => {
+  document.querySelectorAll('.btn-add-song-inline').forEach(btn => {
+    btn.addEventListener('click', () => openModal(null, btn.dataset.targetSet));
+  });
+  document.querySelectorAll('.row-remove-btn').forEach(b => b.addEventListener('click', async (e) => {
     e.stopPropagation();
-    openModal(songs.find(s => s.id === b.dataset.id));
+    if(!confirm('Delete this song from the setlist?')) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${b.dataset.id}`, { method:'DELETE', headers });
+    await fetchSongs();
+    renderSetsContainer();
   }));
   document.querySelectorAll('.inline-edit:not(.genre-edit)').forEach(inp => {
     inp.addEventListener('change', async () => {
@@ -1203,7 +1228,8 @@ document.getElementById('btn-type-interlude').addEventListener('click', () => {
 document.getElementById('btn-new-set').addEventListener('click', () => {
   setBuilderOrder = [];
   document.getElementById('set-name').value = '';
-  document.getElementById('set-start-time').value = '';
+  document.getElementById('set-start-hour').value = '';
+  document.getElementById('set-start-minute').value = '';
   selectedSetColor = SET_COLOR_PALETTE[1];
   selectedSetType = 'songs';
   document.getElementById('btn-type-songs').classList.add('active');
@@ -1214,7 +1240,7 @@ document.getElementById('btn-new-set').addEventListener('click', () => {
   const { unassigned } = groupBySet();
   const list = document.getElementById('set-builder-list');
   if(unassigned.length === 0){
-    list.innerHTML = '<div class="none" style="padding:14px;">No unassigned songs available. Add a new song first, or drag one out of a set into "Unassigned songs".</div>';
+    list.innerHTML = '<div class="none" style="padding:14px;font-size:11px;">No unassigned songs available. Add a new song first, or drag one out of a set into "Unassigned songs".</div>';
   } else {
     list.innerHTML = unassigned.map(s => `
       <label>
@@ -1270,7 +1296,9 @@ document.getElementById('btn-set-confirm').addEventListener('click', async () =>
   if(sets.find(s => s.set_number === name)){ alert('A set with that name already exists.'); return; }
   const minOrder = sets.length ? Math.min(...sets.map(s => s.set_order ?? 0)) : 1;
   const newOrder = minOrder - 1;
-  const startTime = document.getElementById('set-start-time').value;
+  const sh = document.getElementById('set-start-hour').value;
+  const sm = document.getElementById('set-start-minute').value;
+  const startTime = (sh && sm) ? `${sh}:${sm}` : '';
   const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: newOrder, color, set_type: selectedSetType, set_time: startTime || null }) });
   if(!res.ok){
     const errText = await res.text();
@@ -1320,7 +1348,8 @@ document.addEventListener('click', (e) => {
   if(!e.target.closest('.combobox-field')) generoPanel.style.display = 'none';
 });
 
-function openModal(song){
+let addSongTargetSet = null;
+function openModal(song, targetSet){
   document.getElementById('modal-title').textContent = song ? 'Edit song' : 'Add song';
   document.getElementById('song-id').value = song?.id || '';
   document.getElementById('f-name').value = song?.song_name || '';
@@ -1330,11 +1359,11 @@ function openModal(song){
   generoInput.value = song?.genero || '';
   document.getElementById('f-guests').value = song?.guests || '';
   document.getElementById('btn-delete').style.display = song ? 'inline-block' : 'none';
+  addSongTargetSet = targetSet ?? null;
   overlay.classList.add('open');
 }
 function closeModal(){ overlay.classList.remove('open'); }
 
-document.getElementById('btn-add-song').addEventListener('click', () => openModal(null));
 document.getElementById('btn-cancel').addEventListener('click', closeModal);
 overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
 
@@ -1348,13 +1377,13 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     genero: generoInput.value || null,
     guests: document.getElementById('f-guests').value || null,
   };
-  if(!payload.song_name){ alert('Please add a song title.'); return; }
+  if(!payload.song_name && !payload.artist){ alert('Please fill in at least the song title or the artist.'); return; }
 
   if(id){
     await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
   } else {
     payload.song_order = songs.length + 1;
-    payload.set_number = null;
+    payload.set_number = addSongTargetSet || null;
     payload.emotion_level = 'media';
     await fetch(`${SUPABASE_URL}/rest/v1/songs`, { method:'POST', headers, body: JSON.stringify(payload) });
   }
@@ -1563,16 +1592,16 @@ function renderMusicSheetsBox(){
       <a href="${escapeAttr(musicSheets.link)}" target="_blank" rel="noopener" class="btn">🎼 Music Sheets</a>
       <button class="btn ghost small" id="btn-music-sheets-edit" title="Change or remove link" style="margin-left:6px">✎</button>
     `;
-    document.getElementById('btn-music-sheets-edit').addEventListener('click', async () => {
-      const newLink = prompt('Music Sheets link (leave empty to remove):', musicSheets.link || '');
-      if(newLink === null) return;
-      if(musicSheets?.id){
-        await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?id=eq.${musicSheets.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: newLink.trim() || null }) });
-      } else if(newLink.trim()){
-        await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link: newLink.trim() }) });
-      }
-      await fetchMusicSheets();
-      renderMusicSheetsBox();
+    document.getElementById('btn-music-sheets-edit').addEventListener('click', () => {
+      openSmallLinkPopup(document.getElementById('btn-music-sheets-edit'), musicSheets.link || '', async (newLink) => {
+        if(musicSheets?.id){
+          await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?id=eq.${musicSheets.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: newLink || null }) });
+        } else if(newLink){
+          await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link: newLink }) });
+        }
+        await fetchMusicSheets();
+        renderMusicSheetsBox();
+      });
     });
   } else {
     box.innerHTML = `
@@ -1994,16 +2023,10 @@ function renderRehearsalGrid(){
   document.addEventListener('mouseup', globalRehearsalMouseUp);
 
   if(rehearsalShowAll){
-    const hundredSlots = Object.entries(aggregateCache).filter(([k,v]) => v.pct >= 100).map(([k]) => k);
-    if(hundredSlots.length){
-      bestTimes.innerHTML = '<p class="mono-label" style="margin-bottom:8px">Everyone is free:</p><div class="best-times-list">' +
-        hundredSlots.map(k => {
-          const [day, slot] = k.split('T');
-          return `<span class="best-time-chip">${formatDayLabel(day)} ${formatSlotTime(slot)}</span>`;
-        }).join('') + '</div>';
-    } else {
-      bestTimes.innerHTML = '<p class="hint">No slot yet where everyone is free.</p>';
-    }
+    bestTimes.innerHTML =
+      renderRangeGroup(aggregateCache, days, slots, v => v.pct >= 100, 'Everyone is free', '#5DBE7A') +
+      renderRangeGroup(aggregateCache, days, slots, v => v.pct >= 80 && v.pct < 100, '80–99% available', '#4A7FB5') +
+      renderRangeGroup(aggregateCache, days, slots, v => v.pct >= 50 && v.pct < 80, '50–79% available', '#8C6FB5');
   } else {
     bestTimes.innerHTML = '';
   }
@@ -2018,6 +2041,36 @@ async function globalRehearsalMouseUp(){
     await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_availability`, { method:'POST', headers, body: JSON.stringify(toInsert) });
   }
   await fetchRehearsalAvailability();
+}
+
+function renderRangeGroup(aggregateCache, days, slots, matchFn, title, color){
+  const ranges = [];
+  days.forEach(day => {
+    let rangeStart = null;
+    slots.forEach((slot, i) => {
+      const key = `${day}T${slot}`;
+      const v = aggregateCache[key];
+      const matches = v && matchFn(v);
+      if(matches && rangeStart === null) rangeStart = slot;
+      const nextSlot = slots[i+1];
+      const nextKey = nextSlot ? `${day}T${nextSlot}` : null;
+      const nextMatches = nextKey && aggregateCache[nextKey] && matchFn(aggregateCache[nextKey]);
+      if(rangeStart !== null && !nextMatches){
+        const endMinutes = slotToMinutes(slot) + 30;
+        ranges.push({ day, start: rangeStart, endLabel: minutesToLabel(endMinutes) });
+        rangeStart = null;
+      }
+    });
+  });
+  if(ranges.length === 0) return `<p class="hint">No ${title.toLowerCase()} time yet.</p>`;
+  return `<p class="mono-label" style="margin:10px 0 8px">${title}:</p><div class="best-times-list">` +
+    ranges.map(r => `<span class="best-time-chip" style="background:${color}">${formatDayLabel(r.day)}, ${formatSlotTime(r.start)}–${r.endLabel}</span>`).join('') +
+    '</div>';
+}
+function slotToMinutes(slot){ const [h,m] = slot.split(':').map(Number); return h*60+m; }
+function minutesToLabel(mins){
+  const h = Math.floor(mins/60) % 24, m = mins % 60;
+  return formatSlotTime(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
 }
 
 function toggleCell(cell, select){
@@ -2107,6 +2160,7 @@ function renderMemberList(){
         <button type="button" class="swatch swatch-clear" data-clear="1" title="Remove color">✕ Remove color</button>
       `;
       document.body.appendChild(pop);
+      pop.addEventListener('click', (ev) => ev.stopPropagation());
       const rect = btn.getBoundingClientRect();
       const popRect = pop.getBoundingClientRect();
       let left = rect.left;
@@ -2238,8 +2292,14 @@ function parseDurationMinutes(str){
 }
 
 function renderSchedule(){
-  const startHour = 8, endHour = 24;
-  const PX_PER_HOUR = 46;
+  const timedSets = sets.filter(s => s.set_time);
+  let startHour = 8;
+  if(timedSets.length){
+    const earliest = Math.min(...timedSets.map(s => parseInt(s.set_time.split(':')[0], 10)));
+    startHour = Math.max(0, earliest - 2);
+  }
+  const endHour = 24;
+  const PX_PER_HOUR = 76;
   const PAD = 20;
   const totalHeight = (endHour - startHour) * PX_PER_HOUR + PAD * 2;
 
@@ -2249,6 +2309,9 @@ function renderSchedule(){
   for(let h = startHour; h <= endHour; h++){
     const label = h === 24 || h === 0 ? '12:00am' : h > 12 ? `${h-12}:00pm` : h === 12 ? '12:00pm' : `${h}:00am`;
     rulerHtml += `<div class="ruler-mark" style="top:${PAD + (h-startHour)*PX_PER_HOUR}px">${label}</div>`;
+    if(h < endHour){
+      rulerHtml += `<div class="ruler-mark half" style="top:${PAD + (h-startHour)*PX_PER_HOUR + PX_PER_HOUR/2}px">:30</div>`;
+    }
   }
   ruler.innerHTML = rulerHtml;
 
@@ -2257,6 +2320,9 @@ function renderSchedule(){
   track.innerHTML = '';
   for(let h = startHour; h <= endHour; h++){
     track.innerHTML += `<div class="track-line" style="top:${PAD + (h-startHour)*PX_PER_HOUR}px"></div>`;
+    if(h < endHour){
+      track.innerHTML += `<div class="track-line half" style="top:${PAD + (h-startHour)*PX_PER_HOUR + PX_PER_HOUR/2}px"></div>`;
+    }
   }
 
   const unscheduledEl = document.getElementById('schedule-unscheduled');
@@ -2295,17 +2361,23 @@ function renderRehearsalDatesBox(){
   const list = document.getElementById('rehearsal-dates-list');
   const ordered = [...rehearsalDates].sort((a,b) => (a.item_order||0) - (b.item_order||0));
   list.innerHTML = ordered.map((r, i) => `
-    <div class="rehearsal-date-row" data-id="${r.id}">
-      <span class="rehearsal-date-label">Rehearsal ${i+1}</span>
-      <input type="text" class="rd-date-input" data-id="${r.id}" value="${escapeAttr(r.date_text || '')}" placeholder="Date, e.g. Aug 4, 2026">
-      <input type="text" class="rd-time-input" data-id="${r.id}" value="${escapeAttr(r.time_text || '')}" placeholder="Time, e.g. 7:00pm">
-      <button class="rd-remove-btn" data-id="${r.id}">✕</button>
+    <div class="rehearsal-date-card" data-id="${r.id}">
+      <div class="rd-card-top">
+        <span class="rd-card-label">Rehearsal ${i+1}</span>
+        <button class="rd-remove-btn" data-id="${r.id}">✕</button>
+      </div>
+      <input type="text" class="rd-card-input rd-date-input" data-id="${r.id}" value="${escapeAttr(r.date_text || '')}" placeholder="Date">
+      <input type="text" class="rd-card-input rd-time-input" data-id="${r.id}" value="${escapeAttr(r.time_text || '')}" placeholder="Time">
+      <input type="text" class="rd-card-input rd-location-input" data-id="${r.id}" value="${escapeAttr(r.location_text || '')}" placeholder="Location">
+      <input type="text" class="rd-card-input rd-location-link-input" data-id="${r.id}" value="${escapeAttr(r.location_link || '')}" placeholder="Location link (optional)">
     </div>
   `).join('');
 
-  list.querySelectorAll('.rd-date-input, .rd-time-input').forEach(inp => {
+  list.querySelectorAll('.rd-card-input').forEach(inp => {
     inp.addEventListener('change', async () => {
-      const field = inp.classList.contains('rd-date-input') ? 'date_text' : 'time_text';
+      const field = inp.classList.contains('rd-date-input') ? 'date_text'
+        : inp.classList.contains('rd-time-input') ? 'time_text'
+        : inp.classList.contains('rd-location-input') ? 'location_text' : 'location_link';
       await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?id=eq.${inp.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: inp.value || null }) });
       await fetchRehearsalDates();
     });
@@ -2884,6 +2956,7 @@ function renderInputList(){
       pop.innerHTML = `<button type="button" class="swatch swatch-clear" data-color="" title="Remove color">✕</button>` +
         SET_COLOR_PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}"></button>`).join('');
       document.body.appendChild(pop);
+      pop.addEventListener('click', (ev) => ev.stopPropagation());
       clampPopoverToViewport(pop, dot);
       pop.querySelectorAll('.swatch').forEach(sw => {
         sw.addEventListener('click', async (ev) => {
@@ -3112,7 +3185,50 @@ Duración: ${duracion}`;
 async function reload(){
   await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed()]);
   renderTable();
+  renderSpotifyEmbedBox();
 }
+
+function openSmallLinkPopup(anchorEl, currentValue, onSave){
+  document.querySelectorAll('.small-link-popup').forEach(p => p.remove());
+  const pop = document.createElement('div');
+  pop.className = 'small-link-popup';
+  pop.style.position = 'fixed';
+  pop.innerHTML = `
+    <input type="text" class="small-link-input" value="${escapeAttr(currentValue)}" placeholder="Paste link…">
+    <button type="button" class="btn small">Save</button>
+  `;
+  document.body.appendChild(pop);
+  pop.addEventListener('click', (e) => e.stopPropagation());
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + 6;
+  if(left + popRect.width > window.innerWidth) left = window.innerWidth - popRect.width - 10;
+  if(top + popRect.height > window.innerHeight) top = rect.top - popRect.height - 6;
+  pop.style.left = Math.max(10, left) + 'px';
+  pop.style.top = Math.max(10, top) + 'px';
+  const input = pop.querySelector('.small-link-input');
+  input.focus();
+  function submit(){
+    onSave(input.value.trim());
+    pop.remove();
+  }
+  pop.querySelector('.btn').addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if(e.key === 'Enter') submit(); });
+  document.addEventListener('click', function closeOnce(){ pop.remove(); document.removeEventListener('click', closeOnce); }, { once: true });
+}
+
+document.getElementById('spotify-toggle-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const panel = document.getElementById('nav-spotify-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('nav-spotify-panel');
+  if(panel.style.display !== 'none' && !e.target.closest('.nav-spotify-anchor')){
+    panel.style.display = 'none';
+  }
+});
 
 /* ============ PINNED VIEW SHORTCUT ============ */
 let pinnedView = null;
@@ -3120,7 +3236,7 @@ const PIN_LABELS = {
   'view:table':'Setlist', 'view:schedule':'Schedule', 'view:artist':'By Artist',
   'view:country':'By Country', 'view:genre':'By Genre', 'view:emotion':'By Emotion',
   'band:members':'Members', 'band:rehearsals':'Rehearsals',
-  'tech:audio':'Audio', 'tech:stage':'Stage', 'tech:lights':'Lights',
+  'tech:audio':'Sound', 'tech:stage':'Stage', 'tech:lights':'Lightning',
 };
 
 function navigateToPin(dest){
@@ -3171,6 +3287,19 @@ document.addEventListener('click', (e) => {
     dd.style.display = 'none';
   }
 });
+
+(function populateTimeSelects(){
+  const hourSel = document.getElementById('set-start-hour');
+  const minSel = document.getElementById('set-start-minute');
+  for(let h = 0; h < 24; h++){
+    const v = String(h).padStart(2,'0');
+    hourSel.innerHTML += `<option value="${v}">${v}</option>`;
+  }
+  for(let m = 0; m < 60; m++){
+    const v = String(m).padStart(2,'0');
+    minSel.innerHTML += `<option value="${v}">${v}</option>`;
+  }
+})();
 
 reload();
 </script>

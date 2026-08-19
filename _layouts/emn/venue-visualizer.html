@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Venue Visualizer — PA'LANTE · AMBRA Live Productions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Ovo&display=swap" rel="stylesheet"><style>
+  :root {
+    --bg: #0e0f14;          /* venue black-blue */
+    --panel: #171922;
+    --line: #262a38;
+    --text: #eef0f6;
+    --muted: #8b90a3;
+    --accent: #ff711c;      /*Ambra*/
+    --accent-2: #7a5cff;    /* wash violet */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* Header */
+  header {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .brand { pointer-events: auto; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  h1 {
+    font-family: 'Ovo', cursive;
+    font-weight: 700;
+    font-size: clamp(20px, 3vw, 30px);
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+  h1 .event { color: var(--accent); }
+
+  .toolbar {
+    display: flex; gap: 8px; pointer-events: auto;
+  }
+  .btn {
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font: 500 13px 'Inter', sans-serif;
+    padding: 9px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Footer / hints */
+  footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 18px 24px;
+    pointer-events: none;
+    z-index: 10;
+    font-size: 12px; color: var(--muted);
+  }
+  .hints span { margin-right: 16px; }
+  .hints b { color: var(--text); font-weight: 600; }
+  @media (max-width: 640px) { .hints { display: none; } }
+
+  /* Loader */
+  #loader {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px;
+    background: var(--bg);
+    transition: opacity .5s;
+  }
+  #loader.hidden { opacity: 0; pointer-events: none; }
+  .load-title {
+    font-family: 'Archivo', sans-serif;
+    font-variation-settings: 'wdth' 125;
+    font-weight: 750;
+    font-size: 26px;
+  }
+  .bar {
+    width: min(320px, 70vw); height: 2px;
+    background: var(--line); border-radius: 2px; overflow: hidden;
+  }
+  .bar i {
+    display: block; height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width .2s;
+  }
+  #loadmsg { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Drop zone message (shown when no model configured/found) */
+  #drop {
+    position: fixed; inset: 0; z-index: 15;
+    display: none; align-items: center; justify-content: center;
+    text-align: center;
+  }
+  #drop.visible { display: flex; }
+  #drop .box {
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    padding: 40px 48px;
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  #drop p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  #drop .load-title { margin-bottom: 4px; }
+  #filein { display: none; }
+  .link { color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #loader, .btn, .bar i { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<header>
+  <div class="brand">
+    <div class="eyebrow">AMBRA Live Productions</div>
+    <h1>Venue Visualizer · <span class="event">Pa'Lante Event 2026</span></h1>
+  </div>
+  <div class="toolbar">
+    <button class="btn" id="resetBtn" title="Reset camera">Reset view</button>
+    <button class="btn" id="fsBtn" title="Toggle fullscreen">Fullscreen</button>
+  </div>
+</header>
+
+<footer>
+  <div class="hints">
+    <span><b>Drag</b> rotate</span>
+    <span><b>Scroll / pinch</b> zoom</span>
+    <span><b>Right-drag / two-finger</b> pan</span>
+  </div>
+  <div>© AMBRA Live Productions</div>
+</footer>
+
+<div id="loader">
+  <div class="load-title">PA'LANTE</div>
+  <div class="bar"><i id="barfill"></i></div>
+  <div id="loadmsg">Loading venue model</div>
+</div>
+
+<div id="drop">
+  <div class="box">
+    <div class="load-title">No model loaded</div>
+    <p>Drop a <b>.glb</b> file here, or <span class="link" id="pick">browse</span>.</p>
+    <p>To load automatically, set <code>MODEL_URL</code> at the top of the script.</p>
+    <input type="file" id="filein" accept=".glb,.gltf" />
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const MODEL_URL = 'models/palante.glb';
+const app = document.getElementById('app');
+const loaderEl = document.getElementById('loader');
+const barfill = document.getElementById('barfill');
+const loadmsg = document.getElementById('loadmsg');
+const dropEl = document.getElementById('drop');
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+app.appendChild(renderer.domElement);
+
+// Scene
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e0f14);
+scene.fog = new THREE.Fog(0x0e0f14, 40, 120);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.05, 500);
+camera.position.set(4, 3, 6);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 0.2;
+controls.maxDistance = 100;
+
+// Lighting: neutral IBL + warm/violet stage accents
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const key = new THREE.DirectionalLight(0xfff1dc, 1.6);
+key.position.set(6, 10, 6);
+scene.add(key);
+const amber = new THREE.PointLight(0xf2a33c, 12, 40);
+amber.position.set(-5, 4, -3);
+scene.add(amber);
+const violet = new THREE.PointLight(0x7a5cff, 10, 40);
+violet.position.set(5, 3, -5);
+scene.add(violet);
+scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+
+// Subtle grid ground for spatial reference
+const grid = new THREE.GridHelper(60, 60, 0x2c3040, 0x1b1e2a);
+grid.material.transparent = true;
+grid.material.opacity = 0.4;
+scene.add(grid);
+
+// Loading
+const gltfLoader = new GLTFLoader();
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/');
+gltfLoader.setDRACOLoader(draco);
+
+let currentModel = null;
+let homePos = new THREE.Vector3();
+let homeTarget = new THREE.Vector3();
+
+function frameModel(object) {
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const dist = maxDim / (2 * Math.tan((camera.fov * Math.PI) / 360)) * 1.4;
+
+  controls.target.copy(center);
+  camera.position.set(center.x + dist * 0.7, center.y + dist * 0.45, center.z + dist * 0.7);
+  camera.near = maxDim / 100;
+  camera.far = maxDim * 20;
+  camera.updateProjectionMatrix();
+  controls.minDistance = maxDim * 0.05;
+  controls.maxDistance = maxDim * 6;
+  scene.fog.near = maxDim * 3;
+  scene.fog.far = maxDim * 12;
+  grid.position.y = box.min.y;
+  controls.update();
+
+  homePos.copy(camera.position);
+  homeTarget.copy(controls.target);
+}
+
+function addModel(gltf) {
+  if (currentModel) scene.remove(currentModel);
+  currentModel = gltf.scene;
+  scene.add(currentModel);
+  frameModel(currentModel);
+  loaderEl.classList.add('hidden');
+  dropEl.classList.remove('visible');
+}
+
+function loadFromURL(url) {
+  loaderEl.classList.remove('hidden');
+  gltfLoader.load(
+    url,
+    (gltf) => addModel(gltf),
+    (xhr) => {
+      if (xhr.total) barfill.style.width = `${(xhr.loaded / xhr.total) * 100}%`;
+    },
+    () => {
+      loaderEl.classList.add('hidden');
+      dropEl.classList.add('visible');
+    }
+  );
+}
+
+// Drag & drop / file picker fallback
+function loadFromFile(file) {
+  loaderEl.classList.remove('hidden');
+  loadmsg.textContent = file.name;
+  const url = URL.createObjectURL(file);
+  gltfLoader.load(url, (gltf) => { addModel(gltf); URL.revokeObjectURL(url); });
+}
+addEventListener('dragover', (e) => e.preventDefault());
+addEventListener('drop', (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && /\.(glb|gltf)$/i.test(f.name)) loadFromFile(f);
+});
+document.getElementById('pick').addEventListener('click', () => document.getElementById('filein').click());
+document.getElementById('filein').addEventListener('change', (e) => {
+  if (e.target.files[0]) loadFromFile(e.target.files[0]);
+});
+
+// Toolbar
+document.getElementById('resetBtn').addEventListener('click', () => {
+  camera.position.copy(homePos);
+  controls.target.copy(homeTarget);
+  controls.update();
+});
+document.getElementById('fsBtn').addEventListener('click', () => {
+  document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+});
+
+// Resize + loop
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+renderer.setAnimationLoop(() => {
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+loadFromURL(MODEL_URL);
+</script>
+</body>
+</html>

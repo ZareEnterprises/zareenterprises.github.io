@@ -39,6 +39,11 @@
     <div class="byline">EMN</div>
     <div class="sublabel">Escuela de Música y Negocios</div>
   </div>
+
+  <a class="home-link" href="https://zareenterprises.github.io/practice-lab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/></svg>
+    <span>Ir a Página Principal</span>
+  </a>
 </div>
 
 <div class="main" id="mainStage">
@@ -117,10 +122,6 @@
       <div class="meter-group">
         <div class="label">Simple meter</div>
         <div class="chip-row" id="meterSimple"></div>
-      </div>
-      <div class="meter-group">
-        <div class="label">Alla breve meter</div>
-        <div class="chip-row" id="meterBreve"></div>
       </div>
       <div class="meter-group">
         <div class="label">Compound meter</div>
@@ -340,9 +341,244 @@ function atomsForDiff(diff){
   return EASY_ATOMS;
 }
 
+
+/* ---------------------- COMPOUND METER (6/8, 9/8, 12/8) ----------------------
+   The beat is a dotted quarter (6 ticks = 3 eighths). Every pattern below is
+   EXACTLY one beat long, so by construction:
+     - no note, and no dot, ever reaches into the following beat;
+     - beams never cross a beat, so a run of sixteenths tops out at 6;
+     - where a longer value would have straddled the boundary (e.g. a
+       sixteenth on the 3rd eighth followed by an eighth), the pattern uses
+       two sixteenths instead, which is the tied equivalent written out.
+   Values longer than one beat are handled separately in SUSTAINED below and
+   may only begin on a beat.
+   -------------------------------------------------------------------------- */
+const CB = 6; // ticks per compound beat
+
+const COMPOUND_NOTES_EASY = [
+  [{dur:'q',dots:1}],
+  [{dur:'8'},{dur:'8'},{dur:'8'}],
+  [{dur:'q'},{dur:'8'}],
+  [{dur:'8'},{dur:'q'}],
+];
+
+const COMPOUND_NOTES_MEDIUM = COMPOUND_NOTES_EASY.concat([
+  [{dur:'16'},{dur:'16'},{dur:'16'},{dur:'16'},{dur:'16'},{dur:'16'}],
+  [{dur:'8'},{dur:'8'},{dur:'16'},{dur:'16'}],
+  [{dur:'16'},{dur:'16'},{dur:'8'},{dur:'8'}],
+  [{dur:'8'},{dur:'16'},{dur:'16'},{dur:'8'}],
+  [{dur:'16'},{dur:'16'},{dur:'8'},{dur:'16'},{dur:'16'}],
+  [{dur:'8'},{dur:'16'},{dur:'16'},{dur:'16'},{dur:'16'}],
+  [{dur:'16'},{dur:'16'},{dur:'16'},{dur:'16'},{dur:'8'}],
+  [{dur:'8',dots:1},{dur:'8',dots:1}],
+  [{dur:'8',dots:1},{dur:'16'},{dur:'8'}],
+  [{dur:'8'},{dur:'8',dots:1},{dur:'16'}],
+  [{dur:'q'},{dur:'16'},{dur:'16'}],
+  [{dur:'16'},{dur:'16'},{dur:'q'}],
+  [{dur:'8',dots:1},{dur:'16'},{dur:'16'},{dur:'16'}],
+]);
+
+const COMPOUND_NOTES_HARD = COMPOUND_NOTES_MEDIUM.concat([
+  [{dur:'16'},{dur:'8'},{dur:'8'},{dur:'16'}],
+  [{dur:'16'},{dur:'8'},{dur:'16'},{dur:'8'}],
+  [{dur:'8'},{dur:'16'},{dur:'8'},{dur:'16'}],
+  [{dur:'16'},{dur:'8',dots:1},{dur:'8'}],
+  [{dur:'16'},{dur:'16'},{dur:'16'},{dur:'8',dots:1}],
+]);
+
+// Rest-bearing beat patterns. A whole-beat rest is the dotted-quarter rest.
+const COMPOUND_RESTS_EASY = [
+  [{dur:'q',dots:1,rest:true}],
+  [{dur:'8',rest:true},{dur:'8'},{dur:'8'}],
+  [{dur:'8'},{dur:'8'},{dur:'8',rest:true}],
+  [{dur:'8'},{dur:'8',rest:true},{dur:'8'}],
+  [{dur:'q',rest:true},{dur:'8'}],
+  [{dur:'8'},{dur:'q',rest:true}],
+  [{dur:'8',rest:true},{dur:'q'}],
+];
+
+const COMPOUND_RESTS_MEDIUM = COMPOUND_RESTS_EASY.concat([
+  [{dur:'8',rest:true},{dur:'16'},{dur:'16'},{dur:'8'}],
+  [{dur:'8',rest:true},{dur:'8'},{dur:'16'},{dur:'16'}],
+  [{dur:'16',rest:true},{dur:'16'},{dur:'8'},{dur:'8'}],
+  [{dur:'8'},{dur:'16'},{dur:'16'},{dur:'8',rest:true}],
+  [{dur:'16'},{dur:'16'},{dur:'8',rest:true},{dur:'8'}],
+]);
+
+function compoundNotePatterns(diff){
+  if(diff==='hard') return COMPOUND_NOTES_HARD;
+  if(diff==='medium') return COMPOUND_NOTES_MEDIUM;
+  return COMPOUND_NOTES_EASY;
+}
+function compoundRestPatterns(diff){
+  return (diff==='easy') ? COMPOUND_RESTS_EASY : COMPOUND_RESTS_MEDIUM;
+}
+
+// Values longer than one beat. All are dotted, all start on a beat.
+//   dotted half  = 2 beats — allowed in 6/8, 9/8 and 12/8
+//   dotted whole = 4 beats — 12/8 only, and only from the downbeat
+function sustainedForCompound(meter, position, remaining){
+  const out = [];
+  if(remaining >= 12) out.push({ticks:12, notes:[{dur:'h', dots:1}]});
+  if(meter==='12/8' && position===0 && remaining >= 24) out.push({ticks:24, notes:[{dur:'w', dots:1}]});
+  return out;
+}
+
+function patternTicks(pattern){ return pattern.reduce((s,n)=>s+specTicks(n), 0); }
+
+// Builds one compound measure beat by beat. Because the unit of choice is a
+// whole beat, nothing can land off-grid: the beat rules hold by construction
+// rather than by filtering after the fact.
+function fillMeasureCompound(totalTicks, diff, meter, opts={}){
+  const notePats = compoundNotePatterns(diff);
+  const restPats = compoundRestPatterns(diff);
+  const noRestFirstBeat = !!opts.noRestFirstBeat;
+  const maxRests = opts.maxRests;
+  const minNotes = opts.minNotes || 0;
+  const maxRestTicks = opts.maxRestTicks;
+  const maxSingleRestTicks = opts.maxSingleRestTicks;
+  const pairedRestsOnly = !!opts.pairedRestsOnly;
+
+  for(let attempt=0; attempt<80; attempt++){
+    let position = 0, restCount = 0, restTicksUsed = 0, noteCount = 0;
+    const seq = [];
+    let ok = true;
+
+    while(position < totalTicks){
+      const remaining = totalTicks - position;
+
+      // a multi-beat sustained value occasionally takes over from here
+      const sustained = sustainedForCompound(meter, position, remaining);
+      if(sustained.length && Math.random() < 0.18){
+        const pick = sustained[Math.floor(Math.random()*sustained.length)];
+        seq.push(pick);
+        noteCount += 1;
+        position += pick.ticks;
+        continue;
+      }
+
+      let pool = notePats.slice();
+      const restsAllowed = !(noRestFirstBeat && position === 0);
+      if(restsAllowed){
+        let rp = restPats;
+        if(maxSingleRestTicks!=null){
+          rp = rp.filter(p => p.every(n => !n.rest || specTicks(n) <= maxSingleRestTicks));
+        }
+        if(pairedRestsOnly){
+          rp = rp.filter(p => p.some(n => !n.rest));
+        }
+        if(maxRests!=null){
+          rp = rp.filter(p => restCount + p.filter(n=>n.rest).length <= maxRests);
+        }
+        if(maxRestTicks!=null){
+          rp = rp.filter(p => restTicksUsed + p.filter(n=>n.rest).reduce((s,n)=>s+specTicks(n),0) <= maxRestTicks);
+        }
+        pool = pool.concat(rp);
+      }
+      if(!pool.length){ ok = false; break; }
+
+      // while under the rest budget, actively favour rest-bearing patterns so
+      // the requested population is reached rather than merely permitted
+      let pattern;
+      if(restsAllowed && maxRestTicks!=null && restTicksUsed < maxRestTicks){
+        const weights = pool.map(p => p.some(n=>n.rest) ? 10 : 1);
+        const total = weights.reduce((s,w)=>s+w,0);
+        let r = Math.random()*total;
+        pattern = pool[pool.length-1];
+        for(let i=0;i<pool.length;i++){ r -= weights[i]; if(r<=0){ pattern = pool[i]; break; } }
+      } else {
+        pattern = pool[Math.floor(Math.random()*pool.length)];
+      }
+
+      seq.push({ticks: CB, notes: pattern});
+      restCount += pattern.filter(n=>n.rest).length;
+      restTicksUsed += pattern.filter(n=>n.rest).reduce((s,n)=>s+specTicks(n),0);
+      noteCount += pattern.filter(n=>!n.rest).length;
+      position += CB;
+    }
+
+    if(ok && position === totalTicks && noteCount >= minNotes) return seq;
+  }
+
+  // Fallback: one dotted quarter per beat. Always legal in compound.
+  const seq = [];
+  for(let t=0; t<totalTicks; t+=CB) seq.push({ticks:CB, notes:[{dur:'q',dots:1}]});
+  return seq;
+}
+
+// 7/8 is additive (2+2+3 eighths). Each beat segment is filled independently
+// so that nothing spills from one group into the next — the same readability
+// rule the compound meters follow, applied to unequal beats.
+function fillMeasure78(diff, opts={}){
+  const segments = [4,4,6];
+  const pool4 = atomsForDiff(diff).filter(a => a.ticks === 4);
+  const notePats6 = compoundNotePatterns(diff);
+  const restPats6 = compoundRestPatterns(diff);
+  const noRestFirstBeat = !!opts.noRestFirstBeat;
+  const maxRestTicks = opts.maxRestTicks;
+  const maxSingleRestTicks = opts.maxSingleRestTicks;
+  const pairedRestsOnly = !!opts.pairedRestsOnly;
+  const maxRests = opts.maxRests;
+  const minNotes = opts.minNotes || 0;
+
+  for(let attempt=0; attempt<80; attempt++){
+    const seq = [];
+    let restCount = 0, restTicksUsed = 0, noteCount = 0, ok = true;
+
+    segments.forEach((segTicks, segIdx)=>{
+      if(!ok) return;
+      const restsAllowed = !(noRestFirstBeat && segIdx === 0);
+      let pool;
+      if(segTicks === 6){
+        pool = notePats6.map(p => ({ticks:6, notes:p}));
+        if(restsAllowed) pool = pool.concat(restPats6.map(p => ({ticks:6, notes:p})));
+      } else {
+        pool = pool4.slice();
+        if(!restsAllowed) pool = pool.filter(a => !a.notes.some(n=>n.rest));
+      }
+      if(maxSingleRestTicks!=null){
+        pool = pool.filter(a => a.notes.every(n => !n.rest || specTicks(n) <= maxSingleRestTicks));
+      }
+      if(pairedRestsOnly){
+        pool = pool.filter(a => a.notes.some(n => !n.rest));
+      }
+      if(maxRests!=null){
+        pool = pool.filter(a => restCount + a.notes.filter(n=>n.rest).length <= maxRests);
+      }
+      if(maxRestTicks!=null){
+        pool = pool.filter(a => restTicksUsed + a.notes.filter(n=>n.rest).reduce((s,n)=>s+specTicks(n),0) <= maxRestTicks);
+      }
+      if(!pool.length){ ok = false; return; }
+
+      let atom;
+      if(restsAllowed && maxRestTicks!=null && restTicksUsed < maxRestTicks){
+        const weights = pool.map(a => a.notes.some(n=>n.rest) ? 10 : 1);
+        const total = weights.reduce((s,w)=>s+w,0);
+        let r = Math.random()*total;
+        atom = pool[pool.length-1];
+        for(let i=0;i<pool.length;i++){ r -= weights[i]; if(r<=0){ atom = pool[i]; break; } }
+      } else {
+        atom = pool[Math.floor(Math.random()*pool.length)];
+      }
+      seq.push(atom);
+      restCount += atom.notes.filter(n=>n.rest).length;
+      restTicksUsed += atom.notes.filter(n=>n.rest).reduce((s,n)=>s+specTicks(n),0);
+      noteCount += atom.notes.filter(n=>!n.rest).length;
+    });
+
+    if(ok && noteCount >= minNotes) return seq;
+  }
+  return [
+    {ticks:4, notes:[{dur:'q'}]},
+    {ticks:4, notes:[{dur:'q'}]},
+    {ticks:6, notes:[{dur:'q',dots:1}]},
+  ];
+}
+
 function fillMeasure(totalTicks, diff, opts={}){
   const pool = atomsForDiff(diff);
-  const beatTicks = opts.beatTicks || 4;
+  const beatStarts = opts.beatStarts || [0,4,8,12];
+  const firstBeatEnd = beatStarts.length>1 ? beatStarts[1] : totalTicks;
   const noRestFirstBeat = !!opts.noRestFirstBeat;
   const maxRests = opts.maxRests; // null/undefined = unlimited (event-count cap)
   const minNotes = opts.minNotes || 0;
@@ -362,7 +598,7 @@ function fillMeasure(totalTicks, diff, opts={}){
     while(remaining>0 && guard<40){
       guard++;
       let candidates = pool.filter(a=>a.ticks<=remaining);
-      if(noRestFirstBeat && position < beatTicks){
+      if(noRestFirstBeat && position < firstBeatEnd){
         candidates = candidates.filter(a => !a.notes.some(n=>n.rest));
       }
       if(maxRests!=null){
@@ -384,11 +620,11 @@ function fillMeasure(totalTicks, diff, opts={}){
         candidates = candidates.filter(a => !(a.notes.length===1 && a.notes[0].rest));
       }
       // Half notes (blancas) may only start exactly on a beat (position
-      // aligned to beatTicks) — never mid-beat, which would be a syncopated
+      // on a beat start) — never mid-beat, which would be a syncopated
       // "contratiempo" entry. Applies to plain and dotted half notes alike.
       candidates = candidates.filter(a => {
         const hasHalf = a.notes.some(n => n.dur==='h');
-        return !hasHalf || (position % beatTicks === 0);
+        return !hasHalf || isBeatStart(position, beatStarts);
       });
       if(candidates.length===0){ ok=false; break; }
       // Weighted pick: while under the rest-tick budget, actively favor
@@ -427,17 +663,34 @@ function fillMeasure(totalTicks, diff, opts={}){
 }
 
 const METER_TICKS = { // ticks per measure (sixteenth=1)
-  '2/4':8, '3/4':12, '4/4':16, 'C':16, '5/4':20, '6/4':24, '7/4':28,
-  '2/2':16, '3/2':24, '4/2':32, 'C|':16,
+  '2/4':8, '3/4':12, '4/4':16, 'C':16, '5/4':20, '6/4':24, '7/8':14,
   '6/8':12, '9/8':18, '12/8':24
 };
 
-function beatTicksForMeter(meter){
-  // compound meters (x/8, x a multiple of 3) beam in dotted-quarter beats;
-  // everything else beams in quarter-note beats.
-  if(meter==='6/8' || meter==='9/8' || meter==='12/8') return 6;
-  return 4;
+const COMPOUND_METERS = ['6/8','9/8','12/8'];
+function isCompound(meter){ return COMPOUND_METERS.indexOf(meter) !== -1; }
+
+// The beat grid is an ARRAY of tick offsets, not one uniform number, because
+// 7/8 is additive (2+2+3 eighths) and its last beat is longer than the others.
+//   simple   -> quarter-note beats     (every 4 ticks)
+//   compound -> dotted-quarter beats   (every 6 ticks)
+//   7/8      -> 2+2+3 eighths          (0, 4, 8)
+function beatStartsForMeter(meter){
+  const total = METER_TICKS[meter] || 16;
+  if(isCompound(meter)){ const a=[]; for(let t=0;t<total;t+=6) a.push(t); return a; }
+  if(meter==='7/8') return [0,4,8];
+  const a=[]; for(let t=0;t<total;t+=4) a.push(t); return a;
 }
+function beatIndexAt(tick, starts){
+  let idx = 0;
+  for(let k=0;k<starts.length;k++){ if(starts[k] <= tick) idx = k; else break; }
+  return idx;
+}
+function beatEndAfter(tick, starts, total){
+  for(let k=0;k<starts.length;k++){ if(starts[k] > tick) return starts[k]; }
+  return total;
+}
+function isBeatStart(tick, starts){ return starts.indexOf(tick) !== -1; }
 
 const POPULATION_CONFIG = {
   notpopulated: { restFraction: 0.40 },
@@ -467,7 +720,7 @@ function decomposeTicksToRests(ticks){
 // rest that would otherwise straddle a beat boundary into smaller rests
 // aligned to each beat — so a rest never obscures where the next beat starts.
 // Also tags each spec with which tuplet group (if any) it belongs to.
-function flattenAndSplitRests(seq, beatTicks){
+function flattenAndSplitRests(seq, beatStarts, totalTicks){
   const out = [];
   let runningTick = 0;
   seq.forEach((atom, atomIdx)=>{
@@ -477,7 +730,7 @@ function flattenAndSplitRests(seq, beatTicks){
       if(spec.rest && !atom.tuplet){
         let remain = ticks, cursor = runningTick;
         while(remain > 0){
-          const beatEnd = (Math.floor(cursor/beatTicks)+1) * beatTicks;
+          const beatEnd = beatEndAfter(cursor, beatStarts, totalTicks);
           const chunk = Math.min(remain, beatEnd - cursor);
           decomposeTicksToRests(chunk).forEach(r => out.push(r));
           cursor += chunk; remain -= chunk;
@@ -495,20 +748,26 @@ function flattenAndSplitRests(seq, beatTicks){
 // Merges two adjacent plain eighth rests into a single quarter rest —
 // but only when both fall inside the same beat (never across a boundary,
 // which would undo the beat-alignment split above).
-function mergeEighthRestPairs(flat, beatTicks){
+// A note inside a 3:2 tuplet is written as an eighth but occupies 2/3 of one,
+// so the running position must use the occupied value, not the written one.
+function occupiedTicks(spec){
+  return spec.tupletGroup != null ? specTicks(spec) * 2 / 3 : specTicks(spec);
+}
+
+function mergeEighthRestPairs(flat, beatStarts){
   const out = [];
   let pos = 0, i = 0;
   while(i < flat.length){
     const cur = flat[i];
-    const curTicks = specTicks(cur);
+    const curTicks = occupiedTicks(cur);
     if(cur.rest && cur.dur==='8' && !cur.dots && i+1<flat.length){
       const next = flat[i+1];
       if(next.rest && next.dur==='8' && !next.dots){
-        const beatOfCur = Math.floor(pos/beatTicks);
-        const beatOfNext = Math.floor((pos+curTicks)/beatTicks);
+        const beatOfCur = beatIndexAt(pos, beatStarts);
+        const beatOfNext = beatIndexAt(pos+curTicks, beatStarts);
         if(beatOfCur === beatOfNext){
           out.push({dur:'q', dots:0, rest:true, tupletGroup:null});
-          pos += curTicks + specTicks(next);
+          pos += curTicks + occupiedTicks(next);
           i += 2;
           continue;
         }
@@ -636,7 +895,7 @@ function buildMeterGroup(containerId, list){
     chip.dataset.meter = m.value;
     if(m.value===state.meter) chip.classList.add('active');
     chip.onclick = ()=>{
-      document.querySelectorAll('#meterSimple .chip,#meterBreve .chip,#meterCompound .chip').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('#meterSimple .chip,#meterCompound .chip').forEach(x=>x.classList.remove('active'));
       chip.classList.add('active');
       state.meter = m.value;
       generate();
@@ -646,10 +905,7 @@ function buildMeterGroup(containerId, list){
 }
 buildMeterGroup('meterSimple', [
   {label:'2/4',value:'2/4'},{label:'3/4',value:'3/4'},{label:'4/4',value:'4/4'},
-  {label:'C',value:'C'},{label:'5/4',value:'5/4'},{label:'6/4',value:'6/4'},{label:'7/4',value:'7/4'}
-]);
-buildMeterGroup('meterBreve', [
-  {label:'2/2',value:'2/2'},{label:'3/2',value:'3/2'},{label:'4/2',value:'4/2'},{label:'𝄵',value:'C|'}
+  {label:'C',value:'C'},{label:'5/4',value:'5/4'},{label:'6/4',value:'6/4'},{label:'7/8',value:'7/8'}
 ]);
 buildMeterGroup('meterCompound', [
   {label:'6/8',value:'6/8'},{label:'9/8',value:'9/8'},{label:'12/8',value:'12/8'}
@@ -766,7 +1022,13 @@ function generate(){
   outputSvg.innerHTML = '';
 
   const measureTicks = METER_TICKS[state.meter] || 16;
-  const beatTicks = beatTicksForMeter(state.meter);
+  const beatStarts = beatStartsForMeter(state.meter);
+  const firstBeatEnd = beatStarts.length>1 ? beatStarts[1] : measureTicks;
+  const buildSeq = (opts) => {
+    if(isCompound(state.meter)) return fillMeasureCompound(measureTicks, state.diff, state.meter, opts);
+    if(state.meter === '7/8')   return fillMeasure78(state.diff, opts);
+    return fillMeasure(measureTicks, state.diff, opts);
+  };
 
   // Pass 1: generate all rhythm sequences first, then flatten each into
   // individual note/rest specs with beat-aligned rests, so stave width can
@@ -786,19 +1048,23 @@ function generate(){
       // into two events if it crosses a beat boundary.
       let flat, okFlat = null;
       for(let attempt=0; attempt<40; attempt++){
-        const seq = fillMeasure(measureTicks, state.diff, {...popOpts, beatTicks, noRestFirstBeat:true, maxRests:2, minNotes:2});
-        flat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatTicks), beatTicks);
+        const seq = buildSeq({...popOpts, beatStarts, noRestFirstBeat:true, maxRests:2, minNotes:2});
+        flat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts);
         let pos=0, restCount=0, restOnBeat1=false;
         flat.forEach(spec=>{
-          if(spec.rest){ restCount++; if(pos<beatTicks) restOnBeat1=true; }
+          if(spec.rest){ restCount++; if(pos<firstBeatEnd) restOnBeat1=true; }
           pos += specTicks(spec);
         });
         if(!restOnBeat1 && restCount<=2){ okFlat = flat; break; }
       }
-      measureFlats.push(okFlat || flat);
+      if(!okFlat){
+        const seq = buildSeq({beatStarts, maxRestTicks:0, noRestFirstBeat:true, minNotes:2});
+        okFlat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts);
+      }
+      measureFlats.push(okFlat);
     } else {
-      const seq = fillMeasure(measureTicks, state.diff, {...popOpts, beatTicks, minNotes:2});
-      measureFlats.push(mergeEighthRestPairs(flattenAndSplitRests(seq, beatTicks), beatTicks));
+      const seq = buildSeq({...popOpts, beatStarts, minNotes:2});
+      measureFlats.push(mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts));
     }
   }
 
@@ -913,7 +1179,7 @@ function generate(){
     events.forEach(e=>{
       const eligible = !e.isRest && !e.inTuplet && (e.dur==='8' || e.dur==='16');
       if(!eligible){ flushBeam(); return; }
-      const beatIdx = Math.floor(e.startTick / beatTicks);
+      const beatIdx = beatIndexAt(e.startTick, beatStarts);
       if(current.length===0){ current=[e]; currentBeat=beatIdx; return; }
       if(beatIdx===currentBeat){ current.push(e); }
       else { flushBeam(); current=[e]; currentBeat=beatIdx; }
@@ -948,7 +1214,7 @@ function generate(){
   // meta
   const qualityLabel = MODES[state.modeId].label.split(' (')[0];
   document.getElementById('hintKey').textContent = `${state.tonicKey} ${state.qualityMode==='major'?'Major':'minor'} — ${qualityLabel}`;
-  document.getElementById('metaMeter').textContent = state.meter==='C|' ? 'Cut time' : state.meter;
+  document.getElementById('metaMeter').textContent = state.meter;
   document.getElementById('metaMeasures').textContent = state.measures;
   document.getElementById('metaDiff').textContent = state.diff.charAt(0).toUpperCase()+state.diff.slice(1);
 }

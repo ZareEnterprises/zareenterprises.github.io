@@ -1862,3 +1862,37 @@
     padding: 28px 22px 24px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   "Ir a Página Principal" button — sits at the right of .brandline-below,
+   level with the EMN signature. Scoped to .emn-tool so the landing page
+   is unaffected.
+   -------------------------------------------------------------------------- */
+
+.emn-tool .brandline-below .home-link {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+  background: var(--paper);
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  padding: 8px 16px;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+.emn-tool .brandline-below .home-link:hover { background: var(--red); color: #fff; }
+.emn-tool .brandline-below .home-link:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.emn-tool .brandline-below .home-link svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+@media (max-width: 640px) {
+  .emn-tool .brandline-below .home-link { padding: 7px 13px; font-size: 11.5px; }
+  .emn-tool .brandline-below .home-link span { display: none; }
+  .emn-tool .brandline-below .home-link::after { content: 'Inicio'; }
+}

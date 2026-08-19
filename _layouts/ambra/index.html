@@ -22,8 +22,8 @@
 
 <nav class="tabs" id="tabs">
   <button class="tab-btn primary active tab-setlist" data-tab="table">Setlist</button>
-  <button class="tab-btn primary tab-instrumentation" data-tab="instrumentation">Lineup</button>
   <button class="tab-btn primary tab-band" data-tab="band">Band</button>
+  <button class="tab-btn primary tab-instrumentation" data-tab="instrumentation">Lineup</button>
   <button class="tab-btn primary tab-technical" data-tab="technical">Technical</button>
   <span class="tab-divider"></span>
   <span class="pin-tab-anchor">
@@ -53,7 +53,7 @@
         <div class="filter-chips-wrap">
           <button class="pill small" data-pin="tech:audio">Audio</button>
           <button class="pill small" data-pin="tech:stage">Stage</button>
-          <button class="pill small" data-pin="tech:lights">Lights</button>
+          <button class="pill small" data-pin="tech:lights">Lightning</button>
         </div>
       </div>
     </div>
@@ -66,12 +66,14 @@
     <div class="toolbar">
       <div class="view-by-bar">
         <span class="mono-label">View by:</span>
-        <button class="pill active" data-view="table">☰ Setlist</button>
-        <button class="pill" data-view="schedule">🕐 Schedule</button>
-        <button class="pill" data-view="artist">🎤 Artist</button>
-        <button class="pill" data-view="country">🌐 Country</button>
-        <button class="pill" data-view="genre">🎵 Genre</button>
-        <button class="pill" data-view="emotion">♡ Emotion</button>
+        <button class="pill active" data-view="table">Setlist</button>
+        <button class="pill" data-view="schedule">Schedule</button>
+      </div>
+      <div class="view-by-bar stats-by-bar">
+        <span class="mono-label">Statistics by:</span>
+        <button class="pill" data-view="country">Country</button>
+        <button class="pill" data-view="genre">Genre</button>
+        <button class="pill" data-view="emotion">Emotion</button>
       </div>
       <div class="toolbar-actions">
         <div style="display:flex;gap:8px;align-items:center">
@@ -99,6 +101,7 @@
     </div>
 
     <div id="setlist-table-view">
+      <div id="spotify-embed-box"></div>
       <div id="sets-container">
         <div class="status">Loading setlist…</div>
       </div>
@@ -114,19 +117,6 @@
           <div class="schedule-track" id="schedule-track"></div>
         </div>
         <div id="schedule-unscheduled"></div>
-
-        <div class="rehearsal-dates-box">
-          <div class="toolbar">
-            <span class="mono-label">Rehearsal dates</span>
-            <button class="btn ghost small" id="btn-add-rehearsal-date">+ Add date</button>
-          </div>
-          <div id="rehearsal-dates-list"></div>
-          <div class="rehearsal-date-row event-date-row">
-            <span class="rehearsal-date-label">Event</span>
-            <span class="rehearsal-date-value" id="rehearsal-event-date-value">—</span>
-            <span class="rehearsal-date-value" id="rehearsal-event-time-value">—</span>
-          </div>
-        </div>
       </div>
       <div id="chart-artist-wrap" class="chart-wrap" style="display:none">
         <h3>Songs by artist</h3>
@@ -158,7 +148,7 @@
 
   <div id="view-instrumentation" style="display:none">
     <div class="toolbar">
-      <span class="mono-label"></span>
+      <div id="music-sheets-box"></div>
       <div class="filters-anchor">
         <button class="filters-link" id="btn-lineup-filters-toggle">Filters ▾</button>
         <div class="filters-dropdown" id="lineup-filters-dropdown" style="display:none">
@@ -194,8 +184,8 @@
   <div id="view-band" style="display:none">
     <div class="toolbar toolbar-stacked">
       <div class="band-subtabs">
-        <button class="pill active" data-band-sub="members">Members</button>
-        <button class="pill" data-band-sub="rehearsals">Rehearsals</button>
+        <button class="tech-subtab members active" data-band-sub="members">👥 Members</button>
+        <button class="tech-subtab rehearsals" data-band-sub="rehearsals">📅 Rehearsals</button>
       </div>
       <span class="mono-label" id="band-count">—</span>
     </div>
@@ -210,7 +200,7 @@
         <div class="catalog-col-stack" id="catalog-col-stack"></div>
         <div class="member-list-box">
           <div class="member-list-head">
-            <span>Instrument</span><span>Artist</span><span>Outfit</span><span>Comments</span><span></span><span></span><span></span>
+            <span>Instrument</span><span>Artist</span><span>Outfit</span><span>Role</span><span></span><span></span><span></span>
           </div>
           <div id="member-list"></div>
         </div>
@@ -229,10 +219,28 @@
       <div id="rehearsal-member-picker" class="rehearsal-member-picker"></div>
 
       <label class="filter-chip" style="margin:14px 0"><input type="checkbox" id="rehearsal-show-all"> Show them all (availability heatmap)</label>
+      <div class="heatmap-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#5DBE7A"></span>100% available</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#4A7FB5"></span>80–99%</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#8C6FB5"></span>50–79%</span>
+      </div>
 
       <div id="rehearsal-grid-wrap"></div>
 
       <div id="rehearsal-best-times"></div>
+
+      <div class="rehearsal-dates-box">
+        <div class="toolbar">
+          <span class="mono-label">Rehearsal dates</span>
+          <button class="btn ghost small" id="btn-add-rehearsal-date">+ Add date</button>
+        </div>
+        <div id="rehearsal-dates-list"></div>
+        <div class="rehearsal-date-row event-date-row">
+          <span class="rehearsal-date-label">Event</span>
+          <span class="rehearsal-date-value" id="rehearsal-event-date-value">—</span>
+          <span class="rehearsal-date-value" id="rehearsal-event-time-value">—</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -289,14 +297,24 @@
               <select id="stage-precision"><option value="0">Whole numbers</option><option value="1" selected>0.1</option><option value="2">0.01</option></select>
             </div>
           </div>
-          <div class="field"><label>Label</label><input type="text" id="rect-label" placeholder="e.g. Main stage"></div>
+          <div class="field"><label>Label</label><input type="text" id="rect-label" placeholder="e.g. Main stage" list="stage-equipment-datalist"></div>
+          <datalist id="stage-equipment-datalist"></datalist>
           <div class="row2">
             <div class="field"><label>Length</label><input type="number" id="rect-length" placeholder="e.g. 20"></div>
             <div class="field"><label>Width</label><input type="number" id="rect-width" placeholder="e.g. 16"></div>
           </div>
-          <div class="field"><label>Height (optional)</label><input type="number" id="rect-height" placeholder="not used in 2D"></div>
+          <div class="field"><label>Height (optional)</label><input type="number" id="rect-height" placeholder="e.g. 10"></div>
           <button class="btn" id="btn-add-rect">+ Create rectangle</button>
           <div id="rect-list"></div>
+
+          <div class="equipment-list-box">
+            <p class="catalog-title">Equipment list</p>
+            <div class="catalog-add-row">
+              <input type="text" id="equipment-input" placeholder="e.g. Truss, Riser, Podium…">
+              <button class="cat-add-btn" id="btn-add-equipment">+</button>
+            </div>
+            <div id="equipment-list"></div>
+          </div>
         </div>
         <div class="stage-visualizer-wrap">
           <div class="stage-visualizer" id="stage-visualizer"></div>
@@ -373,15 +391,15 @@
     <h2>Create new set</h2>
     <div class="row2">
       <div class="field"><label>Set name</label><input id="set-name" placeholder="SET 1, Sound Check, Speeches…"></div>
-      <div class="field"><label>Start time (optional)</label><input type="time" id="set-start-time"></div>
+      <div class="field"><label>Start time (optional)</label><input type="time" id="set-start-time" step="60"></div>
     </div>
     <div class="field"><label>Color</label>
       <div class="color-swatches" id="color-swatches"></div>
     </div>
     <div class="field"><label>Type</label>
       <div class="set-type-toggle">
-        <button type="button" class="set-type-btn active" id="btn-type-songs" data-type="songs">🎵 Songs</button>
-        <button type="button" class="set-type-btn" id="btn-type-interlude" data-type="interlude">🎤 Interlude</button>
+        <button type="button" class="set-type-btn active" id="btn-type-songs" data-type="songs">Songs</button>
+        <button type="button" class="set-type-btn" id="btn-type-interlude" data-type="interlude">Interlude</button>
       </div>
     </div>
     <div id="songs-picker-wrap">
@@ -432,6 +450,9 @@ let rehearsalActiveMember = null;
 let rehearsalShowAll = false;
 let rehearsalDates = [];
 let bandProfile = null;
+let musicSheets = null;
+let stageEquipment = [];
+let spotifyEmbed = null;
 let genres = [];
 let instrumentCatalog = [];
 let charts = {};
@@ -505,6 +526,20 @@ async function fetchBandProfile(){
   const arr = res.ok ? await res.json() : [];
   bandProfile = arr[0] || null;
 }
+async function fetchMusicSheets(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?select=*&limit=1`, { headers });
+  const arr = res.ok ? await res.json() : [];
+  musicSheets = arr[0] || null;
+}
+async function fetchStageEquipment(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_equipment?select=*&order=name.asc`, { headers });
+  stageEquipment = res.ok ? await res.json() : [];
+}
+async function fetchSpotifyEmbed(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?select=*&limit=1`, { headers });
+  const arr = res.ok ? await res.json() : [];
+  spotifyEmbed = arr[0] || null;
+}
 async function fetchGenres(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/genres?select=*&order=name.asc`, { headers });
   genres = res.ok ? await res.json() : [];
@@ -515,7 +550,7 @@ async function fetchInstrumentCatalog(){
 }
 
 function instrumentOptions(){ return instrumentCatalog.map(i => i.name); }
-function singerList(){ return band.filter(b => (b.instrument||'').trim().toLowerCase() === 'singer'); }
+function singerList(){ return band.filter(b => (b.role||'').trim().toLowerCase() === 'singer'); }
 function singerColor(name){
   const list = singerList().map(s => s.artist_name);
   const idx = list.indexOf(name);
@@ -614,8 +649,41 @@ function columnHeader(){
 }
 
 function renderTable(){
+  renderSpotifyEmbedBox();
   renderSingerChips();
   renderSetsContainer();
+}
+
+function renderSpotifyEmbedBox(){
+  const box = document.getElementById('spotify-embed-box');
+  if(spotifyEmbed?.link){
+    const match = spotifyEmbed.link.match(/playlist\/([a-zA-Z0-9]+)|track\/([a-zA-Z0-9]+)|album\/([a-zA-Z0-9]+)/);
+    let embedUrl = null;
+    if(match){
+      if(match[1]) embedUrl = `https://open.spotify.com/embed/playlist/${match[1]}`;
+      else if(match[2]) embedUrl = `https://open.spotify.com/embed/track/${match[2]}`;
+      else if(match[3]) embedUrl = `https://open.spotify.com/embed/album/${match[3]}`;
+    }
+    box.innerHTML = embedUrl
+      ? `<div class="spotify-embed-wrap"><iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button></div>`
+      : `<div class="spotify-embed-wrap"><p class="hint">Could not read that Spotify link.</p><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button></div>`;
+    document.getElementById('btn-spotify-edit').addEventListener('click', async () => {
+      const link = prompt('Spotify playlist/track/album link (leave empty to remove):', spotifyEmbed.link || '');
+      if(link === null) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?id=eq.${spotifyEmbed.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: link.trim() || null }) });
+      await fetchSpotifyEmbed();
+      renderSpotifyEmbedBox();
+    });
+  } else {
+    box.innerHTML = `<div class="spotify-embed-wrap"><input type="text" id="spotify-link-input" placeholder="Paste a Spotify playlist/track/album link…"><button class="btn small" id="btn-spotify-save">Save</button></div>`;
+    document.getElementById('btn-spotify-save').addEventListener('click', async () => {
+      const link = document.getElementById('spotify-link-input').value.trim();
+      if(!link) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed`, { method:'POST', headers, body: JSON.stringify({ link }) });
+      await fetchSpotifyEmbed();
+      renderSpotifyEmbedBox();
+    });
+  }
 }
 
 function renderSetsContainer(){
@@ -773,9 +841,11 @@ document.querySelectorAll('.rail-time').forEach(el => {
       document.querySelectorAll('.color-popover').forEach(p => p.remove());
       const pop = document.createElement('div');
       pop.className = 'color-popover';
+      pop.style.position = 'fixed';
       pop.innerHTML = `<button type="button" class="swatch swatch-clear" data-color="" title="Remove color">✕</button>` +
         SET_COLOR_PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}"></button>`).join('');
-      dot.parentElement.appendChild(pop);
+      document.body.appendChild(pop);
+      clampPopoverToViewport(pop, dot);
       pop.querySelectorAll('.swatch').forEach(sw => {
         sw.addEventListener('click', async (ev) => {
           ev.stopPropagation();
@@ -789,6 +859,16 @@ document.querySelectorAll('.rail-time').forEach(el => {
   document.addEventListener('click', () => document.querySelectorAll('.color-popover').forEach(p => p.remove()));
 }
 
+function clampPopoverToViewport(pop, anchorEl){
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + 6;
+  if(left + popRect.width > window.innerWidth) left = window.innerWidth - popRect.width - 10;
+  if(top + popRect.height > window.innerHeight) top = rect.top - popRect.height - 6;
+  pop.style.left = Math.max(10, left) + 'px';
+  pop.style.top = Math.max(10, top) + 'px';
+}
 let setDragState = null;
 function wireSetDragAndDrop(){
   document.querySelectorAll('#sets-container .set-block:not(.pool)').forEach(block => {
@@ -1454,7 +1534,7 @@ function updateInstrHead(){
   const head = document.getElementById('instr-head-row');
   const cols = getLineupColumns();
   head.style.gridTemplateColumns = `1.3fr ${cols.map(c => c.width).join(' ')}`;
-  head.innerHTML = `<span>Song</span>` + cols.map(c => `<span>${c.label}</span>`).join('');
+  head.innerHTML = `<span>Song</span>` + cols.map(c => `<span class="${c.key === 'tonality_text' ? 'hdr-tonality-right' : ''}">${c.label}</span>`).join('');
 }
 
 document.getElementById('btn-lineup-filters-toggle').addEventListener('click', (e) => {
@@ -1476,7 +1556,41 @@ document.querySelectorAll('#lineup-filters-dropdown input[data-lineup-field]').f
   });
 });
 
+function renderMusicSheetsBox(){
+  const box = document.getElementById('music-sheets-box');
+  if(musicSheets?.link){
+    box.innerHTML = `
+      <a href="${escapeAttr(musicSheets.link)}" target="_blank" rel="noopener" class="btn">🎼 Music Sheets</a>
+      <button class="btn ghost small" id="btn-music-sheets-edit" title="Change or remove link" style="margin-left:6px">✎</button>
+    `;
+    document.getElementById('btn-music-sheets-edit').addEventListener('click', async () => {
+      const newLink = prompt('Music Sheets link (leave empty to remove):', musicSheets.link || '');
+      if(newLink === null) return;
+      if(musicSheets?.id){
+        await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?id=eq.${musicSheets.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: newLink.trim() || null }) });
+      } else if(newLink.trim()){
+        await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link: newLink.trim() }) });
+      }
+      await fetchMusicSheets();
+      renderMusicSheetsBox();
+    });
+  } else {
+    box.innerHTML = `
+      <input type="text" id="music-sheets-input" placeholder="Paste Music Sheets link…" style="width:260px">
+      <button class="btn small" id="btn-music-sheets-save">Save</button>
+    `;
+    document.getElementById('btn-music-sheets-save').addEventListener('click', async () => {
+      const link = document.getElementById('music-sheets-input').value.trim();
+      if(!link) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link }) });
+      await fetchMusicSheets();
+      renderMusicSheetsBox();
+    });
+  }
+}
+
 function renderInstrumentation(){
+  renderMusicSheetsBox();
   const container = document.getElementById('instr-container');
   updateInstrHead();
   if(songs.length === 0){
@@ -1515,7 +1629,10 @@ function renderInstrumentation(){
       if(c.key === 'tonality_text') return `<input type="text" class="tonality-text-input" data-id="${song.id}" data-field="tonality" value="${escapeAttr(song.tonality || '')}" placeholder="Key, e.g. C, Em">`;
       if(c.key === 'singers') return `<div class="expandable" data-kind="singers" data-song-id="${song.id}"><button type="button" class="condensed-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button></div>`;
       if(c.key === 'instruments') return `<div class="expandable" data-kind="instruments" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button></div>`;
-      if(c.key === 'guests') return `<input type="text" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="Special guest">`;
+      if(c.key === 'guests'){
+        const currentGuests = (song.guests || '').split('/').map(s => s.trim()).filter(Boolean);
+        return `<div class="expandable" data-kind="guests" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentGuests.length ? escapeHtml(currentGuests.join(', ')) : 'Select guest(s)'}</button></div>`;
+      }
       if(c.key === 'arranger') return `<input type="text" data-id="${song.id}" data-field="arranger" value="${escapeAttr(song.arranger || '')}" placeholder="Arranger">`;
       if(c.key === 'version') return `<input type="text" data-id="${song.id}" data-field="youtube_link" value="${escapeAttr(song.youtube_link || '')}" placeholder="https://...">`;
       if(c.key === 'comments') return `<input type="text" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="Comments">`;
@@ -1560,6 +1677,8 @@ function openChecklistPanel(wrap){
 
   if(kind === 'singers'){
     renderSingerChecklist(panel, song);
+  } else if(kind === 'guests'){
+    renderGuestChecklist(panel, song);
   } else {
     renderInstrumentChecklist(panel, song);
   }
@@ -1577,6 +1696,24 @@ function renderSingerChecklist(panel, song){
     chk.addEventListener('change', async () => {
       const checked = Array.from(panel.querySelectorAll('input:checked')).map(i => i.value);
       await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${song.id}`, { method:'PATCH', headers, body: JSON.stringify({ singers: checked.join('/') || null }) });
+      await fetchSongs();
+      updateCondensedLabel();
+    });
+  });
+}
+
+function guestList(){ return band.filter(b => (b.role||'').trim().toLowerCase() === 'guest'); }
+
+function renderGuestChecklist(panel, song){
+  const options = guestList().map(b => b.artist_name);
+  const current = new Set((song.guests || '').split('/').map(s => s.trim()).filter(Boolean));
+  panel.innerHTML = options.length ? options.map(name => `
+    <label><input type="checkbox" value="${escapeAttr(name)}" ${current.has(name) ? 'checked' : ''}>${escapeHtml(name)}</label>
+  `).join('') : '<div class="none">No band members marked as Guest yet. Set their Role to Guest in the Band tab.</div>';
+  panel.querySelectorAll('input').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      const checked = Array.from(panel.querySelectorAll('input:checked')).map(i => i.value);
+      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${song.id}`, { method:'PATCH', headers, body: JSON.stringify({ guests: checked.join('/') || null }) });
       await fetchSongs();
       updateCondensedLabel();
     });
@@ -1631,6 +1768,9 @@ function updateCondensedLabel(){
     btn.textContent = arr.length ? arr.join(', ') : 'Select singer(s)';
     btn.style.background = arr.length ? hexToRgba(singerColor(arr[0]), 0.22) : '';
     btn.style.borderColor = arr.length ? singerColor(arr[0]) : '';
+  } else if(kind === 'guests'){
+    const arr = (song.guests || '').split('/').map(s => s.trim()).filter(Boolean);
+    btn.textContent = arr.length ? arr.join(', ') : 'Select guest(s)';
   } else {
     const arr = songInstruments.filter(si => si.song_id === songId).map(si => si.instrument);
     btn.textContent = arr.length ? arr.slice(0,2).join(', ') + (arr.length>2 ? ` +${arr.length-2}` : '') : 'Select instruments';
@@ -1731,6 +1871,7 @@ function renderRehearsals(){
   document.getElementById('rehearsal-tz').value = rehearsalSettings?.timezone || '';
   renderMemberPicker();
   renderRehearsalGrid();
+  renderRehearsalDatesBox();
 }
 
 function renderMemberPicker(){
@@ -1885,6 +2026,12 @@ function toggleCell(cell, select){
   else { rehearsalPendingSlots.delete(key); cell.classList.remove('selected'); }
 }
 
+let roleOptions = [];
+async function fetchRoleOptions(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/role_options?select=*&order=name.asc`, { headers });
+  roleOptions = res.ok ? await res.json() : [];
+}
+
 function renderMemberList(){
   const container = document.getElementById('member-list');
   document.getElementById('band-count').textContent = `${instrumentCatalog.length} INSTRUMENTS`;
@@ -1899,28 +2046,55 @@ function renderMemberList(){
   });
   orderedCatalog.forEach(cat => {
     const existing = band.find(b => (b.instrument || '').toLowerCase() === cat.name.toLowerCase());
+    const currentRole = existing?.role || 'MainBand';
     const row = document.createElement('div');
     row.className = 'member-row';
     row.dataset.instrument = cat.name;
     row.dataset.bandId = existing?.id || '';
+    const secondLine = existing?.second_instrument ? `<small class="second-instrument-tag">+ ${escapeHtml(existing.second_instrument)}</small>` : '';
     row.innerHTML = `
       <div class="member-row-main">
-        <span class="member-instrument">${escapeHtml(cat.name)}</span>
+        <span class="member-instrument">${escapeHtml(cat.name)}${secondLine}</span>
         <input type="text" class="member-artist-input" value="${escapeAttr(existing?.artist_name || '')}" placeholder="Type artist name…">
         <input type="text" class="member-outfit-input" value="${escapeAttr(existing?.outfit_size || '')}" placeholder="Size">
-        <input type="text" class="member-comments-input" value="${escapeAttr(existing?.comments || '')}" placeholder="Comments">
+        <select class="member-role-select">
+          ${roleOptions.map(r => `<option value="${escapeAttr(r.name)}" ${r.name === currentRole ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
+          <option value="__other__">Other…</option>
+        </select>
         <button type="button" class="member-color-swatch" style="background:${existing?.outfit_color || 'var(--line)'}" title="Outfit color"></button>
         <button class="edit-pencil" title="Second instrument">✎</button>
-        <button class="member-remove-btn" title="Clear this person">✕</button>
+        <button class="member-remove-btn" title="Remove this row">✕</button>
       </div>
       <div class="member-row-expand" style="display:none">
-        <input type="text" class="member-second-input" value="${escapeAttr(existing?.second_instrument || '')}" placeholder="Second instrument (optional)" list="instrument-options">
+        <input type="text" class="member-second-input" placeholder="2nd instrument" list="instrument-options" maxlength="15">
+        <button type="button" class="btn ghost small member-second-confirm">✓</button>
       </div>
     `;
     row.querySelector('.edit-pencil').addEventListener('click', () => {
       const exp = row.querySelector('.member-row-expand');
       exp.style.display = exp.style.display === 'none' ? 'flex' : 'none';
     });
+    const secondInput = row.querySelector('.member-second-input');
+    function confirmSecond(){
+      upsertMember(row, 'second_instrument', secondInput.value).then(() => renderMemberList());
+    }
+    secondInput.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); confirmSecond(); } });
+    row.querySelector('.member-second-confirm').addEventListener('click', confirmSecond);
+
+    row.querySelector('.member-role-select').addEventListener('change', async (e) => {
+      if(e.target.value === '__other__'){
+        const name = prompt('New role name:');
+        if(!name || !name.trim()){ e.target.value = currentRole; return; }
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/role_options`, { method:'POST', headers, body: JSON.stringify({ name: name.trim() }) });
+        if(!res.ok){ alert('Could not add that role (it may already exist).'); e.target.value = currentRole; return; }
+        await fetchRoleOptions();
+        await upsertMember(row, 'role', name.trim());
+        renderMemberList();
+      } else {
+        await upsertMember(row, 'role', e.target.value);
+      }
+    });
+
     row.querySelector('.member-color-swatch').addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('.color-popover').forEach(p => p.remove());
@@ -1928,25 +2102,39 @@ function renderMemberList(){
       const pop = document.createElement('div');
       pop.className = 'color-popover';
       pop.style.position = 'fixed';
-      const rect = btn.getBoundingClientRect();
-      pop.style.top = (rect.bottom + 6) + 'px';
-      pop.style.left = rect.left + 'px';
-      pop.innerHTML = `<button type="button" class="swatch swatch-clear" data-color="" title="Remove color">✕</button>` +
-        SET_COLOR_PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}"></button>`).join('');
+      pop.innerHTML = `
+        <input type="color" class="native-color-input" value="${existing?.outfit_color || '#D98A3D'}">
+        <button type="button" class="swatch swatch-clear" data-clear="1" title="Remove color">✕ Remove color</button>
+      `;
       document.body.appendChild(pop);
-      pop.querySelectorAll('.swatch').forEach(sw => {
-        sw.addEventListener('click', async (ev) => {
-          ev.stopPropagation();
-          await upsertMember(row, 'outfit_color', sw.dataset.color || null);
-          pop.remove();
-          renderMemberList();
-        });
+      const rect = btn.getBoundingClientRect();
+      const popRect = pop.getBoundingClientRect();
+      let left = rect.left;
+      let top = rect.bottom + 6;
+      if(left + popRect.width > window.innerWidth) left = window.innerWidth - popRect.width - 10;
+      if(top + popRect.height > window.innerHeight) top = rect.top - popRect.height - 6;
+      pop.style.left = Math.max(10, left) + 'px';
+      pop.style.top = Math.max(10, top) + 'px';
+      pop.querySelector('.native-color-input').addEventListener('change', async (ev) => {
+        await upsertMember(row, 'outfit_color', ev.target.value);
+        pop.remove();
+        renderMemberList();
+      });
+      pop.querySelector('.swatch-clear').addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        await upsertMember(row, 'outfit_color', null);
+        pop.remove();
+        renderMemberList();
       });
     });
     row.querySelector('.member-remove-btn').addEventListener('click', async () => {
-      if(!row.dataset.bandId) return;
-      await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${row.dataset.bandId}`, { method:'DELETE', headers });
+      if(row.dataset.bandId){
+        await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${row.dataset.bandId}`, { method:'DELETE', headers });
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog?id=eq.${cat.id}`, { method:'DELETE', headers });
       await fetchBand();
+      await fetchInstrumentCatalog();
+      renderCatalogColumns();
       renderMemberList();
     });
     container.appendChild(row);
@@ -1956,7 +2144,7 @@ function renderMemberList(){
     if(row.dataset.bandId){
       await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${row.dataset.bandId}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: value || null }) });
     } else {
-      const payload = { instrument: row.dataset.instrument, [field]: value || null };
+      const payload = { instrument: row.dataset.instrument, role: 'MainBand', [field]: value || null };
       const res = await fetch(`${SUPABASE_URL}/rest/v1/band`, { method:'POST', headers, body: JSON.stringify(payload) });
       if(!res.ok){ alert('Could not save that: ' + await res.text()); return; }
       const created = await res.json();
@@ -2007,9 +2195,9 @@ document.getElementById('band-name-input').addEventListener('change', async (e) 
   renderBandNameBar();
 });
 
-document.querySelectorAll('.band-subtabs .pill').forEach(pill => {
+document.querySelectorAll('.band-subtabs .tech-subtab').forEach(pill => {
   pill.addEventListener('click', () => {
-    document.querySelectorAll('.band-subtabs .pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.band-subtabs .tech-subtab').forEach(p => p.classList.remove('active'));
     pill.classList.add('active');
     document.getElementById('band-panel-members').style.display = pill.dataset.bandSub === 'members' ? 'block' : 'none';
     document.getElementById('band-panel-rehearsals').style.display = pill.dataset.bandSub === 'rehearsals' ? 'block' : 'none';
@@ -2101,8 +2289,6 @@ function renderSchedule(){
   if(unscheduled.length){
     unscheduledEl.innerHTML = `<p class="hint" style="margin-top:16px">Not scheduled yet (no time set): ${unscheduled.map(s => escapeHtml(s.set_number)).join(', ')} — set a time for them in the Setlist tab.</p>`;
   }
-
-  renderRehearsalDatesBox();
 }
 
 function renderRehearsalDatesBox(){
@@ -2185,7 +2371,44 @@ function renderStage(){
   renderRectList();
   renderStageVisualizer();
   renderStagePlot();
+  renderEquipmentList();
 }
+
+function renderEquipmentList(){
+  const list = document.getElementById('equipment-list');
+  const datalist = document.getElementById('stage-equipment-datalist');
+  datalist.innerHTML = stageEquipment.map(e => `<option value="${escapeAttr(e.name)}">`).join('');
+  if(stageEquipment.length === 0){
+    list.innerHTML = '<div class="empty-note" style="border:none;padding:10px 0;">No equipment saved yet.</div>';
+    return;
+  }
+  list.innerHTML = stageEquipment.map(e => `
+    <div class="catalog-list-item">
+      <span>${escapeHtml(e.name)}</span>
+      <button class="cat-remove-btn" data-id="${e.id}">−</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('.cat-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/stage_equipment?id=eq.${btn.dataset.id}`, { method:'DELETE', headers });
+      await fetchStageEquipment();
+      renderEquipmentList();
+    });
+  });
+}
+document.getElementById('btn-add-equipment').addEventListener('click', async () => {
+  const input = document.getElementById('equipment-input');
+  const name = input.value.trim();
+  if(!name) return;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_equipment`, { method:'POST', headers, body: JSON.stringify({ name }) });
+  if(!res.ok){ alert('Could not add that item (it may already exist).'); return; }
+  input.value = '';
+  await fetchStageEquipment();
+  renderEquipmentList();
+});
+document.getElementById('equipment-input').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') document.getElementById('btn-add-equipment').click();
+});
 
 function renderRectList(){
   const list = document.getElementById('rect-list');
@@ -2197,7 +2420,7 @@ function renderRectList(){
     <div class="rect-list-item" data-id="${r.id}">
       <span class="rect-swatch" style="background:${r.color || 'var(--gold)'}"></span>
       <span class="rect-label-text">${escapeHtml(r.label || 'Rectangle')}</span>
-      <span class="rect-dims">${fmtNum(r.length)} × ${fmtNum(r.width)} ${r.unit || 'ft'}</span>
+      <span class="rect-dims">${fmtNum(r.length)} × ${fmtNum(r.width)}${r.height ? ` × ${fmtNum(r.height)}H` : ''} ${r.unit || 'ft'}</span>
       <button class="rect-remove-btn" data-id="${r.id}">✕</button>
     </div>
   `).join('');
@@ -2235,7 +2458,7 @@ function renderStageVisualizer(){
     el.style.top = ((r.pos_y || 50) / 100 * visH) - h/2 + 'px';
     el.style.background = hexToRgba(r.color || '#D98A3D', 0.28);
     el.style.borderColor = r.color || '#D98A3D';
-    el.innerHTML = `<span class="rect-name">${escapeHtml(r.label || 'Rectangle')}</span><span class="rect-dims-big">${fmtNum(r.length)} × ${fmtNum(r.width)} ${r.unit || 'ft'}</span>`;
+    el.innerHTML = `<span class="rect-name">${escapeHtml(r.label || 'Rectangle')}</span><span class="rect-dims-big">${fmtNum(r.length)} × ${fmtNum(r.width)}${r.height ? ` × ${fmtNum(r.height)}H` : ''} ${r.unit || 'ft'}</span>`;
     vis.appendChild(el);
 
     let dragging = false, offX = 0, offY = 0;
@@ -2426,10 +2649,29 @@ function renderLights(){
       anyRendered = true;
       block.innerHTML = `
         <div class="set-head"><span class="name" style="${setInfo.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setInfo.set_number)}</span></div>
-        <div class="lights-interlude-list">
-          ${items.map(it => `<div class="lights-interlude-item">${escapeHtml(it.description || 'Untitled item')}</div>`).join('')}
+        <div class="lights-head">
+          <span>Cue#</span><span>Item</span><span></span><span>Backdrop color</span><span>Stage lights</span><span>Visuals</span><span>Comments</span>
         </div>
+        <div class="lights-rows"></div>
       `;
+      const rowsDiv = block.querySelector('.lights-rows');
+      items.forEach(item => {
+        cueCounter++;
+        const row = document.createElement('div');
+        row.className = 'lights-row';
+        row.innerHTML = `
+          <span class="cue-number">${cueCounter}</span>
+          <div class="lights-song-cell">
+            <p class="lights-song-title">${escapeHtml(item.description || 'Untitled item')}</p>
+          </div>
+          <span class="lights-readonly">—</span>
+          <input type="text" data-interlude-id="${item.id}" data-field="backdrop_color" value="${escapeAttr(item.backdrop_color || '')}" placeholder="—">
+          <input type="text" data-interlude-id="${item.id}" data-field="stage_lights" value="${escapeAttr(item.stage_lights || '')}" placeholder="—">
+          <input type="text" data-interlude-id="${item.id}" data-field="visuals" value="${escapeAttr(item.visuals || '')}" placeholder="Link">
+          <input type="text" data-interlude-id="${item.id}" data-field="light_comments" value="${escapeAttr(item.light_comments || '')}" placeholder="—">
+        `;
+        rowsDiv.appendChild(row);
+      });
       withRail.appendChild(block);
       container.appendChild(withRail);
       return;
@@ -2441,7 +2683,7 @@ function renderLights(){
     block.innerHTML = `
       <div class="set-head"><span class="name" style="${setInfo.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setInfo.set_number)}</span></div>
       <div class="lights-head">
-        <span>Cue#</span><span>Song</span><span>Special guest</span><span>Backdrop color</span><span>Stage lights</span><span>Comments</span>
+        <span>Cue#</span><span>Song</span><span>Special guest</span><span>Backdrop color</span><span>Stage lights</span><span>Visuals</span><span>Comments</span>
       </div>
       <div class="lights-rows"></div>
     `;
@@ -2463,6 +2705,7 @@ function renderLights(){
         <span class="lights-readonly">${escapeHtml(song.guests || '—')}</span>
         <input type="text" data-id="${song.id}" data-field="backdrop_color" value="${escapeAttr(song.backdrop_color || '')}" placeholder="—">
         <input type="text" data-id="${song.id}" data-field="stage_lights" value="${escapeAttr(song.stage_lights || '')}" placeholder="—">
+        <input type="text" data-id="${song.id}" data-field="visuals" value="${escapeAttr(song.visuals || '')}" placeholder="Link">
         <input type="text" data-id="${song.id}" data-field="light_comments" value="${escapeAttr(song.light_comments || '')}" placeholder="—">
       `;
       rowsDiv.appendChild(row);
@@ -2489,7 +2732,7 @@ function renderLights(){
     container.innerHTML = '<div class="empty-note">No songs in your Setlist yet.</div>';
   }
 
-  container.querySelectorAll('input[type=text]').forEach(inp => {
+  container.querySelectorAll('input[type=text][data-id]').forEach(inp => {
     inp.addEventListener('change', async () => {
       await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${inp.dataset.id}`, {
         method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
@@ -2497,11 +2740,19 @@ function renderLights(){
       await fetchSongs();
     });
   });
+  container.querySelectorAll('input[type=text][data-interlude-id]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${inp.dataset.interludeId}`, {
+        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
+      });
+      await fetchInterludeItems();
+    });
+  });
 }
 
-document.querySelectorAll('.tech-subtab').forEach(btn => {
+document.querySelectorAll('.tech-subtabs .tech-subtab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tech-subtab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tech-subtabs .tech-subtab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.tech-panel').forEach(p => p.style.display = 'none');
     document.getElementById('tech-panel-' + btn.dataset.sub).style.display = 'block';
@@ -2630,12 +2881,10 @@ function renderInputList(){
       const pop = document.createElement('div');
       pop.className = 'color-popover';
       pop.style.position = 'fixed';
-      const rect = dot.getBoundingClientRect();
-      pop.style.top = (rect.bottom + 6) + 'px';
-      pop.style.left = rect.left + 'px';
       pop.innerHTML = `<button type="button" class="swatch swatch-clear" data-color="" title="Remove color">✕</button>` +
         SET_COLOR_PALETTE.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}"></button>`).join('');
       document.body.appendChild(pop);
+      clampPopoverToViewport(pop, dot);
       pop.querySelectorAll('.swatch').forEach(sw => {
         sw.addEventListener('click', async (ev) => {
           ev.stopPropagation();
@@ -2861,7 +3110,7 @@ Duración: ${duracion}`;
 });
 
 async function reload(){
-  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchBandProfile()]);
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed()]);
   renderTable();
 }
 
@@ -2882,7 +3131,7 @@ function navigateToPin(dest){
     if(pill) pill.click();
   } else if(kind === 'band'){
     document.querySelector('.tab-btn[data-tab="band"]').click();
-    const pill = document.querySelector(`.band-subtabs .pill[data-band-sub="${key}"]`);
+    const pill = document.querySelector(`.band-subtabs .tech-subtab[data-band-sub="${key}"]`);
     if(pill) pill.click();
   } else if(kind === 'tech'){
     document.querySelector('.tab-btn[data-tab="technical"]').click();

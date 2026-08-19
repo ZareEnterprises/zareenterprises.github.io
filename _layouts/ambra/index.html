@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js" onerror="window.__gltfLoadFailed=true"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js" onerror="window.__orbitLoadFailed=true"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="window.__xlsxLoadFailed=true"></script>
 <link rel="stylesheet" href="/assets/css/ambra-app.css">
 </head>
 <body class="theme-table">
@@ -22,8 +23,8 @@
 
 <nav class="tabs" id="tabs">
   <button class="tab-btn primary active tab-setlist" data-tab="table">Setlist</button>
-  <button class="tab-btn primary tab-band" data-tab="band">Band</button>
   <button class="tab-btn primary tab-instrumentation" data-tab="instrumentation">Lineup</button>
+  <button class="tab-btn primary tab-band" data-tab="band">Band</button>
   <button class="tab-btn primary tab-technical" data-tab="technical">Technical</button>
   <span class="tab-divider"></span>
   <span class="pin-tab-anchor">
@@ -149,8 +150,8 @@
   </div>
 
   <div id="view-instrumentation" style="display:none">
-    <div class="toolbar" style="justify-content:flex-end">
-      <div id="music-sheets-box" style="margin-right:10px"></div>
+    <div class="toolbar" style="justify-content:flex-end; align-items:center;">
+      <div id="music-sheets-box" style="margin-right:26px"></div>
       <div class="filters-anchor">
         <button class="filters-link" id="btn-lineup-filters-toggle">Filters ▾</button>
         <div class="filters-dropdown" id="lineup-filters-dropdown" style="display:none">
@@ -264,19 +265,25 @@
 
       <div id="audio-panel-requirements" class="audio-subpanel">
         <div class="set-block audio-centered">
-          <div class="req-head"><span>Item</span><span>Model</span><span>Amount</span><span></span></div>
+          <div class="req-head">
+            <span>Item</span><span>Model</span><span>Amount</span>
+            <button class="copy-icon-btn" id="btn-copy-req" title="Copy for Excel">⧉</button>
+          </div>
           <div id="audio-req-rows"></div>
           <button class="btn ghost small" id="btn-add-req-row" style="margin:12px 20px">+ Add row</button>
+          <div style="text-align:center;padding:0 20px 16px"><button class="btn ghost small" id="btn-download-req">⬇ Download .xlsx</button></div>
         </div>
       </div>
 
       <div id="audio-panel-inputlist" class="audio-subpanel" style="display:none">
         <div class="set-block">
           <div class="input-list-head">
-            <span>#</span><span>Instrument</span><span>Mic</span><span>48?</span><span>Stand or Clip</span><span>Snake Input</span><span></span>
+            <span>#</span><span>Instrument</span><span>Mic</span><span>48?</span><span>Stand or Clip</span><span>Snake Input</span>
+            <button class="copy-icon-btn" id="btn-copy-inputlist" title="Copy for Excel">⧉</button>
           </div>
           <div id="input-list-rows"></div>
           <button class="btn ghost small" id="btn-add-input-row" style="margin:12px 20px">+ Add row</button>
+          <div style="text-align:center;padding:0 20px 16px"><button class="btn ghost small" id="btn-download-inputlist">⬇ Download .xlsx</button></div>
         </div>
       </div>
 
@@ -354,6 +361,7 @@
         <span class="mono-label">Linked from Setlist — read-only except Backdrop Color, Stage Lights & Comments</span>
       </div>
       <div id="lights-container"></div>
+      <div style="text-align:center;padding:16px 0"><button class="btn ghost small" id="btn-download-lights">⬇ Download .xlsx</button></div>
     </div>
   </div>
 
@@ -362,8 +370,12 @@
 <footer class="site-footer">
   <span>&copy; All rights reserved by AMBRA Live Productions LLC.</span>
   <span class="footer-links">
-    <a href="https://ambraproductions.us/" target="_blank" rel="noopener" title="Website">🌐</a>
-    <a href="https://www.instagram.com/ambra.us/" target="_blank" rel="noopener" title="Instagram">📷</a>
+    <a href="https://ambraproductions.us/" target="_blank" rel="noopener" title="Website">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.8 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.8-3.8-9s1.3-6.5 3.8-9z"/></svg>
+    </a>
+    <a href="https://www.instagram.com/ambra.us/" target="_blank" rel="noopener" title="Instagram">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
+    </a>
   </span>
 </footer>
 
@@ -398,10 +410,7 @@
 <!-- Create Set Modal -->
 <div class="overlay" id="overlay-set">
   <div class="modal">
-    <div class="modal-title-row">
-      <h2>Create new set</h2>
-      <div class="color-swatches small" id="color-swatches"></div>
-    </div>
+    <h2>Create new set</h2>
     <div class="row2">
       <div class="field"><label>Set name</label><input id="set-name" placeholder="SET 1, Sound Check, Speeches…"></div>
       <div class="field"><label>Start time (optional)</label>
@@ -423,9 +432,12 @@
       <div class="set-builder-list" id="set-builder-list"></div>
     </div>
     <p class="hint" id="interlude-hint" style="display:none">This set will use Description / Mics needed / To whom / Props rows instead of songs — you'll add them after creating the set.</p>
+    <div class="field"><label>Color</label>
+      <div class="color-swatches" id="color-swatches"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn ghost" id="btn-set-cancel">Cancel</button>
-      <button class="btn confirm" id="btn-set-confirm" disabled>Name your set</button>
+      <button class="btn confirm" id="btn-set-confirm" disabled>Accept</button>
     </div>
   </div>
 </div>
@@ -468,6 +480,7 @@ let rehearsalDates = [];
 let bandProfile = null;
 let musicSheets = null;
 let stageEquipment = [];
+let lightCues = [];
 let spotifyEmbed = null;
 let genres = [];
 let instrumentCatalog = [];
@@ -550,6 +563,10 @@ async function fetchMusicSheets(){
 async function fetchStageEquipment(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_equipment?select=*&order=name.asc`, { headers });
   stageEquipment = res.ok ? await res.json() : [];
+}
+async function fetchLightCues(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/light_cues?select=*&order=cue_order.asc.nullslast`, { headers });
+  lightCues = res.ok ? await res.json() : [];
 }
 async function fetchSpotifyEmbed(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?select=*&limit=1`, { headers });
@@ -680,7 +697,7 @@ function renderSpotifyEmbedBox(){
       else if(match[3]) embedUrl = `https://open.spotify.com/embed/album/${match[3]}`;
     }
     box.innerHTML = embedUrl
-      ? `<iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button>`
+      ? `<iframe src="${embedUrl}" width="100%" height="232" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button>`
       : `<p class="hint">Could not read that Spotify link.</p><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button>`;
     document.getElementById('btn-spotify-edit').addEventListener('click', () => {
       openSmallLinkPopup(document.getElementById('btn-spotify-edit'), spotifyEmbed.link || '', async (link) => {
@@ -806,12 +823,10 @@ function wireSetEditing(){
 
   function parseTimeInput(str){
   if(!str || str === '—') return '';
-  console.log(str)
   str = str.trim().toLowerCase();
-  let m = str.match(/^(\d{1,2}):(\d{2})$/); // 1 o 2 num delante, 2 despues de :
-  if(m) return `${String(m[1]).padStart(2,'0')}:${m[2]}`; 
-  m = str.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);// 2 num : 2 num
-  console.log(m)
+  let m = str.match(/^(\d{1,2}):(\d{2})$/);
+  if(m) return `${String(m[1]).padStart(2,'0')}:${m[2]}`;
+  m = str.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
   if(m){
     let h = parseInt(m[1], 10);
     const mins = m[2] || '00';
@@ -1282,7 +1297,7 @@ function updateSetConfirmBtn(){
     else btn.textContent = setBuilderOrder.length ? `Confirm — group ${setBuilderOrder.length} song${setBuilderOrder.length>1?'s':''}` : 'Create empty set';
   } else {
     btn.disabled = true;
-    btn.textContent = 'Name your set';
+    btn.textContent = 'Accept';
   }
 }
 document.getElementById('set-name').addEventListener('input', updateSetConfirmBtn);
@@ -1446,13 +1461,13 @@ function renderInterludeRows(container, setInfo){
       <span></span><span>Description</span><span>Mics needed</span><span>To whom</span><span>Props</span><span></span>
     </div>
     <div class="interlude-rows" data-set-id="${setInfo.id}"></div>
-    <button class="btn ghost small btn-add-interlude-row" data-set-id="${setInfo.id}" style="margin:12px 20px">+ Add row</button>
+    <button class="btn ghost small btn-add-interlude-row" data-set-id="${setInfo.id}" style="margin:12px 20px">+ Add</button>
   `;
   const rowsDiv = container.querySelector('.interlude-rows');
   const items = interludeItems.filter(it => it.set_id === setInfo.id).sort((a,b) => (a.item_order||0) - (b.item_order||0));
 
   if(items.length === 0){
-    rowsDiv.innerHTML = '<div class="empty-note" style="border:none;padding:18px;">No items yet — click "+ Add row" to start.</div>';
+    rowsDiv.innerHTML = '<div class="empty-note" style="border:none;padding:18px;">No items yet — click "+ Add" to start.</div>';
   }
 
   items.forEach(item => {
@@ -1732,6 +1747,14 @@ function renderSingerChecklist(panel, song){
 }
 
 function guestList(){ return band.filter(b => (b.role||'').trim().toLowerCase() === 'guest'); }
+function guestNamesToInstruments(guestsStr){
+  const names = (guestsStr || '').split('/').map(s => s.trim()).filter(Boolean);
+  if(names.length === 0) return '—';
+  return names.map(name => {
+    const member = band.find(b => (b.artist_name||'').trim().toLowerCase() === name.toLowerCase());
+    return member?.instrument || name;
+  }).join(', ');
+}
 
 function renderGuestChecklist(panel, song){
   const options = guestList().map(b => b.artist_name);
@@ -2114,7 +2137,7 @@ function renderMemberList(){
           ${roleOptions.map(r => `<option value="${escapeAttr(r.name)}" ${r.name === currentRole ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
           <option value="__other__">Other…</option>
         </select>
-        <button type="button" class="member-color-swatch" style="background:${existing?.outfit_color || 'var(--line)'}" title="Outfit color"></button>
+        <button type="button" class="member-color-swatch" style="background:${(existing?.outfit_color || '').split(',')[0] || 'var(--line)'}" title="Outfit color"></button>
         <button class="edit-pencil" title="Second instrument">✎</button>
         <button class="member-remove-btn" title="Remove this row">✕</button>
       </div>
@@ -2150,34 +2173,8 @@ function renderMemberList(){
 
     row.querySelector('.member-color-swatch').addEventListener('click', (e) => {
       e.stopPropagation();
-      document.querySelectorAll('.color-popover').forEach(p => p.remove());
-      const btn = e.currentTarget;
-      const pop = document.createElement('div');
-      pop.className = 'color-popover';
-      pop.style.position = 'fixed';
-      pop.innerHTML = `
-        <input type="color" class="native-color-input" value="${existing?.outfit_color || '#D98A3D'}">
-        <button type="button" class="swatch swatch-clear" data-clear="1" title="Remove color">✕ Remove color</button>
-      `;
-      document.body.appendChild(pop);
-      pop.addEventListener('click', (ev) => ev.stopPropagation());
-      const rect = btn.getBoundingClientRect();
-      const popRect = pop.getBoundingClientRect();
-      let left = rect.left;
-      let top = rect.bottom + 6;
-      if(left + popRect.width > window.innerWidth) left = window.innerWidth - popRect.width - 10;
-      if(top + popRect.height > window.innerHeight) top = rect.top - popRect.height - 6;
-      pop.style.left = Math.max(10, left) + 'px';
-      pop.style.top = Math.max(10, top) + 'px';
-      pop.querySelector('.native-color-input').addEventListener('change', async (ev) => {
-        await upsertMember(row, 'outfit_color', ev.target.value);
-        pop.remove();
-        renderMemberList();
-      });
-      pop.querySelector('.swatch-clear').addEventListener('click', async (ev) => {
-        ev.stopPropagation();
-        await upsertMember(row, 'outfit_color', null);
-        pop.remove();
+      openMultiColorPanel(e.currentTarget, existing?.outfit_color || '', 2, async (csv) => {
+        await upsertMember(row, 'outfit_color', csv || null);
         renderMemberList();
       });
     });
@@ -2299,7 +2296,7 @@ function renderSchedule(){
     startHour = Math.max(0, earliest - 2);
   }
   const endHour = 24;
-  const PX_PER_HOUR = 76;
+  const PX_PER_HOUR = 100;
   const PAD = 20;
   const totalHeight = (endHour - startHour) * PX_PER_HOUR + PAD * 2;
 
@@ -2694,6 +2691,66 @@ document.getElementById('stage-plot-input').addEventListener('change', async (e)
 });
 
 /* ============ LIGHTS TAB ============ */
+function renderCueSubRows(rowsDiv, parentType, parentId){
+  const cues = lightCues.filter(c => c.parent_type === parentType && c.parent_id === parentId).sort((a,b) => (a.cue_order||0)-(b.cue_order||0));
+  cues.forEach(cue => {
+    const row = document.createElement('div');
+    row.className = 'lights-row cue-sub-row';
+    row.innerHTML = `
+      <span></span>
+      <span class="cue-sub-tag">↳ section</span>
+      <span></span>
+      <div class="cue-time-cell">
+        <input type="text" data-cue-id="${cue.id}" data-field="cue_start_time" value="${escapeAttr(cue.cue_start_time || '')}" placeholder="e.g. 0:15" maxlength="20">
+      </div>
+      <div class="color-bubbles-row" data-color-owner="cue" data-id="${cue.id}">
+        ${(cue.color||'').split(',').filter(Boolean).map(c=>`<span class="color-bubble-sm" style="background:${c}"></span>`).join('')}
+        <button type="button" class="color-bubbles-add-btn" data-color-owner="cue" data-id="${cue.id}">+</button>
+      </div>
+      <input type="text" data-cue-id="${cue.id}" data-field="visuals" value="${escapeAttr(cue.visuals || '')}" placeholder="Link">
+      <div class="cue-comments-cell">
+        <textarea class="lights-comments-textarea" data-cue-id="${cue.id}" data-field="comments" maxlength="300" placeholder="—">${escapeHtml(cue.comments || '')}</textarea>
+        <button type="button" class="cue-remove-btn" data-cue-id="${cue.id}">✕</button>
+      </div>
+    `;
+    rowsDiv.appendChild(row);
+  });
+
+  rowsDiv.querySelectorAll('.cue-sub-row input[type=text][data-cue-id]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/light_cues?id=eq.${inp.dataset.cueId}`, { method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null }) });
+      await fetchLightCues();
+    });
+  });
+  rowsDiv.querySelectorAll('.cue-sub-row .lights-comments-textarea').forEach(ta => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 300) + 'px';
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 300) + 'px'; });
+    ta.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/light_cues?id=eq.${ta.dataset.cueId}`, { method:'PATCH', headers, body: JSON.stringify({ comments: ta.value || null }) });
+      await fetchLightCues();
+    });
+  });
+  rowsDiv.querySelectorAll('.cue-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/light_cues?id=eq.${btn.dataset.cueId}`, { method:'DELETE', headers });
+      await fetchLightCues();
+      renderLights();
+    });
+  });
+  rowsDiv.querySelectorAll('.cue-sub-row .color-bubbles-add-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cue = lightCues.find(c => c.id === btn.dataset.id);
+      openMultiColorPanel(btn, cue?.color || '', 5, async (csv) => {
+        await fetch(`${SUPABASE_URL}/rest/v1/light_cues?id=eq.${btn.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ color: csv || null }) });
+        await fetchLightCues();
+        renderLights();
+      });
+    });
+  });
+}
+
 function renderLights(){
   const container = document.getElementById('lights-container');
   container.innerHTML = '';
@@ -2720,9 +2777,9 @@ function renderLights(){
       if(items.length === 0) return;
       anyRendered = true;
       block.innerHTML = `
-        <div class="set-head"><span class="name" style="${setInfo.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setInfo.set_number)}</span></div>
+        <div class="set-head"><span class="name" style="${setInfo.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setInfo.set_number)}</span><button class="copy-icon-btn" data-copy-light-set="${setInfo.set_number}" title="Copy for Excel">⧉</button></div>
         <div class="lights-head">
-          <span>Cue#</span><span>Item</span><span></span><span>Backdrop color</span><span>Stage lights</span><span>Visuals</span><span>Comments</span>
+          <span>Cue#</span><span>Item</span><span></span><span>Cue Start Time</span><span>Color</span><span>Visuals</span><span>Comments</span>
         </div>
         <div class="lights-rows"></div>
       `;
@@ -2737,12 +2794,19 @@ function renderLights(){
             <p class="lights-song-title">${escapeHtml(item.description || 'Untitled item')}</p>
           </div>
           <span class="lights-readonly">—</span>
-          <input type="text" data-interlude-id="${item.id}" data-field="backdrop_color" value="${escapeAttr(item.backdrop_color || '')}" placeholder="—">
-          <input type="text" data-interlude-id="${item.id}" data-field="stage_lights" value="${escapeAttr(item.stage_lights || '')}" placeholder="—">
+          <div class="cue-time-cell">
+            <input type="text" data-interlude-id="${item.id}" data-field="backdrop_color" value="${escapeAttr(item.backdrop_color || '')}" placeholder="e.g. 0:15" maxlength="20">
+            <button type="button" class="add-cue-link" data-parent-type="interlude" data-parent-id="${item.id}">+ Add</button>
+          </div>
+          <div class="color-bubbles-row" data-color-owner="interlude" data-id="${item.id}">
+            ${(item.stage_lights||'').split(',').filter(Boolean).map(c=>`<span class="color-bubble-sm" style="background:${c}"></span>`).join('')}
+            <button type="button" class="color-bubbles-add-btn" data-color-owner="interlude" data-id="${item.id}">+</button>
+          </div>
           <input type="text" data-interlude-id="${item.id}" data-field="visuals" value="${escapeAttr(item.visuals || '')}" placeholder="Link">
-          <input type="text" data-interlude-id="${item.id}" data-field="light_comments" value="${escapeAttr(item.light_comments || '')}" placeholder="—">
+          <textarea class="lights-comments-textarea" data-interlude-id="${item.id}" data-field="light_comments" maxlength="300" placeholder="—">${escapeHtml(item.light_comments || '')}</textarea>
         `;
         rowsDiv.appendChild(row);
+        renderCueSubRows(rowsDiv, 'interlude', item.id);
       });
       withRail.appendChild(block);
       container.appendChild(withRail);
@@ -2753,9 +2817,9 @@ function renderLights(){
     if(setSongs.length === 0) return;
     anyRendered = true;
     block.innerHTML = `
-      <div class="set-head"><span class="name" style="${setInfo.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setInfo.set_number)}</span></div>
+      <div class="set-head"><span class="name" style="${setInfo.color ? `color:${setInfo.color}` : ''}">${escapeHtml(setInfo.set_number)}</span><button class="copy-icon-btn" data-copy-light-set="${setInfo.set_number}" title="Copy for Excel">⧉</button></div>
       <div class="lights-head">
-        <span>Cue#</span><span>Song</span><span>Special guest</span><span>Backdrop color</span><span>Stage lights</span><span>Visuals</span><span>Comments</span>
+        <span>Cue#</span><span>Song</span><span>Special guest</span><span>Cue Start Time</span><span>Color</span><span>Visuals</span><span>Comments</span>
       </div>
       <div class="lights-rows"></div>
     `;
@@ -2774,13 +2838,20 @@ function renderLights(){
             ${song.artist ? `<p class="lights-song-artist">${escapeHtml(song.artist)}</p>` : ''}
           </div>
         </div>
-        <span class="lights-readonly">${escapeHtml(song.guests || '—')}</span>
-        <input type="text" data-id="${song.id}" data-field="backdrop_color" value="${escapeAttr(song.backdrop_color || '')}" placeholder="—">
-        <input type="text" data-id="${song.id}" data-field="stage_lights" value="${escapeAttr(song.stage_lights || '')}" placeholder="—">
+        <span class="lights-readonly">${guestNamesToInstruments(song.guests)}</span>
+        <div class="cue-time-cell">
+          <input type="text" data-id="${song.id}" data-field="backdrop_color" value="${escapeAttr(song.backdrop_color || '')}" placeholder="e.g. 0:15" maxlength="20">
+          <button type="button" class="add-cue-link" data-parent-type="song" data-parent-id="${song.id}">+ Add</button>
+        </div>
+        <div class="color-bubbles-row" data-color-owner="song" data-id="${song.id}">
+          ${(song.stage_lights||'').split(',').filter(Boolean).map(c=>`<span class="color-bubble-sm" style="background:${c}"></span>`).join('')}
+          <button type="button" class="color-bubbles-add-btn" data-color-owner="song" data-id="${song.id}">+</button>
+        </div>
         <input type="text" data-id="${song.id}" data-field="visuals" value="${escapeAttr(song.visuals || '')}" placeholder="Link">
-        <input type="text" data-id="${song.id}" data-field="light_comments" value="${escapeAttr(song.light_comments || '')}" placeholder="—">
+        <textarea class="lights-comments-textarea" data-id="${song.id}" data-field="light_comments" maxlength="300" placeholder="—">${escapeHtml(song.light_comments || '')}</textarea>
       `;
       rowsDiv.appendChild(row);
+      renderCueSubRows(rowsDiv, 'song', song.id);
     });
     withRail.appendChild(block);
     container.appendChild(withRail);
@@ -2818,6 +2889,58 @@ function renderLights(){
         method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
       });
       await fetchInterludeItems();
+    });
+  });
+  container.querySelectorAll('.lights-comments-textarea').forEach(ta => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 300) + 'px';
+    ta.addEventListener('input', () => {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 300) + 'px';
+    });
+    ta.addEventListener('change', async () => {
+      const payload = { light_comments: ta.value || null };
+      if(ta.dataset.id){
+        await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${ta.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+        await fetchSongs();
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${ta.dataset.interludeId}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+        await fetchInterludeItems();
+      }
+    });
+  });
+  container.querySelectorAll('.color-bubbles-add-btn').forEach(btn => {
+    if(btn.dataset.colorOwner === 'cue') return;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const owner = btn.dataset.colorOwner;
+      const id = btn.dataset.id;
+      const current = owner === 'song'
+        ? (songs.find(s => s.id === id)?.stage_lights || '')
+        : (interludeItems.find(it => it.id === id)?.stage_lights || '');
+      openMultiColorPanel(btn, current, 5, async (csv) => {
+        const payload = { stage_lights: csv || null };
+        if(owner === 'song'){
+          await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+          await fetchSongs();
+        } else {
+          await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+          await fetchInterludeItems();
+        }
+        renderLights();
+      });
+    });
+  });
+  container.querySelectorAll('.add-cue-link').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const parentType = btn.dataset.parentType;
+      const parentId = btn.dataset.parentId;
+      const existingCount = lightCues.filter(c => c.parent_type === parentType && c.parent_id === parentId).length;
+      await fetch(`${SUPABASE_URL}/rest/v1/light_cues`, {
+        method:'POST', headers, body: JSON.stringify({ parent_type: parentType, parent_id: parentId, cue_order: existingCount + 1 })
+      });
+      await fetchLightCues();
+      renderLights();
     });
   });
 }
@@ -2996,7 +3119,10 @@ function renderSpeakerTables(){
     block.innerHTML = `
       <div class="set-head">
         <span class="name editable-name" contenteditable="true" data-table-id="${tbl.id}">${escapeHtml(tbl.name || 'Untitled')}</span>
-        <button class="del-set" data-table-id="${tbl.id}" title="Delete table">✕</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="copy-icon-btn" data-copy-table-id="${tbl.id}" title="Copy for Excel">⧉</button>
+          <button class="del-set" data-table-id="${tbl.id}" title="Delete table">✕</button>
+        </div>
       </div>
       <div class="speaker-head"><span>Number</span><span>Name</span><span>Model</span><span></span></div>
       <div class="speaker-rows" data-table-id="${tbl.id}"></div>
@@ -3183,9 +3309,54 @@ Duración: ${duracion}`;
 });
 
 async function reload(){
-  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed()]);
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues()]);
   renderTable();
   renderSpotifyEmbedBox();
+}
+
+function openMultiColorPanel(anchorEl, colorsCsv, maxColors, onChange){
+  document.querySelectorAll('.multi-color-panel').forEach(p => p.remove());
+  const colors = (colorsCsv || '').split(',').map(c => c.trim()).filter(Boolean);
+  const pop = document.createElement('div');
+  pop.className = 'multi-color-panel';
+  pop.style.position = 'fixed';
+  function render(){
+    pop.innerHTML = `
+      <div class="mcp-bubbles">
+        ${colors.map((c, i) => `<span class="mcp-bubble" style="background:${c}" data-i="${i}" title="Click to remove"></span>`).join('')}
+        ${colors.length < maxColors ? `<span class="mcp-add">+<input type="color" class="mcp-color-input" value="#D98A3D"></span>` : ''}
+      </div>
+    `;
+    pop.querySelectorAll('.mcp-bubble').forEach(b => {
+      b.addEventListener('click', () => {
+        colors.splice(parseInt(b.dataset.i, 10), 1);
+        onChange(colors.join(','));
+        render();
+      });
+    });
+    const addInput = pop.querySelector('.mcp-color-input');
+    if(addInput){
+      addInput.addEventListener('input', (e) => {
+        colors.push(e.target.value);
+        onChange(colors.join(','));
+        render();
+      });
+    }
+  }
+  render();
+  document.body.appendChild(pop);
+  pop.addEventListener('click', (e) => e.stopPropagation());
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + 6;
+  if(left + popRect.width > window.innerWidth) left = window.innerWidth - popRect.width - 10;
+  if(top + popRect.height > window.innerHeight) top = rect.top - popRect.height - 6;
+  pop.style.left = Math.max(10, left) + 'px';
+  pop.style.top = Math.max(10, top) + 'px';
+  setTimeout(() => {
+    document.addEventListener('click', function closeOnce(){ pop.remove(); document.removeEventListener('click', closeOnce); }, { once: true });
+  }, 0);
 }
 
 function openSmallLinkPopup(anchorEl, currentValue, onSave){
@@ -3215,7 +3386,9 @@ function openSmallLinkPopup(anchorEl, currentValue, onSave){
   }
   pop.querySelector('.btn').addEventListener('click', submit);
   input.addEventListener('keydown', (e) => { if(e.key === 'Enter') submit(); });
-  document.addEventListener('click', function closeOnce(){ pop.remove(); document.removeEventListener('click', closeOnce); }, { once: true });
+  setTimeout(() => {
+    document.addEventListener('click', function closeOnce(){ pop.remove(); document.removeEventListener('click', closeOnce); }, { once: true });
+  }, 0);
 }
 
 document.getElementById('spotify-toggle-btn').addEventListener('click', (e) => {
@@ -3300,6 +3473,160 @@ document.addEventListener('click', (e) => {
     minSel.innerHTML += `<option value="${v}">${v}</option>`;
   }
 })();
+
+/* ============ COPY FOR EXCEL ============ */
+const NAMED_COLORS = [
+  ['#FF0000','Red'],['#E14A3E','Red'],['#FF3B30','Red'],['#6B2C2C','Dark Red'],['#B23F3A','Red'],
+  ['#00FF00','Green'],['#5DBE7A','Green'],['#4C9A6A','Green'],['#5DB57D','Green'],
+  ['#0000FF','Blue'],['#4A7FB5','Blue'],['#1E90FF','Blue'],
+  ['#FFFF00','Yellow'],['#D6B24A','Yellow'],['#FFD700','Gold'],
+  ['#800080','Purple'],['#8C6FB5','Purple'],['#6B7FB0','Blue-Purple'],
+  ['#FFA500','Orange'],['#D98A3D','Orange'],['#D9722C','Orange'],['#F2914D','Orange'],
+  ['#FFC0CB','Pink'],['#C7738C','Pink'],
+  ['#FFFFFF','White'],['#000000','Black'],
+  ['#00FFFF','Cyan'],['#3FA8A0','Teal'],['#7FA6A0','Teal'],
+];
+function hexToColorName(hex){
+  if(!hex) return '';
+  hex = hex.trim();
+  const h = hex.replace('#','');
+  if(h.length !== 6) return hex;
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  let best = null, bestDist = Infinity;
+  NAMED_COLORS.forEach(([nHex, name]) => {
+    const nh = nHex.replace('#','');
+    const nr = parseInt(nh.substring(0,2),16), ng = parseInt(nh.substring(2,4),16), nb = parseInt(nh.substring(4,6),16);
+    const dist = (r-nr)**2 + (g-ng)**2 + (b-nb)**2;
+    if(dist < bestDist){ bestDist = dist; best = name; }
+  });
+  return best || hex;
+}
+function colorsCsvToNames(csv){
+  return (csv || '').split(',').map(c => c.trim()).filter(Boolean).map(hexToColorName).join(', ');
+}
+async function copyTSV(rows, label){
+  const text = rows.map(r => r.map(cell => (cell ?? '').toString().replace(/\t/g,' ').replace(/\n/g,' ')).join('\t')).join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    alert((label || 'Data') + ' copied — paste it into Excel.');
+  } catch(e){
+    alert('Could not copy automatically. Select and copy manually:\n\n' + text);
+  }
+}
+
+document.getElementById('btn-copy-req').addEventListener('click', () => {
+  const rows = [['Item','Model','Amount']];
+  audioRequirements.forEach(r => rows.push([r.item || '', r.model || '', r.amount || '']));
+  copyTSV(rows, 'Audio Requirements');
+});
+
+document.getElementById('btn-copy-inputlist').addEventListener('click', () => {
+  const rows = [['#','Instrument','Mic','48?','Stand or Clip','Snake Input']];
+  [...inputListRows].sort((a,b) => (a.channel_number||0)-(b.channel_number||0)).forEach(r => {
+    rows.push([r.channel_number ?? '', r.instrument || '', r.mic || '', r.is_48v ? 'Yes' : 'No', r.stand_or_clip || '', r.snake_input || '']);
+  });
+  copyTSV(rows, 'Input List');
+});
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-copy-table-id]');
+  if(!btn) return;
+  const tbl = speakerTables.find(t => t.id === btn.dataset.copyTableId);
+  if(!tbl) return;
+  const items = speakerItems.filter(it => it.table_id === tbl.id).sort((a,b) => (a.item_order||0)-(b.item_order||0));
+  const rows = [[tbl.name || 'Untitled'], ['Number','Name','Model']];
+  items.forEach(it => rows.push([it.number || '', it.name || '', it.model || '']));
+  copyTSV(rows, tbl.name || 'Speakers table');
+});
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-copy-light-set]');
+  if(!btn) return;
+  const setName = btn.dataset.copyLightSet;
+  const setInfo = sets.find(s => s.set_number === setName);
+  const timeLabel = setInfo?.set_time ? setInfo.set_time.slice(0,5) : '';
+  const rows = [['Time','Cue#','Song','Special guest','Cue Start Time','Color','Visuals','Comments']];
+
+  if(setInfo?.set_type === 'interlude'){
+    const items = interludeItems.filter(it => it.set_id === setInfo.id).sort((a,b) => (a.item_order||0)-(b.item_order||0));
+    let cue = 0;
+    items.forEach(it => {
+      cue++;
+      rows.push([timeLabel, cue, it.description || '', '', it.backdrop_color || '', colorsCsvToNames(it.stage_lights), it.visuals || '', it.light_comments || '']);
+      lightCues.filter(c => c.parent_type === 'interlude' && c.parent_id === it.id).sort((a,b)=>(a.cue_order||0)-(b.cue_order||0)).forEach(c => {
+        rows.push([timeLabel, cue, '', '', c.cue_start_time || '', colorsCsvToNames(c.color), c.visuals || '', c.comments || '']);
+      });
+    });
+  } else {
+    const setSongs = songs.filter(s => s.set_number === setName).sort((a,b) => (a.song_order||0)-(b.song_order||0));
+    let cue = 0;
+    setSongs.forEach(song => {
+      cue++;
+      const songLabel = song.artist ? `${song.song_name || ''} - ${song.artist}` : (song.song_name || '');
+      rows.push([timeLabel, cue, songLabel, song.guests || '', song.backdrop_color || '', colorsCsvToNames(song.stage_lights), song.visuals || '', song.light_comments || '']);
+      lightCues.filter(c => c.parent_type === 'song' && c.parent_id === song.id).sort((a,b)=>(a.cue_order||0)-(b.cue_order||0)).forEach(c => {
+        rows.push([timeLabel, cue, '', '', c.cue_start_time || '', colorsCsvToNames(c.color), c.visuals || '', c.comments || '']);
+      });
+    });
+  }
+  copyTSV(rows, setName);
+});
+
+function downloadXLSX(filename, sheetName, rows){
+  if(typeof XLSX === 'undefined'){
+    alert('The Excel export library could not load. Check your internet connection and try again.');
+    return;
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0,31));
+  XLSX.writeFile(wb, filename);
+}
+
+document.getElementById('btn-download-req').addEventListener('click', () => {
+  const rows = [['Item','Model','Amount']];
+  audioRequirements.forEach(r => rows.push([r.item || '', r.model || '', r.amount || '']));
+  downloadXLSX('Audio Requirements.xlsx', 'Audio Requirements', rows);
+});
+
+document.getElementById('btn-download-inputlist').addEventListener('click', () => {
+  const rows = [['#','Instrument','Mic','48?','Stand or Clip','Snake Input']];
+  [...inputListRows].sort((a,b) => (a.channel_number||0)-(b.channel_number||0)).forEach(r => {
+    rows.push([r.channel_number ?? '', r.instrument || '', r.mic || '', r.is_48v ? 'Yes' : 'No', r.stand_or_clip || '', r.snake_input || '']);
+  });
+  downloadXLSX('Input List.xlsx', 'Input List', rows);
+});
+
+document.getElementById('btn-download-lights').addEventListener('click', () => {
+  const rows = [['Set','Time','Cue#','Song','Special guest','Cue Start Time','Color','Visuals','Comments']];
+  const allSets = [...sets].sort((a,b) => (a.set_order||0) - (b.set_order||0));
+  allSets.forEach(setInfo => {
+    const timeLabel = setInfo.set_time ? setInfo.set_time.slice(0,5) : '';
+    if(setInfo.set_type === 'interlude'){
+      const items = interludeItems.filter(it => it.set_id === setInfo.id).sort((a,b) => (a.item_order||0)-(b.item_order||0));
+      let cue = 0;
+      items.forEach(it => {
+        cue++;
+        rows.push([setInfo.set_number, timeLabel, cue, it.description || '', '', it.backdrop_color || '', colorsCsvToNames(it.stage_lights), it.visuals || '', it.light_comments || '']);
+        lightCues.filter(c => c.parent_type === 'interlude' && c.parent_id === it.id).sort((a,b)=>(a.cue_order||0)-(b.cue_order||0)).forEach(c => {
+          rows.push([setInfo.set_number, timeLabel, cue, '', '', c.cue_start_time || '', colorsCsvToNames(c.color), c.visuals || '', c.comments || '']);
+        });
+      });
+    } else {
+      const setSongs = songs.filter(s => s.set_number === setInfo.set_number).sort((a,b) => (a.song_order||0)-(b.song_order||0));
+      let cue = 0;
+      setSongs.forEach(song => {
+        cue++;
+        const songLabel = song.artist ? `${song.song_name || ''} - ${song.artist}` : (song.song_name || '');
+        rows.push([setInfo.set_number, timeLabel, cue, songLabel, guestNamesToInstruments(song.guests), song.backdrop_color || '', colorsCsvToNames(song.stage_lights), song.visuals || '', song.light_comments || '']);
+        lightCues.filter(c => c.parent_type === 'song' && c.parent_id === song.id).sort((a,b)=>(a.cue_order||0)-(b.cue_order||0)).forEach(c => {
+          rows.push([setInfo.set_number, timeLabel, cue, '', '', c.cue_start_time || '', colorsCsvToNames(c.color), c.visuals || '', c.comments || '']);
+        });
+      });
+    }
+  });
+  downloadXLSX('Lightning.xlsx', 'Lightning', rows);
+});
 
 reload();
 </script>

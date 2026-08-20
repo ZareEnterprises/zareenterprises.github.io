@@ -7,9 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js" onerror="window.__gltfLoadFailed=true"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js" onerror="window.__orbitLoadFailed=true"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="window.__xlsxLoadFailed=true"></script>
 <link rel="stylesheet" href="/assets/css/ambra-app.css">
 </head>
@@ -237,11 +235,12 @@
           <h2 class="section-title" style="margin:0">REHEARSAL DATES</h2>
           <button class="btn ghost small" id="btn-add-rehearsal-date">+ Add date</button>
         </div>
-        <div id="rehearsal-dates-list" class="rehearsal-dates-grid"></div>
-        <div class="rehearsal-date-card event-date-card">
-          <div class="rd-card-label">Event</div>
-          <div class="rd-card-date" id="rehearsal-event-date-value">—</div>
-          <div class="rd-card-time" id="rehearsal-event-time-value">—</div>
+        <div class="rehearsal-dates-layout">
+          <div id="rehearsal-dates-list" class="rehearsal-dates-grid"></div>
+          <div class="rehearsal-song-picker">
+            <p class="mono-label" style="margin-bottom:8px">Setlist songs — drag onto a day</p>
+            <div id="rehearsal-song-picker-list"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -306,8 +305,7 @@
               <select id="stage-precision"><option value="0">Whole numbers</option><option value="1" selected>0.1</option><option value="2">0.01</option></select>
             </div>
           </div>
-          <div class="field"><label>Label</label><input type="text" id="rect-label" placeholder="e.g. Main stage" list="stage-equipment-datalist"></div>
-          <datalist id="stage-equipment-datalist"></datalist>
+          <div class="field"><label>Label</label><input type="text" id="rect-label" placeholder="e.g. Main stage"></div>
           <div class="row2">
             <div class="field"><label>Length</label><input type="number" id="rect-length" placeholder="e.g. 20"></div>
             <div class="field"><label>Width</label><input type="number" id="rect-width" placeholder="e.g. 16"></div>
@@ -315,15 +313,6 @@
           <div class="field"><label>Height (optional)</label><input type="number" id="rect-height" placeholder="e.g. 10"></div>
           <button class="btn" id="btn-add-rect">+ Create rectangle</button>
           <div id="rect-list"></div>
-
-          <div class="equipment-list-box">
-            <p class="catalog-title">Equipment list</p>
-            <div class="catalog-add-row">
-              <input type="text" id="equipment-input" placeholder="e.g. Truss, Riser, Podium…">
-              <button class="cat-add-btn" id="btn-add-equipment">+</button>
-            </div>
-            <div id="equipment-list"></div>
-          </div>
         </div>
         <div class="stage-visualizer-wrap">
           <div class="stage-visualizer" id="stage-visualizer"></div>
@@ -335,25 +324,37 @@
       </div>
 
       <h2 class="section-title">STAGE PLOT</h2>
-      <div class="stage-plot-box">
-        <div id="stage-plot-display" class="stage-plot-display"></div>
+      <div class="stage-plot-box wide">
+        <div id="stage-plot-display" class="stage-plot-display wide"></div>
         <input type="file" id="stage-plot-input" accept="image/*" style="display:none">
         <button class="btn ghost" id="btn-upload-plot">Upload image (max 100KB)</button>
       </div>
 
-      <h2 class="section-title">3D STAGE MODEL</h2>
-      <p class="hint" style="text-align:center;max-width:520px;margin:0 auto 16px">Browsers can't open .blend files directly — in Blender, use File → Export → glTF 2.0 (.glb), then upload the .glb here.</p>
-      <div class="stage-3d-box">
-        <div id="stage-3d-canvas-wrap"><div class="empty-note" style="border:none;">No 3D model loaded yet.</div></div>
-        <input type="file" id="stage-3d-input" accept=".glb,.gltf" style="display:none">
-        <div style="text-align:center;margin-top:12px">
-          <button class="btn ghost" id="btn-upload-3d">Upload .glb / .gltf model</button>
-        </div>
-      </div>
+      <h2 class="section-title" style="margin-top:56px">3D STAGE MODEL</h2>
+      <p class="hint" style="text-align:center;max-width:560px;margin:0 auto 16px">Browsers can't open .blend files directly — export from Blender as glTF 2.0 (.glb) and save it as <code>assets/palante.glb</code> in your repo.</p>
+      <div class="stage-3d-box wide">
+        <div id="stage3d-canvas-wrap">
+          <div id="stage3d-loader" style="display:none">
+            <div class="stage3d-load-title">Loading model…</div>
+            <div class="stage3d-bar"><i id="stage3d-barfill"></i></div>
+          </div>
+          <div id="stage3d-empty" class="empty-note" style="border:none;">No model found at assets/palante.glb yet.</div>
 
-      <div style="text-align:center;margin-top:22px">
-        <!-- Fill in the real link when the 3D viewer is ready -->
-        <a href="" id="btn-3d-view" class="btn" target="_blank" rel="noopener">View in Interactive 3D</a>
+          <div class="stage3d-overlay stage3d-overlay-tl">
+            <div class="stage3d-eyebrow">AMBRA LIVE PRODUCTIONS</div>
+            <div class="stage3d-title">Venue Visualizer · <span id="stage3d-project-title"></span></div>
+          </div>
+          <div class="stage3d-overlay stage3d-overlay-tr">
+            <button class="stage3d-btn" id="btn-3d-reset">Reset view</button>
+            <button class="stage3d-btn" id="btn-3d-fullscreen">Fullscreen</button>
+          </div>
+          <div class="stage3d-overlay stage3d-overlay-bl">
+            <span><b>Drag</b> rotate</span>
+            <span><b>Scroll / pinch</b> zoom</span>
+            <span><b>Right-drag / two-finger</b> pan</span>
+          </div>
+          <div class="stage3d-overlay stage3d-overlay-br">&copy; AMBRA Live Productions</div>
+        </div>
       </div>
     </div>
     <div id="tech-panel-lights" class="tech-panel" style="display:none">
@@ -477,6 +478,7 @@ let rehearsalAvailability = [];
 let rehearsalActiveMember = null;
 let rehearsalShowAll = false;
 let rehearsalDates = [];
+let rehearsalDateSongs = [];
 let bandProfile = null;
 let musicSheets = null;
 let stageEquipment = [];
@@ -549,6 +551,10 @@ async function fetchRehearsalAvailability(){
 async function fetchRehearsalDates(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?select=*&order=item_order.asc.nullslast`, { headers });
   rehearsalDates = res.ok ? await res.json() : [];
+}
+async function fetchRehearsalDateSongs(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_date_songs?select=*&order=item_order.asc.nullslast`, { headers });
+  rehearsalDateSongs = res.ok ? await res.json() : [];
 }
 async function fetchBandProfile(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/band_profile?select=*&limit=1`, { headers });
@@ -689,16 +695,30 @@ function renderTable(){
 function renderSpotifyEmbedBox(){
   const box = document.getElementById('nav-spotify-panel');
   if(spotifyEmbed?.link){
-    const match = spotifyEmbed.link.match(/playlist\/([a-zA-Z0-9]+)|track\/([a-zA-Z0-9]+)|album\/([a-zA-Z0-9]+)/);
-    let embedUrl = null;
-    if(match){
-      if(match[1]) embedUrl = `https://open.spotify.com/embed/playlist/${match[1]}`;
-      else if(match[2]) embedUrl = `https://open.spotify.com/embed/track/${match[2]}`;
-      else if(match[3]) embedUrl = `https://open.spotify.com/embed/album/${match[3]}`;
-    }
-    box.innerHTML = embedUrl
-      ? `<iframe src="${embedUrl}" width="100%" height="232" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button>`
-      : `<p class="hint">Could not read that Spotify link.</p><button class="btn ghost small" id="btn-spotify-edit">✎ Change</button>`;
+    box.innerHTML = `
+      <div class="spotify-menu">
+        <button class="spotify-menu-item" id="btn-spotify-play">▶ Play on Spotify</button>
+        <button class="spotify-menu-item" id="btn-spotify-save-setlist">💾 Save setlist</button>
+        <button class="spotify-menu-item" id="btn-spotify-copy-link">🔗 Copy link</button>
+        <button class="spotify-menu-item" id="btn-spotify-edit">✎ Change link</button>
+      </div>
+    `;
+    document.getElementById('btn-spotify-play').addEventListener('click', () => window.open(spotifyEmbed.link, '_blank', 'noopener'));
+    document.getElementById('btn-spotify-save-setlist').addEventListener('click', () => {
+      const rows = [['Set','Song','Artist','Genre','Country','Duration']];
+      const orderedSets = [...sets].sort((a,b) => (a.set_order||0)-(b.set_order||0));
+      orderedSets.forEach(setInfo => {
+        songs.filter(s => s.set_number === setInfo.set_number).sort((a,b)=>(a.song_order||0)-(b.song_order||0)).forEach(s => {
+          rows.push([setInfo.set_number, s.song_name || '', s.artist || '', s.genero || '', s.artist_country || '', s.duration || '']);
+        });
+      });
+      songs.filter(s => !s.set_number).forEach(s => rows.push(['Unassigned', s.song_name || '', s.artist || '', s.genero || '', s.artist_country || '', s.duration || '']));
+      downloadXLSX('Setlist.xlsx', 'Setlist', rows);
+    });
+    document.getElementById('btn-spotify-copy-link').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(spotifyEmbed.link); alert('Link copied.'); }
+      catch(e){ alert(spotifyEmbed.link); }
+    });
     document.getElementById('btn-spotify-edit').addEventListener('click', () => {
       openSmallLinkPopup(document.getElementById('btn-spotify-edit'), spotifyEmbed.link || '', async (link) => {
         await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?id=eq.${spotifyEmbed.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: link || null }) });
@@ -1309,21 +1329,41 @@ document.getElementById('btn-set-confirm').addEventListener('click', async () =>
   const color = selectedSetColor;
   if(!name) return;
   if(sets.find(s => s.set_number === name)){ alert('A set with that name already exists.'); return; }
-  const minOrder = sets.length ? Math.min(...sets.map(s => s.set_order ?? 0)) : 1;
-  const newOrder = minOrder - 1;
   const sh = document.getElementById('set-start-hour').value;
   const sm = document.getElementById('set-start-minute').value;
   const startTime = (sh && sm) ? `${sh}:${sm}` : '';
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: newOrder, color, set_type: selectedSetType, set_time: startTime || null }) });
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: 9999, color, set_type: selectedSetType, set_time: startTime || null }) });
   if(!res.ok){
     const errText = await res.text();
     alert('Could not create the set:\n' + errText);
     return;
   }
+  const createdArr = await res.json();
+  const newSet = createdArr[0];
+
+  // Position it correctly among existing sets by time, then re-sequence everyone
+  let ordered = [...sets].sort((a,b) => (a.set_order||0) - (b.set_order||0));
+  if(startTime){
+    let insertPos = ordered.length;
+    for(let i=0;i<ordered.length;i++){
+      if(ordered[i].set_time && ordered[i].set_time > startTime){ insertPos = i; break; }
+    }
+    ordered.splice(insertPos, 0, newSet);
+  } else {
+    ordered.unshift(newSet);
+  }
+  await Promise.all(ordered.map((s, i) =>
+    fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${s.id}`, { method:'PATCH', headers, body: JSON.stringify({ set_order: i + 1 }) })
+  ));
+
   if(selectedSetType === 'songs' && setBuilderOrder.length){
     await Promise.all(setBuilderOrder.map((id, i) =>
       fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, { method:'PATCH', headers, body: JSON.stringify({ set_number: name, song_order: i+1 }) })
     ));
+  }
+  if(selectedSetType === 'interlude'){
+    await fetch(`${SUPABASE_URL}/rest/v1/interlude_items`, { method:'POST', headers, body: JSON.stringify({ set_id: newSet.id, item_order: 1 }) });
   }
   overlaySet.classList.remove('open');
   await reload();
@@ -2357,7 +2397,16 @@ function renderSchedule(){
 function renderRehearsalDatesBox(){
   const list = document.getElementById('rehearsal-dates-list');
   const ordered = [...rehearsalDates].sort((a,b) => (a.item_order||0) - (b.item_order||0));
-  list.innerHTML = ordered.map((r, i) => `
+  const subText = document.querySelector('header.top .sub').textContent.trim();
+  const parts = subText.split('·').map(p => p.trim());
+
+  list.innerHTML = ordered.map((r, i) => {
+    const assigned = rehearsalDateSongs.filter(rs => rs.rehearsal_date_id === r.id).sort((a,b)=>(a.item_order||0)-(b.item_order||0));
+    const chips = assigned.map(rs => {
+      const song = songs.find(s => s.id === rs.song_id);
+      return `<span class="rd-song-chip" data-rs-id="${rs.id}">${escapeHtml(song?.song_name || 'Untitled')}<button class="rd-song-remove" data-rs-id="${rs.id}">✕</button></span>`;
+    }).join('');
+    return `
     <div class="rehearsal-date-card" data-id="${r.id}">
       <div class="rd-card-top">
         <span class="rd-card-label">Rehearsal ${i+1}</span>
@@ -2367,8 +2416,14 @@ function renderRehearsalDatesBox(){
       <input type="text" class="rd-card-input rd-time-input" data-id="${r.id}" value="${escapeAttr(r.time_text || '')}" placeholder="Time">
       <input type="text" class="rd-card-input rd-location-input" data-id="${r.id}" value="${escapeAttr(r.location_text || '')}" placeholder="Location">
       <input type="text" class="rd-card-input rd-location-link-input" data-id="${r.id}" value="${escapeAttr(r.location_link || '')}" placeholder="Location link (optional)">
-    </div>
-  `).join('');
+      <div class="rd-song-dropzone" data-rehearsal-id="${r.id}">${chips || '<span class="rd-dropzone-hint">Drag songs here</span>'}</div>
+    </div>`;
+  }).join('') + `
+    <div class="rehearsal-date-card event-date-card">
+      <div class="rd-card-label">Event</div>
+      <div class="rd-card-date">${parts[1] || '—'}</div>
+      <div class="rd-card-time">${parts[2] || '—'}</div>
+    </div>`;
 
   list.querySelectorAll('.rd-card-input').forEach(inp => {
     inp.addEventListener('change', async () => {
@@ -2386,13 +2441,52 @@ function renderRehearsalDatesBox(){
       renderRehearsalDatesBox();
     });
   });
+  list.querySelectorAll('.rd-song-remove').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_date_songs?id=eq.${btn.dataset.rsId}`, { method:'DELETE', headers });
+      await fetchRehearsalDateSongs();
+      renderRehearsalDatesBox();
+    });
+  });
+  list.querySelectorAll('.rd-song-dropzone').forEach(zone => {
+    zone.addEventListener('dragover', (e) => { if(draggedSongForRehearsal) e.preventDefault(); });
+    zone.addEventListener('drop', async (e) => {
+      if(!draggedSongForRehearsal) return;
+      e.preventDefault();
+      const rehearsalId = zone.dataset.rehearsalId;
+      const existingCount = rehearsalDateSongs.filter(rs => rs.rehearsal_date_id === rehearsalId).length;
+      await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_date_songs`, {
+        method:'POST', headers, body: JSON.stringify({ rehearsal_date_id: rehearsalId, song_id: draggedSongForRehearsal, item_order: existingCount + 1 })
+      });
+      draggedSongForRehearsal = null;
+      await fetchRehearsalDateSongs();
+      renderRehearsalDatesBox();
+    });
+  });
 
   document.getElementById('btn-add-rehearsal-date').style.display = rehearsalDates.length >= 8 ? 'none' : 'inline-block';
 
-  const subText = document.querySelector('header.top .sub').textContent.trim();
-  const parts = subText.split('·').map(p => p.trim());
-  document.getElementById('rehearsal-event-date-value').textContent = parts[1] || '—';
-  document.getElementById('rehearsal-event-time-value').textContent = parts[2] || '—';
+  renderRehearsalSongPicker();
+}
+
+let draggedSongForRehearsal = null;
+function renderRehearsalSongPicker(){
+  const picker = document.getElementById('rehearsal-song-picker-list');
+  if(songs.length === 0){
+    picker.innerHTML = '<div class="empty-note" style="border:none;padding:10px 0;">No songs in the Setlist yet.</div>';
+    return;
+  }
+  picker.innerHTML = songs.map(s => `
+    <div class="rd-picker-song" draggable="true" data-song-id="${s.id}">
+      <span class="rd-picker-title">${escapeHtml(s.song_name || 'Untitled')}</span>
+      ${s.artist ? `<span class="rd-picker-artist">${escapeHtml(s.artist)}</span>` : ''}
+    </div>
+  `).join('');
+  picker.querySelectorAll('.rd-picker-song').forEach(el => {
+    el.addEventListener('dragstart', () => { draggedSongForRehearsal = el.dataset.songId; });
+    el.addEventListener('dragend', () => { draggedSongForRehearsal = null; });
+  });
 }
 document.getElementById('btn-add-rehearsal-date').addEventListener('click', async () => {
   if(rehearsalDates.length >= 8){ alert('Maximum of 8 rehearsal dates.'); return; }
@@ -2440,44 +2534,7 @@ function renderStage(){
   renderRectList();
   renderStageVisualizer();
   renderStagePlot();
-  renderEquipmentList();
 }
-
-function renderEquipmentList(){
-  const list = document.getElementById('equipment-list');
-  const datalist = document.getElementById('stage-equipment-datalist');
-  datalist.innerHTML = stageEquipment.map(e => `<option value="${escapeAttr(e.name)}">`).join('');
-  if(stageEquipment.length === 0){
-    list.innerHTML = '<div class="empty-note" style="border:none;padding:10px 0;">No equipment saved yet.</div>';
-    return;
-  }
-  list.innerHTML = stageEquipment.map(e => `
-    <div class="catalog-list-item">
-      <span>${escapeHtml(e.name)}</span>
-      <button class="cat-remove-btn" data-id="${e.id}">−</button>
-    </div>
-  `).join('');
-  list.querySelectorAll('.cat-remove-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await fetch(`${SUPABASE_URL}/rest/v1/stage_equipment?id=eq.${btn.dataset.id}`, { method:'DELETE', headers });
-      await fetchStageEquipment();
-      renderEquipmentList();
-    });
-  });
-}
-document.getElementById('btn-add-equipment').addEventListener('click', async () => {
-  const input = document.getElementById('equipment-input');
-  const name = input.value.trim();
-  if(!name) return;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_equipment`, { method:'POST', headers, body: JSON.stringify({ name }) });
-  if(!res.ok){ alert('Could not add that item (it may already exist).'); return; }
-  input.value = '';
-  await fetchStageEquipment();
-  renderEquipmentList();
-});
-document.getElementById('equipment-input').addEventListener('keydown', (e) => {
-  if(e.key === 'Enter') document.getElementById('btn-add-equipment').click();
-});
 
 function renderRectList(){
   const list = document.getElementById('rect-list');
@@ -2590,53 +2647,6 @@ document.getElementById('stage-visualizer').addEventListener('wheel', (e) => {
   stageZoom = Math.max(0.5, Math.min(2, stageZoom - e.deltaY * 0.001));
   document.getElementById('stage-zoom').value = Math.round(stageZoom * 100);
   renderStageVisualizer();
-});
-
-/* ============ 3D STAGE MODEL VIEWER (glTF/GLB only — .blend must be exported first) ============ */
-document.getElementById('btn-upload-3d').addEventListener('click', () => {
-  document.getElementById('stage-3d-input').click();
-});
-document.getElementById('stage-3d-input').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if(!file) return;
-  if(typeof THREE === 'undefined' || window.__gltfLoadFailed || window.__orbitLoadFailed){
-    document.getElementById('stage-3d-canvas-wrap').innerHTML = '<div class="empty-note" style="border:none;">The 3D viewer library could not load. Check your internet connection and try again.</div>';
-    return;
-  }
-  const url = URL.createObjectURL(file);
-  const wrap = document.getElementById('stage-3d-canvas-wrap');
-  wrap.innerHTML = '';
-  const w = wrap.clientWidth || 600, h = 420;
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x161f1a);
-  const camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 1000);
-  camera.position.set(5, 5, 8);
-  const renderer = new THREE.WebGLRenderer({ antialias:true });
-  renderer.setSize(w, h);
-  wrap.appendChild(renderer.domElement);
-
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-  dir.position.set(5,10,7);
-  scene.add(dir);
-
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
-  const loader = new THREE.GLTFLoader();
-  loader.load(url, (gltf) => {
-    scene.add(gltf.scene);
-  }, undefined, (err) => {
-    wrap.innerHTML = '<div class="empty-note" style="border:none;">Could not load that file. Make sure it\'s a valid .glb or .gltf export.</div>';
-  });
-
-  function animate(){
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-  }
-  animate();
 });
 
 function renderStagePlot(){
@@ -3309,7 +3319,7 @@ Duración: ${duracion}`;
 });
 
 async function reload(){
-  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues()]);
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchRehearsalDateSongs(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues()]);
   renderTable();
   renderSpotifyEmbedBox();
 }
@@ -3629,6 +3639,163 @@ document.getElementById('btn-download-lights').addEventListener('click', () => {
 });
 
 reload();
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const MODEL_URL = '/assets/palante.glb';
+
+const wrap = document.getElementById('stage3d-canvas-wrap');
+const loaderEl = document.getElementById('stage3d-loader');
+const barfill = document.getElementById('stage3d-barfill');
+const emptyEl = document.getElementById('stage3d-empty');
+
+const projectTitleEl = document.getElementById('stage3d-project-title');
+if(projectTitleEl){
+  const appTitle = document.querySelector('header.top h1')?.textContent?.trim();
+  projectTitleEl.textContent = appTitle || 'Untitled Event';
+}
+
+let renderer, scene, camera, controls, currentModel, grid;
+let homePos = null, homeTarget = null;
+let initialized = false;
+
+function initScene(){
+  if(initialized) return;
+  initialized = true;
+  const w = wrap.clientWidth || 800, h = wrap.clientHeight || 520;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  renderer.setSize(w, h);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  wrap.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x161f1a);
+  scene.fog = new THREE.Fog(0x161f1a, 40, 120);
+
+  camera = new THREE.PerspectiveCamera(50, w / h, 0.05, 500);
+  camera.position.set(4, 3, 6);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+  const key = new THREE.DirectionalLight(0xfff1dc, 1.6);
+  key.position.set(6, 10, 6);
+  scene.add(key);
+  const amber = new THREE.PointLight(0xd98a3d, 12, 40);
+  amber.position.set(-5, 4, -3);
+  scene.add(amber);
+  const violet = new THREE.PointLight(0x8c6fb5, 10, 40);
+  violet.position.set(5, 3, -5);
+  scene.add(violet);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+
+  grid = new THREE.GridHelper(60, 60, 0x3a4a3f, 0x241c16);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.4;
+  scene.add(grid);
+
+  window.addEventListener('resize', () => {
+    if(!wrap.clientWidth) return;
+    camera.aspect = wrap.clientWidth / wrap.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  });
+
+  renderer.setAnimationLoop(() => {
+    controls.update();
+    renderer.render(scene, camera);
+  });
+}
+
+function frameModel(object){
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const dist = maxDim / (2 * Math.tan((camera.fov * Math.PI) / 360)) * 1.4;
+
+  controls.target.copy(center);
+  camera.position.set(center.x + dist * 0.7, center.y + dist * 0.45, center.z + dist * 0.7);
+  camera.near = maxDim / 100;
+  camera.far = maxDim * 20;
+  camera.updateProjectionMatrix();
+  controls.minDistance = maxDim * 0.05;
+  controls.maxDistance = maxDim * 6;
+  scene.fog.near = maxDim * 3;
+  scene.fog.far = maxDim * 12;
+  grid.position.y = box.min.y;
+  controls.update();
+
+  homePos = camera.position.clone();
+  homeTarget = controls.target.clone();
+}
+
+const gltfLoader = new GLTFLoader();
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/');
+gltfLoader.setDRACOLoader(draco);
+
+function addModel(gltf){
+  if(currentModel) scene.remove(currentModel);
+  currentModel = gltf.scene;
+  scene.add(currentModel);
+  frameModel(currentModel);
+  loaderEl.style.display = 'none';
+  emptyEl.style.display = 'none';
+  renderer.domElement.style.display = 'block';
+}
+
+function loadFromURL(url, isInitialCheck){
+  initScene();
+  if(!isInitialCheck){ loaderEl.style.display = 'flex'; emptyEl.style.display = 'none'; }
+  gltfLoader.load(
+    url,
+    (gltf) => addModel(gltf),
+    (xhr) => { if(xhr.total) barfill.style.width = `${(xhr.loaded / xhr.total) * 100}%`; },
+    () => {
+      loaderEl.style.display = 'none';
+      if(!currentModel){ emptyEl.style.display = 'block'; renderer.domElement.style.display = 'none'; }
+    }
+  );
+}
+
+document.getElementById('btn-3d-reset').addEventListener('click', () => {
+  if(!homePos) return;
+  camera.position.copy(homePos);
+  controls.target.copy(homeTarget);
+  controls.update();
+});
+document.getElementById('btn-3d-fullscreen').addEventListener('click', () => {
+  document.fullscreenElement ? document.exitFullscreen() : wrap.requestFullscreen();
+});
+
+// Load the venue model from your assets folder (assets/palante.glb) once the Stage tab is first opened
+window.__initStageModelCheck = function(){
+  if(currentModel) return;
+  initScene();
+  loadFromURL(MODEL_URL, true);
+};
+document.querySelector('.tech-subtab.stage')?.addEventListener('click', () => window.__initStageModelCheck());
+if(document.querySelector('.tech-subtab.stage.active')) window.__initStageModelCheck();
 </script>
 </body>
 </html>

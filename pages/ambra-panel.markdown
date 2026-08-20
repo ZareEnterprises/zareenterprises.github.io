@@ -1,4 +1,4 @@
 ---
 layout: ambra/panel
-permalink: /panel
+permalink: /panel/
 ---

@@ -1,0 +1,611 @@
+---
+permalink: /panel
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMBRA Live Productions — Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/login.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="app" style="visibility:hidden">
+
+<div class="app-shell">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="workspace">
+      <span class="workspace-dot"></span>
+      <span>AMBRA workspace</span>
+    </div>
+
+    <nav class="tabs-seg" id="main-tabs">
+      <button class="seg-btn active" data-view="projects" type="button">Projects</button>
+      <button class="seg-btn" data-view="users" type="button">Users</button>
+      <button class="seg-btn" data-view="finance" type="button">Finance</button>
+    </nav>
+
+    <div class="topbar-actions">
+
+      <div class="search-box" id="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="project-search-input" placeholder="Search projects…">
+      </div>
+      <button class="icon-btn" id="btn-search-toggle" type="button" title="Search projects">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+
+      <div class="dropdown-anchor">
+        <button class="icon-btn" id="btn-settings-toggle" type="button" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+        <div class="dropdown-panel" id="settings-panel">
+          <span class="dropdown-label">Workspace settings</span>
+          <button class="dropdown-item" type="button">Time zone</button>
+          <button class="dropdown-item" type="button">Transfer workspace</button>
+          <button class="dropdown-item" type="button">Transfer project</button>
+          <button class="dropdown-item" type="button">Bank details</button>
+          <button class="dropdown-item" type="button">Security</button>
+          <button class="dropdown-item" type="button">Integrations</button>
+          <button class="dropdown-item" type="button">Data &amp; privacy</button>
+        </div>
+      </div>
+
+      <button class="icon-btn" type="button" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </button>
+
+      <div class="dropdown-anchor">
+        <button class="avatar-btn" id="btn-me-toggle" type="button" title="Me">ME</button>
+        <div class="dropdown-panel" id="me-panel" style="min-width:230px">
+          <span class="dropdown-label">Me</span>
+          <div class="field"><label>Name</label><input type="text" value="Dany"></div>
+          <div class="field"><label>Photo</label><input type="file" accept="image/*"></div>
+          <div class="field"><label>Email</label><input type="email" id="me-email-field" value="you@ambralp.com"></div>
+          <div class="field" style="margin-bottom:0"><label>Password</label><input type="password" value="••••••••"></div>
+          <div class="dropdown-sep"></div>
+          <button class="dropdown-item" type="button" id="btn-logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            Log out
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Projects view -->
+  <section id="view-projects">
+    <div class="section-head">
+      <div class="section-head-left">
+        <h2>Your projects</h2>
+        <span class="count-label" id="project-count">4 projects</span>
+      </div>
+    </div>
+    <div class="project-grid" id="project-grid"></div>
+  </section>
+
+  <!-- Users view -->
+  <section id="view-users" style="display:none">
+    <div class="section-head">
+      <div class="section-head-left">
+        <h2>Users</h2>
+        <span class="count-label">5 members</span>
+      </div>
+      <button class="btn-primary" id="btn-add-user" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add new user
+      </button>
+    </div>
+
+    <div class="filter-row" id="filter-row-top"></div>
+
+    <div class="users-table">
+      <div class="utable-head"><span>User</span><span>Role</span><span>Status</span><span></span></div>
+      <div id="users-table-body"></div>
+    </div>
+
+    <div class="filter-row" id="filter-row-bottom" style="margin-top:16px;margin-bottom:0"></div>
+  </section>
+
+  <!-- Finance view (placeholder) -->
+  <section id="view-finance" style="display:none">
+    <div class="section-head"><div class="section-head-left"><h2>Finance</h2></div></div>
+    <div class="pcard-new" style="pointer-events:none;min-height:120px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint)">Nothing here yet</span>
+    </div>
+  </section>
+
+</div>
+
+<!-- New project modal -->
+<div class="overlay" id="overlay-new-project">
+  <div class="modal">
+    <h2>New project</h2>
+    <p class="hint">Double-click a template to open a blank copy of its setup — same lineup, technical &amp; band configuration, no setlist data. Or start from nothing.</p>
+    <div class="template-grid" id="template-grid"></div>
+    <button class="btn-outline" id="btn-blank-project" type="button">Start without a template</button>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-cancel-new-project" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add user / Change permissions modal -->
+<div class="overlay" id="overlay-user">
+  <div class="modal modal-wide">
+    <h2 id="user-modal-title">Add new user</h2>
+    <p class="hint">Visual only for now — saving &amp; inviting comes in a later pass.</p>
+
+    <div class="field"><label>Name</label><input type="text" id="um-name" placeholder="Full name"></div>
+    <div class="field"><label>Email</label><input type="email" id="um-email" placeholder="name@company.com"></div>
+
+    <div class="field">
+      <label>Projects</label>
+      <div class="chip-select" id="um-projects"></div>
+    </div>
+
+    <div class="field">
+      <label>Role</label>
+      <div class="role-btns" id="um-role-btns"></div>
+      <div class="custom-role-row" id="um-custom-role-row">
+        <input type="text" id="um-custom-role-input" placeholder="Custom role name">
+        <button class="btn-ghost" id="um-custom-role-add" type="button">Add</button>
+      </div>
+      <div class="custom-role-chips" id="um-custom-role-chips"></div>
+    </div>
+
+    <div class="field">
+      <div class="perm-head">
+        <span class="label">Permissions by section</span>
+        <span class="perm-count" id="perm-count">0 of 8 with access</span>
+      </div>
+      <div class="perm-tree" id="perm-tree"></div>
+    </div>
+
+    <div class="field" id="um-bands-field" style="display:none">
+      <label>Bands</label>
+      <div class="chip-select" id="um-bands"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-cancel-user" type="button">Cancel</button>
+      <button class="btn-primary" id="btn-save-user" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // Real auth guard: no Supabase session → straight back to /login.
+  // Everything below this (projects, users, permissions) is still
+  // mock data — only the login itself is wired to Supabase so far.
+  // ============================================================
+  const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  supabase.auth.getSession().then(({ data }) => {
+    if (!data.session) {
+      window.location.href = '/login';
+      return;
+    }
+    const emailField = document.getElementById('me-email-field');
+    if (emailField) emailField.value = data.session.user.email;
+    document.body.style.visibility = 'visible';
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  });
+
+  // ============================================================
+  // Visual-only mock data — no Supabase wiring yet.
+  // ============================================================
+  const PROJECTS = [
+    { id:'palante',   name:"Pa'Lante 2026",           meta:'Edited 2h ago',      isTemplate:true  },
+    { id:'fallgala',  name:'Fall Gala 2026',           meta:'Edited yesterday',  isTemplate:true  },
+    { id:'riverside', name:'Riverside Jazz Festival',  meta:'Edited 3 days ago', isTemplate:false },
+    { id:'kickoff',   name:'Corporate Kickoff',        meta:'Edited 1 week ago', isTemplate:false }
+  ];
+
+  // Demo assumes more than one band exists in this session so the band
+  // picker at the bottom of the permissions modal has something to show.
+  const BANDS = ['Orquesta Ambra', 'Barrio Latino'];
+
+  const USERS = [
+    { id:'u0', initials:'ME', name:'You', email:'you@ambralp.com', role:'Admin', status:'active', isMe:true,
+      projects:['palante','fallgala','riverside','kickoff'],
+      perms:{ setlist:'edit', lineup:'edit', band:'edit', members:'edit', rehearsals:'edit', sound:'edit', stage:'edit', lightning:'edit' } },
+    { id:'u1', initials:'MP', name:'Marta P.', email:'marta@ambralp.com', role:'Editor', status:'active',
+      projects:['palante','fallgala'],
+      perms:{ setlist:'edit', lineup:'edit', band:'view', members:'view', rehearsals:'view', sound:'none', stage:'none', lightning:'none' } },
+    { id:'u2', initials:'JL', name:'Juan L.', email:'juan@ambralp.com', role:'Viewer', status:'active',
+      projects:['riverside'],
+      perms:{ setlist:'view', lineup:'view', band:'none', members:'none', rehearsals:'none', sound:'none', stage:'none', lightning:'none' } },
+    { id:'u3', initials:'SR', name:'Sofía R.', email:'sofia@ambralp.com', role:'Editor', status:'pending',
+      projects:['palante'],
+      perms:{ setlist:'edit', lineup:'view', band:'none', members:'none', rehearsals:'none', sound:'none', stage:'none', lightning:'none' } },
+    { id:'u4', initials:'DC', name:'Diego C.', email:'diego@ambralp.com', role:'Viewer', status:'inactive',
+      projects:['kickoff','fallgala'],
+      perms:{ setlist:'view', lineup:'none', band:'none', members:'none', rehearsals:'none', sound:'none', stage:'none', lightning:'none' } }
+  ];
+
+  const ROLE_PRESETS = ['Team','Partner','Client'];
+  let customRoles = []; // session-only — created via "Other", remembered for the rest of this visit
+
+  const PERM_ROWS = [
+    { key:'setlist',   label:'Setlist',    sub:null },
+    { key:'lineup',    label:'Lineup',     sub:null },
+    { key:'band',      label:'Band',       cascadeTo:['members','rehearsals'], sub:[
+      { key:'members',    label:'Members' },
+      { key:'rehearsals', label:'Rehearsals' }
+    ]},
+    { key:'technical', label:'Technical',  groupOnly:true, sub:[
+      { key:'sound',     label:'Sound' },
+      { key:'stage',     label:'Stage' },
+      { key:'lightning', label:'Lightning' }
+    ]}
+  ];
+  const PERM_COUNT_KEYS = ['setlist','lineup','band','members','rehearsals','sound','stage','lightning'];
+
+  let activeProjectFilter = 'all';
+  let currentModalMode = 'add'; // 'add' | 'change'
+  let currentModalPerms = {};
+  let currentModalRole = '';
+
+  function truncate20(str){
+    return str.length > 20 ? str.slice(0,20) + '…' : str;
+  }
+  function svgIcon(paths){ return paths; }
+
+  // ---------- Projects ----------
+  function renderProjects(filterText){
+    const grid = document.getElementById('project-grid');
+    const q = (filterText || '').trim().toLowerCase();
+    const visible = PROJECTS.filter(p => p.name.toLowerCase().includes(q));
+    grid.innerHTML = visible.map(p => `
+      <div class="pcard" data-project="${p.id}">
+        <button class="pcard-del" type="button" title="Delete project" onclick="handleDeleteProject('${p.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <svg class="pcard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+        ${p.isTemplate ? '<div class="pcard-tpl-tag">Template</div><br>' : ''}
+        <p class="pcard-name">${p.name}</p>
+        <p class="pcard-meta">${p.meta}</p>
+        <div class="pcard-actions">
+          <button class="pcard-action-btn" type="button" onclick="handleArchiveProject('${p.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><path d="M10 13h4"/></svg>
+            Archive
+          </button>
+          <button class="pcard-action-btn" type="button" onclick="handleUseAsTemplate('${p.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+            Use as template
+          </button>
+        </div>
+      </div>
+    `).join('') + `
+      <button class="pcard-new" type="button" id="btn-new-project">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>New project</span>
+      </button>
+    `;
+    document.getElementById('project-count').textContent = `${PROJECTS.length} project${PROJECTS.length === 1 ? '' : 's'}`;
+    document.getElementById('btn-new-project').addEventListener('click', openNewProjectModal);
+  }
+  function handleDeleteProject(id){ console.log('[visual only] delete project', id); }
+  function handleArchiveProject(id){ console.log('[visual only] archive project', id); }
+  function handleUseAsTemplate(id){ console.log('[visual only] mark as template', id); }
+
+  document.getElementById('btn-search-toggle').addEventListener('click', () => {
+    const box = document.getElementById('search-box');
+    box.classList.toggle('open');
+    if(box.classList.contains('open')) document.getElementById('project-search-input').focus();
+    else { document.getElementById('project-search-input').value = ''; renderProjects(''); }
+  });
+  document.getElementById('project-search-input').addEventListener('input', (e) => renderProjects(e.target.value));
+
+  // ---------- New project modal ----------
+  function renderTemplates(){
+    const wrap = document.getElementById('template-grid');
+    const templates = PROJECTS.filter(p => p.isTemplate);
+    wrap.innerHTML = templates.map(p => `
+      <div class="template-card" data-template="${p.id}" ondblclick="handleUseTemplate('${p.id}')">
+        <div class="template-badge">Template</div>
+        <div class="template-name">${p.name}</div>
+        <div class="template-hint">Double-click to use</div>
+      </div>
+    `).join('');
+  }
+  function handleUseTemplate(id){
+    const p = PROJECTS.find(x => x.id === id);
+    console.log('[visual only] open blank copy of', p.name, '— same config, no setlist data');
+    closeModal('overlay-new-project');
+  }
+  function openNewProjectModal(){ renderTemplates(); openModal('overlay-new-project'); }
+  document.getElementById('btn-blank-project').addEventListener('click', () => {
+    console.log('[visual only] start new project without a template');
+    closeModal('overlay-new-project');
+  });
+  document.getElementById('btn-cancel-new-project').addEventListener('click', () => closeModal('overlay-new-project'));
+
+  // ---------- Users ----------
+  function statusLabel(s){ return s === 'active' ? 'Active' : s === 'pending' ? 'Pending' : 'Inactive'; }
+  function statusIcon(s){
+    if(s === 'pending') return '<svg class="ustatus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
+    return '<span class="ustatus-dot"></span>';
+  }
+  function renderUsers(){
+    const body = document.getElementById('users-table-body');
+    const rows = USERS.filter(u => activeProjectFilter === 'all' || u.projects.includes(activeProjectFilter));
+    body.innerHTML = rows.map(u => `
+      <div class="utable-row" data-user="${u.id}">
+        <div class="urow-user">
+          <div class="uavatar ${u.isMe ? 'me' : ''}">${u.initials}</div>
+          <div class="uname-wrap">
+            <p class="uname">${u.name}</p>
+            <p class="uemail">${u.email}</p>
+          </div>
+        </div>
+        <span class="urole-pill">${u.role}</span>
+        <span class="ustatus ${u.status}">${statusIcon(u.status)}${statusLabel(u.status)}</span>
+        <div class="udots-anchor">
+          <button class="udots-btn" type="button" onclick="toggleUserMenu('${u.id}')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+          </button>
+          <div class="udots-menu" id="udots-menu-${u.id}">
+            <button class="dropdown-item" type="button" onclick="openChangePermissions('${u.id}')">Change Permissions</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  function toggleUserMenu(id){
+    document.querySelectorAll('.udots-menu').forEach(m => { if(m.id !== 'udots-menu-'+id) m.classList.remove('open'); });
+    document.getElementById('udots-menu-'+id).classList.toggle('open');
+  }
+
+  function renderFilterPills(){
+    const pillsHtml = ['<button class="filter-pill active" data-filter="all" type="button">All</button>']
+      .concat(PROJECTS.map(p => `<button class="filter-pill" data-filter="${p.id}" type="button" title="${p.name}">${truncate20(p.name)}</button>`))
+      .join('');
+    document.getElementById('filter-row-top').innerHTML = pillsHtml;
+    document.getElementById('filter-row-bottom').innerHTML = pillsHtml;
+    document.querySelectorAll('.filter-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeProjectFilter = btn.dataset.filter;
+        document.querySelectorAll('.filter-pill').forEach(b => b.classList.toggle('active', b.dataset.filter === activeProjectFilter));
+        renderUsers();
+      });
+    });
+  }
+
+  document.getElementById('btn-add-user').addEventListener('click', () => openUserModal('add', null));
+
+  // ---------- Add user / Change permissions modal ----------
+  function renderUmProjects(selected){
+    document.getElementById('um-projects').innerHTML = PROJECTS.map(p => `
+      <button type="button" class="chip ${selected.includes(p.id) ? 'selected' : ''}" data-project="${p.id}">${p.name}</button>
+    `).join('');
+    document.querySelectorAll('#um-projects .chip').forEach(chip => {
+      chip.addEventListener('click', () => chip.classList.toggle('selected'));
+    });
+  }
+
+  function renderUmRoles(selectedRole){
+    currentModalRole = selectedRole || '';
+    const allRoles = ROLE_PRESETS.concat(['Other']);
+    document.getElementById('um-role-btns').innerHTML = allRoles.map(r => `
+      <button type="button" class="role-btn ${currentModalRole === r ? 'selected' : ''}" data-role="${r}">${r}</button>
+    `).join('');
+    renderCustomRoleChips();
+    document.querySelectorAll('#um-role-btns .role-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const role = btn.dataset.role;
+        if(role === 'Other'){
+          document.getElementById('um-custom-role-row').classList.add('open');
+          document.getElementById('um-custom-role-input').focus();
+          return;
+        }
+        currentModalRole = role;
+        document.querySelectorAll('#um-role-btns .role-btn, .custom-chip').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('um-custom-role-row').classList.remove('open');
+      });
+    });
+  }
+  function renderCustomRoleChips(){
+    document.getElementById('um-custom-role-chips').innerHTML = customRoles.map(r => `
+      <span class="custom-chip ${currentModalRole === r ? 'selected' : ''}" data-custom-role="${r}">
+        ${r}
+        <button type="button" title="Remove" onclick="removeCustomRole(event,'${r}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </span>
+    `).join('');
+    document.querySelectorAll('.custom-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        if(e.target.closest('button')) return;
+        currentModalRole = chip.dataset.customRole;
+        document.querySelectorAll('#um-role-btns .role-btn, .custom-chip').forEach(b => b.classList.remove('selected'));
+        chip.classList.add('selected');
+        document.getElementById('um-custom-role-row').classList.remove('open');
+      });
+    });
+  }
+  function removeCustomRole(e, role){
+    e.stopPropagation();
+    customRoles = customRoles.filter(r => r !== role);
+    if(currentModalRole === role) currentModalRole = '';
+    renderCustomRoleChips();
+  }
+  document.getElementById('um-custom-role-add').addEventListener('click', addCustomRoleFromInput);
+  document.getElementById('um-custom-role-input').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); addCustomRoleFromInput(); }
+  });
+  function addCustomRoleFromInput(){
+    const input = document.getElementById('um-custom-role-input');
+    const val = input.value.trim();
+    if(!val) return;
+    if(!customRoles.includes(val)) customRoles.push(val);
+    currentModalRole = val;
+    input.value = '';
+    document.getElementById('um-custom-role-row').classList.remove('open');
+    renderCustomRoleChips();
+    document.querySelectorAll('#um-role-btns .role-btn').forEach(b => b.classList.remove('selected'));
+  }
+
+  function renderUmBands(){
+    const wrap = document.getElementById('um-bands-field');
+    if(BANDS.length <= 1){ wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    document.getElementById('um-bands').innerHTML = BANDS.map(b => `
+      <button type="button" class="chip" data-band="${b}">${b}</button>
+    `).join('');
+    document.querySelectorAll('#um-bands .chip').forEach(chip => {
+      chip.addEventListener('click', () => chip.classList.toggle('selected'));
+    });
+  }
+
+  function updatePermCount(){
+    const withAccess = PERM_COUNT_KEYS.filter(k => currentModalPerms[k] && currentModalPerms[k] !== 'none').length;
+    document.getElementById('perm-count').textContent = `${withAccess} of ${PERM_COUNT_KEYS.length} with access`;
+  }
+
+  function segButtonsHtml(rowKey, value){
+    return ['view','edit','none'].map(v => `
+      <button type="button" data-row="${rowKey}" data-value="${v}" class="${value === v ? 'selected' + (v === 'none' ? ' is-none' : '') : ''}">${v === 'view' ? 'View' : v === 'edit' ? 'Edit' : 'None'}</button>
+    `).join('');
+  }
+
+  function renderPermTree(){
+    const wrap = document.getElementById('perm-tree');
+    wrap.innerHTML = PERM_ROWS.map(row => {
+      const hasSub = !!row.sub;
+      const topRow = row.groupOnly ? `
+        <div class="perm-row" data-key="${row.key}">
+          <div class="perm-row-left">
+            <svg class="perm-chevron" data-toggle="${row.key}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            <span class="perm-name">${row.label}</span>
+          </div>
+        </div>
+      ` : `
+        <div class="perm-row" data-key="${row.key}">
+          <div class="perm-row-left">
+            <svg class="perm-chevron ${hasSub ? '' : 'hidden-chevron'}" data-toggle="${row.key}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            <span class="perm-name">${row.label}</span>
+          </div>
+          <div class="seg3" data-row="${row.key}">${segButtonsHtml(row.key, currentModalPerms[row.key])}</div>
+        </div>
+      `;
+      const subRows = hasSub ? `
+        <div class="perm-subwrap" id="perm-sub-${row.key}">
+          ${row.sub.map(s => `
+            <div class="perm-row sub" data-key="${s.key}">
+              <div class="perm-row-left">
+                <svg class="perm-chevron hidden-chevron" viewBox="0 0 24 24"></svg>
+                <span class="perm-name">${s.label}</span>
+              </div>
+              <div class="seg3" data-row="${s.key}">${segButtonsHtml(s.key, currentModalPerms[s.key])}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
+      return topRow + subRows;
+    }).join('');
+
+    wrap.querySelectorAll('.perm-chevron[data-toggle]').forEach(chev => {
+      chev.addEventListener('click', () => {
+        chev.classList.toggle('open');
+        document.getElementById('perm-sub-' + chev.dataset.toggle).classList.toggle('open');
+      });
+    });
+    wrap.querySelectorAll('.seg3 button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rowKey = btn.dataset.row;
+        const value = btn.dataset.value;
+        currentModalPerms[rowKey] = value;
+        const cascadeRow = PERM_ROWS.find(r => r.key === rowKey && r.cascadeTo);
+        if(cascadeRow) cascadeRow.cascadeTo.forEach(k => { currentModalPerms[k] = value; });
+        renderPermTree();
+        updatePermCount();
+      });
+    });
+  }
+
+  function openModal(id){ document.getElementById(id).classList.add('open'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+  function openUserModal(mode, user){
+    currentModalMode = mode;
+    document.getElementById('user-modal-title').textContent = mode === 'add' ? 'Add new user' : 'Change permissions';
+    document.getElementById('um-name').value = user ? user.name : '';
+    document.getElementById('um-email').value = user ? user.email : '';
+    currentModalPerms = user ? Object.assign({}, user.perms) : Object.fromEntries(PERM_COUNT_KEYS.map(k => [k,'none']));
+    renderUmProjects(user ? user.projects : []);
+    renderUmRoles(user ? user.role : '');
+    renderUmBands();
+    renderPermTree();
+    updatePermCount();
+    openModal('overlay-user');
+  }
+  function openChangePermissions(userId){
+    document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
+    const user = USERS.find(u => u.id === userId);
+    openUserModal('change', user);
+  }
+  document.getElementById('btn-cancel-user').addEventListener('click', () => closeModal('overlay-user'));
+  document.getElementById('btn-save-user').addEventListener('click', () => {
+    console.log('[visual only] save user', { mode: currentModalMode, role: currentModalRole, perms: currentModalPerms });
+    closeModal('overlay-user');
+  });
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('#main-tabs .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#main-tabs .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['projects','users','finance'].forEach(v => {
+        document.getElementById('view-' + v).style.display = (v === btn.dataset.view) ? '' : 'none';
+      });
+    });
+  });
+
+  // ---------- Settings / Me dropdowns ----------
+  document.getElementById('btn-settings-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('me-panel').classList.remove('open');
+    document.getElementById('settings-panel').classList.toggle('open');
+  });
+  document.getElementById('btn-me-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('settings-panel').classList.remove('open');
+    document.getElementById('me-panel').classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if(!e.target.closest('.dropdown-anchor')){
+      document.getElementById('settings-panel').classList.remove('open');
+      document.getElementById('me-panel').classList.remove('open');
+    }
+    if(!e.target.closest('.udots-anchor')){
+      document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
+    }
+  });
+  [ 'overlay-new-project', 'overlay-user' ].forEach(id => {
+    document.getElementById(id).addEventListener('click', (e) => { if(e.target.id === id) closeModal(id); });
+  });
+
+  // ---------- Init ----------
+  renderProjects('');
+  renderFilterPills();
+  renderUsers();
+</script>
+
+</body>
+</html>

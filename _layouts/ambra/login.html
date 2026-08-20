@@ -1,0 +1,85 @@
+---
+permalink: /login
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMBRA Live Productions — Team Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/login.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="card">
+    <div class="notch"></div>
+    <img class="logo" src="/assets/img/ambraSubmark.png" alt="AMBRA Submark">
+    <p class="eyebrow">Access badge · Crew &amp; partners</p>
+    <h1>AMBRA Live Productions<br><span>Team Portal</span></h1>
+
+    <form id="login-form">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+
+      <p class="error-msg" id="error-msg">That email and password don't match. Try again.</p>
+
+      <button type="submit" class="submit" id="submit-btn">Log in</button>
+    </form>
+
+    <p class="footnote">© AMBRA Live Productions</p>
+  </div>
+
+  <script>
+    // Real Supabase Auth. The anon/public key is safe to ship client-side —
+    // it only works within whatever Row Level Security policies the project
+    // has configured, unlike the service_role key.
+    const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById('login-form');
+    const errorMsg = document.getElementById('error-msg');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // If there's already a live session, skip the form entirely.
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) window.location.href = '/panel';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.classList.remove('show');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing in…';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        errorMsg.textContent = error.message === 'Invalid login credentials'
+          ? "That email and password don't match. Try again."
+          : error.message;
+        errorMsg.classList.add('show');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log in';
+        return;
+      }
+
+      window.location.href = '/panel';
+    });
+  </script>
+
+</body>
+</html>

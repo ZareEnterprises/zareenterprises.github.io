@@ -18,6 +18,29 @@
   --radius:16px;
 }
 *{ box-sizing:border-box; }
+
+/* View-only permission lock — dims a section and blocks interaction with it
+   for users whose panel permission for that section is "view", not "edit". */
+.perm-locked{
+  pointer-events:none;
+  opacity:.6;
+  filter:grayscale(.2);
+  position:relative;
+}
+.perm-locked::before{
+  content:'🔒 View only';
+  position:absolute;
+  top:10px; right:10px;
+  z-index:5;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  color:var(--text-muted);
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10.5px;
+  letter-spacing:.05em;
+  padding:4px 9px;
+  border-radius:20px;
+}
 body{
   margin:0;
   background:

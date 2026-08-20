@@ -289,7 +289,35 @@ create policy "members can view their own band assignments"
 
 
 -- ----------------------------------------------------------------------------
--- 8. Bootstrap — run this part AFTER you've logged in at /ambra/ at least
+-- 8. mark_my_memberships_active — called by the client right after someone
+--    sets their password from an invite link, so their status flips from
+--    'pending' to 'active'. security definer because a regular member has no
+--    RLS write access to project_members (only admins do) — this function
+--    only ever touches the caller's own rows, and only that one column.
+-- ----------------------------------------------------------------------------
+
+create or replace function public.mark_my_memberships_active()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.project_members
+  set status = 'active'
+  where user_id = auth.uid() and status = 'pending';
+$$;
+
+-- One-time cleanup for anyone who already accepted an invite (logged in at
+-- least once) before this function existed, so they're not stuck showing
+-- "Pending" in the panel forever. Safe to re-run — no-ops once caught up.
+update public.project_members pm
+set status = 'active'
+from auth.users u
+where pm.user_id = u.id and pm.status = 'pending' and u.last_sign_in_at is not null;
+
+
+-- ----------------------------------------------------------------------------
+-- 9. Bootstrap — run this part AFTER you've logged in at /ambra/ at least
 --    once (so your row exists in auth.users / profiles). Replace the email
 --    with the one you log in with, then run just this block.
 -- ----------------------------------------------------------------------------

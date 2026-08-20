@@ -434,6 +434,11 @@
           </button>
           <div class="udots-menu" id="udots-menu-${u.id}">
             <button class="dropdown-item" type="button" onclick="openChangePermissions('${u.id}')">Change Permissions</button>
+            ${u.isMe ? '' : `
+            <button class="dropdown-item" type="button" onclick="handleDeleteUser('${u.id}')" style="color:var(--error)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+              Delete user
+            </button>`}
           </div>
         </div>
       </div>
@@ -554,8 +559,8 @@
   }
 
   function segButtonsHtml(rowKey, value){
-    return ['view','edit','none'].map(v => `
-      <button type="button" data-row="${rowKey}" data-value="${v}" class="${value === v ? 'selected' + (v === 'none' ? ' is-none' : '') : ''}">${v === 'view' ? 'View' : v === 'edit' ? 'Edit' : 'None'}</button>
+    return ['view','edit'].map(v => `
+      <button type="button" data-row="${rowKey}" data-value="${v}" class="${value === v ? 'selected' : ''}">${v === 'view' ? 'View' : 'Edit'}</button>
     `).join('');
   }
 
@@ -616,15 +621,13 @@
     });
   }
 
-  // Writes one permission and repaints just that row's View/Edit/None control.
+  // Writes one permission and repaints just that row's View/Edit control.
   // Deliberately does NOT re-render the tree: a full re-render would tear down
   // the open sub-groups, which is exactly what we want to keep on screen.
   function setPermValue(rowKey, value){
     currentModalPerms[rowKey] = value;
     document.querySelectorAll(`#perm-tree .seg3[data-row="${rowKey}"] button`).forEach(b => {
-      const on = b.dataset.value === value;
-      b.classList.toggle('selected', on);
-      b.classList.toggle('is-none', on && value === 'none');
+      b.classList.toggle('selected', b.dataset.value === value);
     });
   }
 
@@ -643,7 +646,7 @@
     document.getElementById('um-name').value = user ? user.name : '';
     document.getElementById('um-email').value = user ? user.email : '';
     document.getElementById('um-email').disabled = mode === 'change';
-    currentModalPerms = user ? Object.assign({}, user.perms) : Object.fromEntries(PERM_COUNT_KEYS.map(k => [k,'none']));
+    currentModalPerms = user ? Object.assign({}, user.perms) : Object.fromEntries(PERM_COUNT_KEYS.map(k => [k,'edit']));
     const projectIds = user ? user.projects : [];
     renderUmProjects(projectIds);
     renderUmRoles(user ? user.role : '');
@@ -658,6 +661,30 @@
     openUserModal('change', user);
   }
   document.getElementById('btn-cancel-user').addEventListener('click', () => closeModal('overlay-user'));
+
+  async function handleDeleteUser(userId){
+    document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
+    const user = USERS.find(u => u.id === userId);
+    if(!user || user.isMe) return;
+    if(!confirm(`Delete ${user.name} (${user.email})? This permanently removes their account and all project access — it can't be undone.`)) return;
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSession.access_token}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const result = await res.json().catch(() => ({}));
+    if(!res.ok){
+      alert(result.error || 'Could not delete this user.');
+      return;
+    }
+    await loadUsers();
+    renderUsers();
+  }
 
   async function inviteNewMember(email, fullName, projectIds, bandIds){
     const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {

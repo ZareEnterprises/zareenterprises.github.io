@@ -124,6 +124,10 @@
         return;
       }
 
+      // Flips this account's project memberships from 'pending' to 'active'
+      // now that they've actually accepted the invite.
+      await supabaseClient.rpc('mark_my_memberships_active');
+
       window.location.href = '/panel';
     });
 

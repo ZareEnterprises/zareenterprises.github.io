@@ -9,9 +9,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="window.__xlsxLoadFailed=true"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="/assets/css/ambra-app.css">
 </head>
-<body class="theme-table">
+<body class="theme-table" style="visibility:hidden">
 
 <header class="top">
   <img class="top-logo" src="/assets/img/ambraSubmark.png" alt="AMBRA Submark">
@@ -474,6 +475,65 @@ const headers = {
   'Content-Type': 'application/json',
   'Prefer': 'return=representation'
 };
+
+// ============================================================
+// Auth guard + permission gating (frontend only for now — the
+// underlying tables above still accept the anon key with no RLS,
+// so this controls what the UI *offers*, not a hard security
+// boundary yet. See supabase/schema.sql for the real access model).
+// ============================================================
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const PERM_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning'];
+let PERMS = Object.fromEntries(PERM_KEYS.map(k => [k, 'view'])); // safe default until loaded
+
+function canEdit(key){ return PERMS[key] === 'edit'; }
+
+async function loadSessionAndPermissions(){
+  const { data } = await supabaseClient.auth.getSession();
+  if(!data.session){
+    window.location.href = '/ambra/';
+    return false;
+  }
+  const authHeaders = { ...headers, 'Authorization': `Bearer ${data.session.access_token}` };
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_members?select=permissions,projects(slug)&user_id=eq.${data.session.user.id}`,
+    { headers: authHeaders }
+  );
+  const memberships = res.ok ? await res.json() : [];
+  const mine = memberships.find(m => m.projects && m.projects.slug === 'palante');
+
+  if(!mine){
+    // Logged in, but not a member of this project.
+    window.location.href = '/panel';
+    return false;
+  }
+  PERMS = Object.assign({}, PERMS, mine.permissions || {});
+  return true;
+}
+
+function applyPermissionLocks(){
+  const LOCKS = [
+    ['setlist',    ['#setlist-table-view']],
+    ['lineup',     ['#instr-container']],
+    ['members',    ['#band-panel-members']],
+    ['rehearsals', ['#band-panel-rehearsals']],
+    ['sound',      ['#audio-panel-requirements', '#audio-panel-inputlist', '#audio-panel-speakers']],
+    ['stage',      ['#tech-panel-stage']],
+    ['lightning',  ['#tech-panel-lights']]
+  ];
+  LOCKS.forEach(([key, selectors]) => {
+    const locked = !canEdit(key);
+    selectors.forEach(sel => {
+      const el = document.querySelector(sel);
+      if(!el) return;
+      el.classList.toggle('perm-locked', locked);
+      el.title = locked ? "View-only — you don't have edit access to this section" : '';
+    });
+  });
+  const newSetBtn = document.getElementById('btn-new-set');
+  if(newSetBtn) newSetBtn.disabled = !canEdit('setlist');
+}
 
 const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other'];
 const SINGER_PALETTE = ['#E0985C','#7FA6A0','#C7738C','#9AA85C','#8C93C9','#D6B24A','#B77B6E','#6FAF9E'];
@@ -3836,7 +3896,13 @@ document.getElementById('btn-download-lights').addEventListener('click', () => {
   downloadXLSX('Lightning.xlsx', 'Lightning', rows);
 });
 
-reload();
+(async function boot(){
+  const ok = await loadSessionAndPermissions();
+  if(!ok) return;
+  applyPermissionLocks();
+  document.body.style.visibility = 'visible';
+  await reload();
+})();
 </script>
 <script type="importmap">
 {

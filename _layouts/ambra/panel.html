@@ -300,13 +300,13 @@
       { key:'members',    label:'Members' },
       { key:'rehearsals', label:'Rehearsals' }
     ]},
-    { key:'technical', label:'Technical',  groupOnly:true, sub:[
+    { key:'technical', label:'Technical',  cascadeTo:['sound','stage','lightning'], sub:[
       { key:'sound',     label:'Sound' },
       { key:'stage',     label:'Stage' },
       { key:'lightning', label:'Lightning' }
     ]}
   ];
-  const PERM_COUNT_KEYS = ['setlist','lineup','band','members','rehearsals','sound','stage','lightning'];
+  const PERM_COUNT_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning'];
 
   let activeProjectFilter = 'all';
   let currentModalMode = 'add'; // 'add' | 'change'

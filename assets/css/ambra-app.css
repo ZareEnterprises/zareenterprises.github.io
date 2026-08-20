@@ -33,6 +33,14 @@ body{
 header.top{
   padding:36px 28px 22px;
   border-bottom:1px solid var(--line);
+  position:relative;
+}
+.top-logo{
+  position:absolute;
+  top:20px; right:28px;
+  width:34px;
+  height:auto;
+  opacity:.92;
 }
 .paste-icon{
   background:none; border:1px solid var(--line); border-radius:6px; cursor:pointer;

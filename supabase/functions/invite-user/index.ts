@@ -15,7 +15,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const ALLOWED_PERMISSION_KEYS = ['setlist', 'lineup', 'band', 'members', 'rehearsals', 'sound', 'stage', 'lightning'];
+const ALLOWED_PERMISSION_KEYS = ['setlist', 'lineup', 'band', 'members', 'rehearsals', 'technical', 'sound', 'stage', 'lightning'];
 const ALLOWED_PERMISSION_VALUES = ['view', 'edit', 'none'];
 
 const corsHeaders = {

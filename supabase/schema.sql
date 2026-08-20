@@ -139,7 +139,7 @@ language plpgsql
 immutable
 as $$
 declare
-  allowed_keys text[] := array['setlist', 'lineup', 'band', 'members', 'rehearsals', 'sound', 'stage', 'lightning'];
+  allowed_keys text[] := array['setlist', 'lineup', 'band', 'members', 'rehearsals', 'technical', 'sound', 'stage', 'lightning'];
   k text;
   v text;
 begin

@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/assets/css/login.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="app" style="visibility:hidden">
+<body class="app">
 
 <div class="app-shell">
 
@@ -178,26 +178,35 @@
 
 <script>
   // ============================================================
-  // Real auth guard: no Supabase session → straight back to /login.
-  // Everything below this (projects, users, permissions) is still
-  // mock data — only the login itself is wired to Supabase so far.
+  // AUTH GUARD — CURRENTLY OFF.
+  //
+  // While we build the panel, /panel is open: no session check, no
+  // redirect to /login. To turn protection back on later, change
+  // this one line to `true` — nothing else needs to change.
   // ============================================================
+  const REQUIRE_AUTH = false;
+
   const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabaseClient = window.supabase
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
-  supabaseClient.auth.getSession().then(({ data }) => {
-    if (!data.session) {
-      window.location.href = '/login';
-      return;
-    }
-    const emailField = document.getElementById('me-email-field');
-    if (emailField) emailField.value = data.session.user.email;
-    document.body.style.visibility = 'visible';
-  });
+  if (REQUIRE_AUTH && supabaseClient) {
+    document.body.style.visibility = 'hidden';
+    supabaseClient.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        window.location.href = '/login';
+        return;
+      }
+      const emailField = document.getElementById('me-email-field');
+      if (emailField) emailField.value = data.session.user.email;
+      document.body.style.visibility = 'visible';
+    });
+  }
 
   document.getElementById('btn-logout').addEventListener('click', async () => {
-    await supabaseClient.auth.signOut();
+    if (supabaseClient) await supabaseClient.auth.signOut();
     window.location.href = '/login';
   });
 

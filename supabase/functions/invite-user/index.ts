@@ -96,8 +96,13 @@ Deno.serve(async (req) => {
     userId = existingProfile.id;
     if (full_name) await adminClient.from('profiles').update({ full_name }).eq('id', userId);
   } else {
+    // redirectTo is set explicitly so the invite email always lands on the
+    // real site's set-password screen — it must also be added to Supabase's
+    // Auth "Redirect URLs" allow-list (Authentication > URL Configuration)
+    // or Supabase silently falls back to the project's Site URL instead.
     const { data: invited, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: { full_name: full_name || null },
+      redirectTo: 'https://zareenterprises.github.io/ambra/',
     });
     if (inviteErr) return json({ error: `Invite failed: ${inviteErr.message}` }, 400);
     userId = invited.user.id;

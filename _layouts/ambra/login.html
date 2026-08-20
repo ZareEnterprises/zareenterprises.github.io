@@ -14,8 +14,8 @@
   <div class="auth-card">
     <div class="notch"></div>
     <img class="logo" src="/assets/img/ambraSubmark.png" alt="AMBRA Submark">
-    <p class="eyebrow">Access badge · Crew &amp; partners</p>
-    <h1>AMBRA Live Productions<br><span>Team Portal</span></h1>
+    <p class="eyebrow" id="eyebrow">Access badge · Crew &amp; partners</p>
+    <h1 id="heading">AMBRA Live Productions<br><span>Team Portal</span></h1>
 
     <form id="login-form">
       <div class="field">
@@ -30,6 +30,24 @@
       <p class="error-msg" id="error-msg">That email and password don't match. Try again.</p>
 
       <button type="submit" class="btn-primary btn-block" id="submit-btn">Log in</button>
+    </form>
+
+    <!-- Shown instead of the form above when arriving from an invite or
+         password-reset email (both hand off a one-time session and expect
+         the person to pick a password before they can use it again). -->
+    <form id="set-password-form" style="display:none">
+      <div class="field">
+        <label for="new-password">New password</label>
+        <input type="password" id="new-password" placeholder="••••••••" autocomplete="new-password" minlength="6" required>
+      </div>
+      <div class="field">
+        <label for="confirm-password">Confirm password</label>
+        <input type="password" id="confirm-password" placeholder="••••••••" autocomplete="new-password" minlength="6" required>
+      </div>
+
+      <p class="error-msg" id="set-password-error"></p>
+
+      <button type="submit" class="btn-primary btn-block" id="set-password-btn">Set password &amp; continue</button>
     </form>
 
     <p class="footnote">© AMBRA Live Productions</p>
@@ -47,9 +65,66 @@
     const errorMsg = document.getElementById('error-msg');
     const submitBtn = document.getElementById('submit-btn');
 
-    // If there's already a live session, skip the form entirely.
-    supabaseClient.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = '/panel';
+    // Invite and password-reset emails land here with #type=invite or
+    // #type=recovery in the URL — read that BEFORE supabase-js's automatic
+    // session detection rewrites the URL, so we know which screen to show.
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const authType = hashParams.get('type');
+    const isSettingPassword = authType === 'invite' || authType === 'recovery';
+
+    if (isSettingPassword) {
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('set-password-form').style.display = '';
+      document.getElementById('eyebrow').textContent = 'One last step';
+      document.getElementById('heading').innerHTML = 'Set your<br><span>password</span>';
+    } else {
+      // If there's already a live session, skip the form entirely.
+      supabaseClient.auth.getSession().then(({ data }) => {
+        if (data.session) window.location.href = '/panel';
+      });
+    }
+
+    const setPasswordForm = document.getElementById('set-password-form');
+    const setPasswordError = document.getElementById('set-password-error');
+    const setPasswordBtn = document.getElementById('set-password-btn');
+
+    setPasswordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setPasswordError.classList.remove('show');
+
+      const pw1 = document.getElementById('new-password').value;
+      const pw2 = document.getElementById('confirm-password').value;
+      if (pw1 !== pw2) {
+        setPasswordError.textContent = "Passwords don't match.";
+        setPasswordError.classList.add('show');
+        return;
+      }
+
+      setPasswordBtn.disabled = true;
+      setPasswordBtn.textContent = 'Saving…';
+
+      // supabase-js turns the link's URL-hash tokens into a live session
+      // automatically, but that happens asynchronously — wait for it here
+      // instead of racing it.
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        setPasswordError.textContent = 'This link has expired. Ask an admin to send a new invite.';
+        setPasswordError.classList.add('show');
+        setPasswordBtn.disabled = false;
+        setPasswordBtn.textContent = 'Set password & continue';
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.updateUser({ password: pw1 });
+      if (error) {
+        setPasswordError.textContent = error.message;
+        setPasswordError.classList.add('show');
+        setPasswordBtn.disabled = false;
+        setPasswordBtn.textContent = 'Set password & continue';
+        return;
+      }
+
+      window.location.href = '/panel';
     });
 
     form.addEventListener('submit', async (e) => {

@@ -1,7 +1,3 @@
----
-permalink: /panel
-layout: null
----
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -188,9 +184,9 @@ layout: null
   // ============================================================
   const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  supabase.auth.getSession().then(({ data }) => {
+  supabaseClient.auth.getSession().then(({ data }) => {
     if (!data.session) {
       window.location.href = '/login';
       return;
@@ -201,7 +197,7 @@ layout: null
   });
 
   document.getElementById('btn-logout').addEventListener('click', async () => {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     window.location.href = '/login';
   });
 

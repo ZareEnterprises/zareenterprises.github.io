@@ -1,4 +1,4 @@
 ---
 layout: ambra/login
-permalink: /ambra/
+permalink: /login
 ---

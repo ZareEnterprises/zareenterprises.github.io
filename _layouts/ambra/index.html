@@ -57,9 +57,12 @@
       </div>
     </div>
   </span>
-  <span class="nav-spotify-anchor">
-    <button class="pill" id="spotify-toggle-btn">🎧 Spotify</button>
-    <div class="nav-spotify-panel" id="nav-spotify-panel" style="display:none"></div>
+  <span class="nav-right-group">
+    <span id="band-switcher" class="band-switcher"></span>
+    <span class="nav-spotify-anchor">
+      <button class="pill" id="spotify-toggle-btn">🎧 Spotify</button>
+      <div class="nav-spotify-panel" id="nav-spotify-panel" style="display:none"></div>
+    </span>
   </span>
 </nav>
 
@@ -94,7 +97,7 @@
                 <label class="filter-chip active"><input type="checkbox" data-field="country" checked> Country</label>
                 <label class="filter-chip active"><input type="checkbox" data-field="duration" checked> Duration</label>
                 <label class="filter-chip"><input type="checkbox" data-field="guests"> Special guest</label>
-                <label class="filter-chip"><input type="checkbox" data-field="band"> Band</label>
+                <label class="filter-chip" id="setlist-band-filter-chip"><input type="checkbox" data-field="band"> Band</label>
               </div>
             </div>
           </div>
@@ -163,6 +166,7 @@
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="arranger" checked> Arranger</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="version" checked> Version</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="comments" checked> Comments</label>
+              <label class="filter-chip" id="lineup-band-filter-chip" style="display:none"><input type="checkbox" data-lineup-field="band"> Band</label>
             </div>
           </div>
           <div class="filter-section">
@@ -192,9 +196,11 @@
     </div>
 
     <div id="band-panel-members">
+      <div id="band-switcher-panel" class="band-switcher-panel"></div>
       <div class="band-name-bar">
-        <label for="band-name-input">Band name <span class="required-mark">*</span></label>
-        <input type="text" id="band-name-input" placeholder="Required — e.g. Barrio Latino">
+        <label for="band-name-input">Add Band</label>
+        <input type="text" id="band-name-input" placeholder="e.g. Barrio Latino">
+        <button class="btn small" id="btn-add-band-entity">Add</button>
         <span id="band-name-saved-note" class="mono-label"></span>
       </div>
       <div class="band-layout">
@@ -259,7 +265,7 @@
       <div class="audio-subtabs">
         <button class="pill active" data-audio-sub="requirements">Audio Requirements</button>
         <button class="pill" data-audio-sub="inputlist">Input List</button>
-        <button class="pill" data-audio-sub="speakers">Speakers Coverage</button>
+        <button class="pill" data-audio-sub="speakers">Speakers</button>
       </div>
 
       <div id="audio-panel-requirements" class="audio-subpanel">
@@ -288,7 +294,7 @@
 
       <div id="audio-panel-speakers" class="audio-subpanel" style="display:none">
         <div class="toolbar">
-          <span class="mono-label">Speakers Coverage</span>
+          <span class="mono-label">Speakers</span>
           <button class="btn" id="btn-add-speaker-table">+ Add table</button>
         </div>
         <div id="speaker-tables-wrap"></div>
@@ -327,7 +333,7 @@
       <div class="stage-plot-box wide">
         <div id="stage-plot-display" class="stage-plot-display wide"></div>
         <input type="file" id="stage-plot-input" accept="image/*" style="display:none">
-        <button class="btn ghost" id="btn-upload-plot">Upload image (max 100KB)</button>
+        <button class="btn ghost" id="btn-upload-plot">Upload image (max 1MB)</button>
       </div>
 
       <h2 class="section-title" style="margin-top:56px">3D STAGE MODEL</h2>
@@ -408,6 +414,18 @@
   </div>
 </div>
 
+<!-- Delete Band Confirmation Modal -->
+<div class="overlay" id="overlay-delete-band">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <h2 id="delete-band-title">Delete band?</h2>
+    <p class="hint" style="margin-bottom:20px">This will permanently delete all Members, Rehearsals, and Sound data for this band. This cannot be undone.</p>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn" id="btn-delete-band-confirm" style="background:var(--surface);color:var(--text);border:1px solid var(--line)">Eliminar</button>
+      <button class="btn" id="btn-delete-band-cancel" style="background:var(--emo-alta);color:#fff">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Create Set Modal -->
 <div class="overlay" id="overlay-set">
   <div class="modal">
@@ -480,6 +498,8 @@ let rehearsalShowAll = false;
 let rehearsalDates = [];
 let rehearsalDateSongs = [];
 let bandProfile = null;
+let allBands = [];
+let activeBandId = null;
 let musicSheets = null;
 let stageEquipment = [];
 let lightCues = [];
@@ -503,7 +523,8 @@ async function fetchSets(){
   sets = res.ok ? await res.json() : [];
 }
 async function fetchBand(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/band?select=*&order=artist_name.asc`, { headers });
+  if(!activeBandId){ band = []; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/band?select=*&group_id=eq.${activeBandId}&order=artist_name.asc`, { headers });
   band = res.ok ? await res.json() : [];
 }
 async function fetchSongInstruments(){
@@ -515,15 +536,18 @@ async function fetchInterludeItems(){
   interludeItems = res.ok ? await res.json() : [];
 }
 async function fetchAudioRequirements(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements?select=*&order=item_order.asc.nullslast`, { headers });
+  if(!activeBandId){ audioRequirements = []; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements?select=*&group_id=eq.${activeBandId}&order=item_order.asc.nullslast`, { headers });
   audioRequirements = res.ok ? await res.json() : [];
 }
 async function fetchInputList(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/input_list?select=*&order=channel_number.asc.nullslast`, { headers });
+  if(!activeBandId){ inputListRows = []; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/input_list?select=*&group_id=eq.${activeBandId}&order=channel_number.asc.nullslast`, { headers });
   inputListRows = res.ok ? await res.json() : [];
 }
 async function fetchSpeakerTables(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?select=*&order=table_order.asc.nullslast`, { headers });
+  if(!activeBandId){ speakerTables = []; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?select=*&group_id=eq.${activeBandId}&order=table_order.asc.nullslast`, { headers });
   speakerTables = res.ok ? await res.json() : [];
 }
 async function fetchSpeakerItems(){
@@ -540,7 +564,8 @@ async function fetchStageSettings(){
   stageSettings = arr[0] || null;
 }
 async function fetchRehearsalSettings(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_settings?select=*&limit=1`, { headers });
+  if(!activeBandId){ rehearsalSettings = null; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_settings?select=*&group_id=eq.${activeBandId}&limit=1`, { headers });
   const arr = res.ok ? await res.json() : [];
   rehearsalSettings = arr[0] || null;
 }
@@ -549,7 +574,8 @@ async function fetchRehearsalAvailability(){
   rehearsalAvailability = res.ok ? await res.json() : [];
 }
 async function fetchRehearsalDates(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?select=*&order=item_order.asc.nullslast`, { headers });
+  if(!activeBandId){ rehearsalDates = []; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?select=*&group_id=eq.${activeBandId}&order=item_order.asc.nullslast`, { headers });
   rehearsalDates = res.ok ? await res.json() : [];
 }
 async function fetchRehearsalDateSongs(){
@@ -560,6 +586,21 @@ async function fetchBandProfile(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/band_profile?select=*&limit=1`, { headers });
   const arr = res.ok ? await res.json() : [];
   bandProfile = arr[0] || null;
+}
+async function fetchBands(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/bands?select=*&order=item_order.asc.nullslast`, { headers });
+  allBands = res.ok ? await res.json() : [];
+  if(!activeBandId || !allBands.find(b => b.id === activeBandId)){
+    activeBandId = allBands[0]?.id || null;
+  }
+  if(allBands.length >= 2){
+    visibleFields.band = true;
+    lineupVisibleCols.band = true;
+    const setlistChk = document.querySelector('#setlist-band-filter-chip input');
+    if(setlistChk){ setlistChk.checked = true; setlistChk.closest('.filter-chip').classList.add('active'); }
+    const lineupChk = document.querySelector('#lineup-band-filter-chip input');
+    if(lineupChk){ lineupChk.checked = true; lineupChk.closest('.filter-chip').classList.add('active'); }
+  }
 }
 async function fetchMusicSheets(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?select=*&limit=1`, { headers });
@@ -584,7 +625,8 @@ async function fetchGenres(){
   genres = res.ok ? await res.json() : [];
 }
 async function fetchInstrumentCatalog(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog?select=*&order=name.asc`, { headers });
+  if(!activeBandId){ instrumentCatalog = []; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog?select=*&group_id=eq.${activeBandId}&order=name.asc`, { headers });
   instrumentCatalog = res.ok ? await res.json() : [];
 }
 
@@ -1597,7 +1639,7 @@ function parseSetNumber(setName){
   return m ? parseInt(m[1], 10) : null;
 }
 
-let lineupVisibleCols = { tonality:true, singers:true, instruments:true, guests:true, arranger:true, version:true, comments:true };
+let lineupVisibleCols = { tonality:true, singers:true, instruments:true, guests:true, arranger:true, version:true, comments:true, band:false };
 
 function getLineupColumns(){
   const cols = [];
@@ -1611,6 +1653,7 @@ function getLineupColumns(){
   if(lineupVisibleCols.arranger) cols.push({ key:'arranger', width:'1fr', label:'Arranger' });
   if(lineupVisibleCols.version) cols.push({ key:'version', width:'1fr', label:'Version' });
   if(lineupVisibleCols.comments) cols.push({ key:'comments', width:'1fr', label:'Comments' });
+  if(lineupVisibleCols.band && allBands.length >= 2) cols.push({ key:'band', width:'1fr', label:'Band' });
   return cols;
 }
 
@@ -1720,6 +1763,10 @@ function renderInstrumentation(){
       if(c.key === 'arranger') return `<input type="text" data-id="${song.id}" data-field="arranger" value="${escapeAttr(song.arranger || '')}" placeholder="Arranger">`;
       if(c.key === 'version') return `<input type="text" data-id="${song.id}" data-field="youtube_link" value="${escapeAttr(song.youtube_link || '')}" placeholder="https://...">`;
       if(c.key === 'comments') return `<input type="text" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="Comments">`;
+      if(c.key === 'band') return `<select class="member-role-select lineup-band-select" data-id="${song.id}">
+        <option value="">— None —</option>
+        ${allBands.map(b => `<option value="${escapeAttr(b.name)}" ${song.band_name === b.name ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
+      </select>`;
       return '';
     }).join('');
 
@@ -1738,6 +1785,16 @@ function renderInstrumentation(){
       await fetchSongs();
     });
   });
+  container.querySelectorAll('.lineup-band-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${sel.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ band_name: sel.value || null })
+      });
+      await fetchSongs();
+    });
+  });
+  const bandFilterChip = document.getElementById('lineup-band-filter-chip');
+  if(bandFilterChip) bandFilterChip.style.display = allBands.length >= 2 ? 'flex' : 'none';
   container.querySelectorAll('input[type=checkbox][data-field=tonality_original]').forEach(chk => {
     chk.addEventListener('change', async () => {
       await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${chk.dataset.id}`, {
@@ -1897,7 +1954,7 @@ function renderCatalogColumns(){
   async function addInstrument(section, input){
     const name = input.value.trim();
     if(!name) return;
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog`, { method:'POST', headers, body: JSON.stringify({ name, section }) });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog`, { method:'POST', headers, body: JSON.stringify({ name, section, group_id: activeBandId }) });
     if(!res.ok){ alert('Could not add that instrument (it may already exist).'); return; }
     await fetchInstrumentCatalog();
     renderCatalogColumns();
@@ -1998,7 +2055,7 @@ document.getElementById('btn-save-rehearsal-range').addEventListener('click', as
   if(rehearsalSettings?.id){
     await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_settings?id=eq.${rehearsalSettings.id}`, { method:'PATCH', headers, body: JSON.stringify({ start_date, end_date, timezone }) });
   } else {
-    await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_settings`, { method:'POST', headers, body: JSON.stringify({ start_date, end_date, timezone }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_settings`, { method:'POST', headers, body: JSON.stringify({ start_date, end_date, timezone, group_id: activeBandId }) });
   }
   await fetchRehearsalSettings();
   renderRehearsals();
@@ -2235,7 +2292,7 @@ function renderMemberList(){
     if(row.dataset.bandId){
       await fetch(`${SUPABASE_URL}/rest/v1/band?id=eq.${row.dataset.bandId}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: value || null }) });
     } else {
-      const payload = { instrument: row.dataset.instrument, role: 'MainBand', [field]: value || null };
+      const payload = { instrument: row.dataset.instrument, role: 'MainBand', group_id: activeBandId, [field]: value || null };
       const res = await fetch(`${SUPABASE_URL}/rest/v1/band`, { method:'POST', headers, body: JSON.stringify(payload) });
       if(!res.ok){ alert('Could not save that: ' + await res.text()); return; }
       const created = await res.json();
@@ -2259,32 +2316,169 @@ function renderMemberList(){
 }
 
 function renderBand(){
+  renderBandSwitcherPanel();
   renderBandNameBar();
   renderCatalogColumns();
   renderMemberList();
 }
 
-function renderBandNameBar(){
-  const input = document.getElementById('band-name-input');
-  const note = document.getElementById('band-name-saved-note');
-  input.value = bandProfile?.name || '';
-  note.textContent = bandProfile?.name ? '✓ saved' : 'Required to use Band features';
-  document.querySelectorAll('.band-layout, #band-panel-rehearsals').forEach(el => {
-    el.style.opacity = bandProfile?.name ? '1' : '.4';
-    el.style.pointerEvents = bandProfile?.name ? 'auto' : 'none';
+function renderBandSwitcherPanel(){
+  const el = document.getElementById('band-switcher-panel');
+  if(!el) return;
+  if(allBands.length === 0){ el.innerHTML = ''; return; }
+  el.innerHTML = allBands.map(b => `
+    <span class="band-panel-pill ${b.id === activeBandId ? 'active-band' : ''}" data-band-id="${b.id}">
+      <button type="button" class="band-panel-pill-name" data-band-id="${b.id}">${escapeHtml(b.name)}</button>
+      <button type="button" class="band-panel-pill-edit" data-band-id="${b.id}" title="Rename">✎</button>
+      <button type="button" class="band-panel-pill-x" data-band-id="${b.id}" title="Delete band">✕</button>
+    </span>
+  `).join('');
+  el.querySelectorAll('.band-panel-pill-name').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if(btn.dataset.bandId === activeBandId) return;
+      activeBandId = btn.dataset.bandId;
+      renderBandSwitcher();
+      renderBandSwitcherPanel();
+      await switchActiveBandData();
+    });
+  });
+  el.querySelectorAll('.band-panel-pill-edit').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const bandObj = allBands.find(b => b.id === btn.dataset.bandId);
+      const newName = prompt('Rename band:', bandObj?.name || '');
+      if(!newName || !newName.trim() || newName.trim() === bandObj?.name) return;
+      if(allBands.find(b => b.name.toLowerCase() === newName.trim().toLowerCase())){ alert('A band with that name already exists.'); return; }
+      await fetch(`${SUPABASE_URL}/rest/v1/bands?id=eq.${btn.dataset.bandId}`, { method:'PATCH', headers, body: JSON.stringify({ name: newName.trim() }) });
+      await fetchBands();
+      renderBandSwitcher();
+      renderBandSwitcherPanel();
+      renderBandNameBar();
+    });
+  });
+  el.querySelectorAll('.band-panel-pill-x').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const bandObj = allBands.find(b => b.id === btn.dataset.bandId);
+      openDeleteBandModal(bandObj);
+    });
   });
 }
-document.getElementById('band-name-input').addEventListener('change', async (e) => {
-  const name = e.target.value.trim();
-  if(!name) return;
-  if(bandProfile?.id){
-    await fetch(`${SUPABASE_URL}/rest/v1/band_profile?id=eq.${bandProfile.id}`, { method:'PATCH', headers, body: JSON.stringify({ name }) });
-  } else {
-    await fetch(`${SUPABASE_URL}/rest/v1/band_profile`, { method:'POST', headers, body: JSON.stringify({ name }) });
-  }
-  await fetchBandProfile();
-  renderBandNameBar();
+
+let bandPendingDelete = null;
+function openDeleteBandModal(bandObj){
+  bandPendingDelete = bandObj;
+  document.getElementById('delete-band-title').textContent = `Delete "${bandObj.name}"?`;
+  document.getElementById('overlay-delete-band').classList.add('open');
+}
+document.getElementById('btn-delete-band-cancel').addEventListener('click', () => {
+  bandPendingDelete = null;
+  document.getElementById('overlay-delete-band').classList.remove('open');
 });
+document.getElementById('btn-delete-band-confirm').addEventListener('click', async () => {
+  if(!bandPendingDelete) return;
+  const id = bandPendingDelete.id;
+  const name = bandPendingDelete.name;
+  await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/band?group_id=eq.${id}`, { method:'DELETE', headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog?group_id=eq.${id}`, { method:'DELETE', headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/rehearsal_settings?group_id=eq.${id}`, { method:'DELETE', headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?group_id=eq.${id}`, { method:'DELETE', headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/audio_requirements?group_id=eq.${id}`, { method:'DELETE', headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/input_list?group_id=eq.${id}`, { method:'DELETE', headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?group_id=eq.${id}`, { method:'DELETE', headers }),
+  ]);
+  await fetch(`${SUPABASE_URL}/rest/v1/songs?band_name=eq.${encodeURIComponent(name)}`, { method:'PATCH', headers, body: JSON.stringify({ band_name: null }) });
+  await fetch(`${SUPABASE_URL}/rest/v1/bands?id=eq.${id}`, { method:'DELETE', headers });
+
+  bandPendingDelete = null;
+  document.getElementById('overlay-delete-band').classList.remove('open');
+  activeBandId = null;
+  await fetchBands();
+  renderBandSwitcher();
+  renderBandSwitcherPanel();
+  await switchActiveBandData();
+  await fetchSongs();
+});
+
+function renderBandSwitcher(){
+  const el = document.getElementById('band-switcher');
+  if(allBands.length === 0){ el.innerHTML = ''; return; }
+  if(allBands.length <= 3){
+    el.innerHTML = allBands.map(b => `
+      <button class="pill ${b.id === activeBandId ? 'active-band' : ''}" data-band-id="${b.id}">${escapeHtml(b.name)}</button>
+    `).join('');
+    el.querySelectorAll('button[data-band-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(btn.dataset.bandId === activeBandId) return;
+        activeBandId = btn.dataset.bandId;
+        renderBandSwitcher();
+        renderBandSwitcherPanel();
+        await switchActiveBandData();
+      });
+    });
+  } else {
+    const active = allBands.find(b => b.id === activeBandId);
+    el.innerHTML = `
+      <select id="band-switcher-select" class="singer-sort-select" style="width:auto">
+        ${allBands.map(b => `<option value="${b.id}" ${b.id === activeBandId ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
+      </select>
+    `;
+    document.getElementById('band-switcher-select').addEventListener('change', async (e) => {
+      activeBandId = e.target.value;
+      renderBandSwitcherPanel();
+      await switchActiveBandData();
+    });
+  }
+}
+
+async function switchActiveBandData(){
+  await Promise.all([fetchBand(), fetchInstrumentCatalog(), fetchRehearsalSettings(), fetchRehearsalDates(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems()]);
+  renderBandNameBar();
+  if(document.getElementById('view-band').style.display !== 'none'){
+    renderCatalogColumns();
+    renderMemberList();
+    if(document.getElementById('band-panel-rehearsals').style.display !== 'none') renderRehearsals();
+  }
+  if(document.getElementById('view-technical').style.display !== 'none'){
+    const activeSub = document.querySelector('.tech-subtabs .tech-subtab.active')?.dataset.sub;
+    if(activeSub === 'audio'){
+      const activeAudioSub = document.querySelector('.audio-subtabs .pill.active')?.dataset.audioSub;
+      if(activeAudioSub === 'requirements') renderAudioRequirements();
+      else if(activeAudioSub === 'inputlist') renderInputList();
+      else if(activeAudioSub === 'speakers') renderSpeakerTables();
+    }
+  }
+}
+
+function renderBandNameBar(){
+  const note = document.getElementById('band-name-saved-note');
+  const active = allBands.find(b => b.id === activeBandId);
+  note.textContent = active ? `Editing: ${active.name}` : (allBands.length ? '' : 'Add a band to get started');
+  const hasBand = allBands.length > 0 && activeBandId;
+  document.querySelectorAll('.band-layout, #band-panel-rehearsals').forEach(el => {
+    el.style.opacity = hasBand ? '1' : '.4';
+    el.style.pointerEvents = hasBand ? 'auto' : 'none';
+  });
+}
+async function addNewBand(){
+  const input = document.getElementById('band-name-input');
+  const name = input.value.trim();
+  if(!name) return;
+  if(allBands.length >= 15){ alert('Maximum of 15 bands.'); return; }
+  if(allBands.find(b => b.name.toLowerCase() === name.toLowerCase())){ alert('A band with that name already exists.'); return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/bands`, { method:'POST', headers, body: JSON.stringify({ name, item_order: allBands.length + 1 }) });
+  if(!res.ok){ alert('Could not create that band:\n' + await res.text()); return; }
+  const created = await res.json();
+  input.value = '';
+  await fetchBands();
+  activeBandId = created[0]?.id || activeBandId;
+  renderBandSwitcher();
+  renderBandSwitcherPanel();
+  await switchActiveBandData();
+}
+document.getElementById('btn-add-band-entity').addEventListener('click', addNewBand);
+document.getElementById('band-name-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') addNewBand(); });
 
 document.querySelectorAll('.band-subtabs .tech-subtab').forEach(pill => {
   pill.addEventListener('click', () => {
@@ -2490,7 +2684,7 @@ function renderRehearsalSongPicker(){
 }
 document.getElementById('btn-add-rehearsal-date').addEventListener('click', async () => {
   if(rehearsalDates.length >= 8){ alert('Maximum of 8 rehearsal dates.'); return; }
-  await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates`, { method:'POST', headers, body: JSON.stringify({ item_order: rehearsalDates.length + 1 }) });
+  await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates`, { method:'POST', headers, body: JSON.stringify({ item_order: rehearsalDates.length + 1, group_id: activeBandId }) });
   await fetchRehearsalDates();
   renderRehearsalDatesBox();
 });
@@ -2681,8 +2875,8 @@ document.getElementById('btn-upload-plot').addEventListener('click', () => {
 document.getElementById('stage-plot-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if(!file) return;
-  if(file.size > 100 * 1024){
-    alert('That image is over 100KB. Please choose a smaller file.');
+  if(file.size > 1024 * 1024){
+    alert('That image is over 1MB. Please choose a smaller file.');
     e.target.value = '';
     return;
   }
@@ -3013,7 +3207,7 @@ function renderAudioRequirements(){
 }
 document.getElementById('btn-add-req-row').addEventListener('click', async () => {
   await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements`, {
-    method:'POST', headers, body: JSON.stringify({ item_order: audioRequirements.length + 1 })
+    method:'POST', headers, body: JSON.stringify({ item_order: audioRequirements.length + 1, group_id: activeBandId })
   });
   await fetchAudioRequirements();
   renderAudioRequirements();
@@ -3108,7 +3302,7 @@ document.addEventListener('click', () => document.querySelectorAll('.color-popov
 document.getElementById('btn-add-input-row').addEventListener('click', async () => {
   const maxCh = inputListRows.reduce((m, r) => Math.max(m, r.channel_number || 0), 0);
   await fetch(`${SUPABASE_URL}/rest/v1/input_list`, {
-    method:'POST', headers, body: JSON.stringify({ channel_number: maxCh + 1 })
+    method:'POST', headers, body: JSON.stringify({ channel_number: maxCh + 1, group_id: activeBandId })
   });
   await fetchInputList();
   renderInputList();
@@ -3204,7 +3398,7 @@ document.getElementById('btn-add-speaker-table').addEventListener('click', async
   const name = prompt('Name for this speaker table (e.g. "Option 1: Stage Only"):');
   if(!name || !name.trim()) return;
   await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables`, {
-    method:'POST', headers, body: JSON.stringify({ name: name.trim(), table_order: speakerTables.length + 1 })
+    method:'POST', headers, body: JSON.stringify({ name: name.trim(), table_order: speakerTables.length + 1, group_id: activeBandId })
   });
   await fetchSpeakerTables();
   renderSpeakerTables();
@@ -3319,9 +3513,12 @@ Duración: ${duracion}`;
 });
 
 async function reload(){
+  await fetchBands();
   await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchRehearsalDateSongs(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues()]);
   renderTable();
   renderSpotifyEmbedBox();
+  renderBandSwitcher();
+  renderBandSwitcherPanel();
 }
 
 function openMultiColorPanel(anchorEl, colorsCsv, maxColors, onChange){

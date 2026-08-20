@@ -520,7 +520,7 @@ body.theme-technical{ --main-bg:#0B1710; }
 
 .stage-visualizer-wrap{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; }
 .stage-visualizer{
-  position:relative; width:100%; height:420px; background:var(--bg);
+  position:relative; width:100%; height:460px; background:var(--bg);
   border:1px dashed var(--line); border-radius:10px; overflow:hidden;
 }
 .stage-rect{
@@ -545,7 +545,7 @@ body.theme-technical{ --main-bg:#0B1710; }
   background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
   display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
-.stage-plot-display.wide{ max-width:calc(100% - 24px); min-height:340px; }
+.stage-plot-display.wide{ max-width:calc(50% - 12px); min-height:170px; }
 .stage-plot-display img{ width:100%; height:auto; display:block; }
 .stage-plot-overlay{
   position:absolute; inset:0; background:rgba(8,11,9,0.72);
@@ -765,7 +765,11 @@ body.theme-technical{ --main-bg:#0B1710; }
 .footer-links a:hover{ color:var(--gold-bright); }
 .footer-links a:hover{ color:var(--gold-bright); }
 
-.nav-spotify-anchor{ position:relative; margin-left:auto; }
+.nav-right-group{ display:flex; align-items:center; gap:16px; margin-left:auto; }
+.nav-spotify-anchor{ position:relative; }
+.band-switcher{ display:flex; align-items:center; gap:6px; }
+.band-switcher .pill{ padding:8px 14px; }
+.band-switcher .pill.active-band{ background:var(--gold); border-color:var(--gold); color:#1a1310; font-weight:600; }
 .nav-spotify-panel{
   position:absolute; top:calc(100% + 8px); right:0; z-index:150;
   background:var(--surface); border:1px solid var(--line); border-radius:12px;
@@ -864,3 +868,18 @@ body.theme-technical{ --main-bg:#0B1710; }
 .rd-picker-song:active{ cursor:grabbing; }
 .rd-picker-title{ font-family:'Fraunces',serif; font-weight:600; font-size:12px; color:var(--text); }
 .rd-picker-artist{ font-size:9.5px; color:var(--text-faint); }
+
+.band-switcher-panel{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.band-panel-pill{
+  display:flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--line);
+  border-radius:20px; padding:4px 4px 4px 14px; transition:.15s;
+}
+.band-panel-pill.active-band{ background:var(--gold); border-color:var(--gold); }
+.band-panel-pill.active-band .band-panel-pill-name{ color:#1a1310; font-weight:600; }
+.band-panel-pill-name{ background:none; border:none; color:var(--text); font-size:13px; cursor:pointer; padding:4px 2px; font-family:'Inter',sans-serif; }
+.band-panel-pill-edit, .band-panel-pill-x{
+  background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:11px;
+  width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+}
+.band-panel-pill-edit:hover{ color:var(--gold-bright); background:rgba(0,0,0,0.15); }
+.band-panel-pill-x:hover{ color:#fff; background:var(--emo-alta); }

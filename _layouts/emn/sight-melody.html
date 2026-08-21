@@ -44,10 +44,11 @@
 </div>
 
 <div class="main" id="mainStage">
-  <div class="stage-hint">Click anywhere to generate a new exercise · <b id="hintKey">C Major</b>
+  <div class="stage-hint">Click anywhere to generate a new exercise · <b id="hintKey">C Major</b></div>
+  <div id="staff-wrap">
     <button type="button" class="play-btn" id="btnPlay">▶ Play melody</button>
+    <div id="output"></div>
   </div>
-  <div id="staff-wrap"><div id="output"></div></div>
   <div class="meta-row">
     <span>Meter <b id="metaMeter">4/4</b></span>
     <span>Measures <b id="metaMeasures">4</b></span>
@@ -1229,29 +1230,49 @@ function generate(){
 // matches scientific pitch notation (midi 60 = C4), same convention letterOctave()
 // already uses above. There's no separate sharp set, so lookup is by pitch class only.
 const PIANO_PC_NAMES = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
-function midiToSampleFile(midi){
+function midiToSampleUrl(midi){
   const pc = ((midi % 12) + 12) % 12;
   const octave = Math.floor(midi / 12) - 1;
-  return `${PIANO_PC_NAMES[pc]}${octave}.mp3`;
+  return `/assets/sounds/piano/${PIANO_PC_NAMES[pc]}${octave}.mp3`;
 }
+// Count-in click — drop a single percussion hit here to enable the 1-bar
+// count-in; without this file present, playback just skips the count-in and
+// starts the melody right away (loadBuffer's fetch fails, caught below).
+const CLICK_URL = '/assets/sounds/click.mp3';
 
 const QUARTER_BPM = 92; // fixed practice tempo — no tempo control in this tool yet
 const SECONDS_PER_TICK = 60 / QUARTER_BPM / 4; // 4 ticks (sixteenths) per quarter note
 
 let audioCtx = null;
-const bufferCache = {}; // filename -> decoded AudioBuffer (or in-flight Promise)
+const bufferCache = {}; // url -> decoded AudioBuffer (or in-flight Promise)
 function getAudioCtx(){
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
-async function loadBuffer(file){
-  if(bufferCache[file]) return bufferCache[file];
+async function loadBuffer(url){
+  if(bufferCache[url]) return bufferCache[url];
   const ctx = getAudioCtx();
-  const p = fetch(`/assets/sounds/piano/${file}`)
+  const p = fetch(url)
     .then(r => r.arrayBuffer())
     .then(buf => ctx.decodeAudioData(buf));
-  bufferCache[file] = p;
+  bufferCache[url] = p;
   return p;
+}
+function scheduleHit(ctx, buffer, when, sources){
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.start(when);
+  sources.push(source);
+}
+// One count-in bar in the CURRENT meter — same beat grid fillMeasure() uses
+// (beatStartsForMeter), so a 6/8 count-in clicks twice (dotted-quarter beats)
+// while a 4/4 one clicks four times, not a generic "4 clicks" regardless of meter.
+function countInBeatSeconds(){
+  const meter = state.meter;
+  const total = METER_TICKS[meter] || 16;
+  const starts = beatStartsForMeter(meter);
+  return starts.map((s, i) => ((i + 1 < starts.length ? starts[i + 1] : total) - s) * SECONDS_PER_TICK);
 }
 
 let playbackToken = 0; // bumped on every play/stop so a stale scheduled run can no-op
@@ -1263,38 +1284,43 @@ async function playMelody(){
   const ctx = getAudioCtx();
   if(ctx.state === 'suspended') await ctx.resume();
 
-  const files = [...new Set(playbackSeq.filter(e => e.midi != null).map(e => midiToSampleFile(e.midi)))];
+  const urls = [...new Set(playbackSeq.filter(e => e.midi != null).map(e => midiToSampleUrl(e.midi)))];
   btn.disabled = true;
   btn.textContent = 'Loading…';
   try {
-    await Promise.all(files.map(loadBuffer));
+    await Promise.all(urls.map(loadBuffer));
   } catch (err) {
     btn.disabled = false;
     btn.textContent = '▶ Play melody';
     console.error('Could not load piano samples', err);
     return;
   }
+  // Count-in click is optional — no click.mp3 yet just means no count-in.
+  let clickBuffer = null;
+  try { clickBuffer = await loadBuffer(CLICK_URL); } catch { /* no count-in available */ }
   if(myToken !== playbackToken) return; // superseded while loading
 
   btn.disabled = false;
   btn.classList.add('playing');
   btn.textContent = '■ Stop';
 
-  const startAt = ctx.currentTime + 0.05;
-  let t = 0;
   const sources = [];
+  const t0 = ctx.currentTime + 0.05;
+  let cursor = 0; // seconds elapsed since t0
+  if(clickBuffer){
+    countInBeatSeconds().forEach(beatSec => {
+      scheduleHit(ctx, clickBuffer, t0 + cursor, sources);
+      cursor += beatSec;
+    });
+  }
   for(const ev of playbackSeq){
     if(ev.midi != null){
-      const buffer = await bufferCache[midiToSampleFile(ev.midi)];
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start(startAt + t);
-      sources.push(source);
+      const buffer = await bufferCache[midiToSampleUrl(ev.midi)];
+      scheduleHit(ctx, buffer, t0 + cursor, sources);
     }
-    t += ev.ticks * SECONDS_PER_TICK;
+    cursor += ev.ticks * SECONDS_PER_TICK;
   }
-  const totalSeconds = t;
+  const totalSeconds = cursor;
   activeSources = sources;
 
   setTimeout(() => {

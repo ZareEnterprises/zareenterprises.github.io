@@ -960,6 +960,7 @@
   user-select: none;
 }
 .emn-tool .stage-hint {
+  align-self: flex-start;
   font-size: 12.5px;
   color: var(--muted);
   margin-bottom: 14px;
@@ -967,9 +968,12 @@
 }
 .emn-tool .stage-hint b { color: var(--ink); }
 .emn-tool .play-btn {
-  margin-left: 12px;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
   padding: 5px 14px;
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--red);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -978,10 +982,11 @@
   color: var(--ink);
   transition: all .12s ease;
 }
-.emn-tool .play-btn:hover { border-color: var(--red); }
-.emn-tool .play-btn.playing { background: var(--red); border-color: var(--red); color: #fff; }
+.emn-tool .play-btn:hover { background: var(--red); color: #fff; }
+.emn-tool .play-btn.playing { background: var(--red); color: #fff; }
 .emn-tool .play-btn:disabled { opacity: .5; cursor: default; }
 .emn-tool #staff-wrap {
+  position: relative;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 16px;

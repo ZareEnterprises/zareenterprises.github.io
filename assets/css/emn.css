@@ -961,17 +961,19 @@
 }
 .emn-tool .stage-hint {
   align-self: flex-start;
+  margin-top: 10px;
   font-size: 12.5px;
   color: var(--muted);
   margin-bottom: 14px;
   letter-spacing: .02em;
 }
-.emn-tool .stage-hint b { color: var(--ink); }
+.emn-tool .stage-toolbar {
+  align-self: flex-end;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
 .emn-tool .play-btn {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 2;
   padding: 5px 14px;
   border: 1.5px solid var(--red);
   border-radius: 999px;
@@ -986,7 +988,6 @@
 .emn-tool .play-btn.playing { background: var(--red); color: #fff; }
 .emn-tool .play-btn:disabled { opacity: .5; cursor: default; }
 .emn-tool #staff-wrap {
-  position: relative;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -994,6 +995,15 @@
   padding: 28px 18px;
   max-width: 96vw;
   overflow-x: auto;
+}
+.emn-tool .staff-key-label {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: .02em;
+  margin-bottom: 14px;
 }
 .emn-tool #staff-wrap svg { display: block; margin: 0 auto; }
 .emn-tool .meta-row {

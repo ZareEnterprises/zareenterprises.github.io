@@ -3782,9 +3782,10 @@ function renderLights(){
       const parentType = btn.dataset.parentType;
       const parentId = btn.dataset.parentId;
       const existingCount = lightCues.filter(c => c.parent_type === parentType && c.parent_id === parentId).length;
-      await fetch(`${SUPABASE_URL}/rest/v1/light_cues`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/light_cues`, {
         method:'POST', headers, body: JSON.stringify({ parent_type: parentType, parent_id: parentId, cue_order: existingCount + 1 })
       });
+      if(!res.ok){ alert('Could not add that cue: ' + await res.text()); return; }
       await fetchLightCues();
       renderLights();
     });

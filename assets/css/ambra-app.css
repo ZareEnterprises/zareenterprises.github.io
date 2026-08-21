@@ -933,7 +933,7 @@ main{ position:relative; }
 .cue-time-cell{ display:flex; flex-direction:column; gap:3px; }
 .add-cue-link{ background:none; border:none; color:var(--gold-bright); font-size:10px; cursor:pointer; padding:0; text-align:left; font-family:'IBM Plex Mono',monospace; }
 .add-cue-link:hover{ text-decoration:underline; }
-.cue-sub-row{ background:rgba(0,0,0,0.15); opacity:.92; }
+.cue-sub-row{ background:rgba(80,80,80,0.4); opacity:.92; }
 .cue-sub-tag{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-faint); font-style:italic; }
 .cue-comments-cell{ display:flex; align-items:flex-start; gap:6px; }
 .cue-comments-cell textarea{ flex:1; }

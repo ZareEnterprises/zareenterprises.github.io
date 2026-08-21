@@ -688,7 +688,8 @@ body.auth{
 .ustatus.inactive{ color:var(--faint); }
 .ustatus.inactive .ustatus-dot{ background:var(--faint); }
 
-.udots-anchor{ position:relative; justify-self:end; }
+.udots-anchor{ position:relative; justify-self:end; z-index:1; }
+.udots-anchor:has(.udots-menu.open){ z-index:150; }
 .udots-btn{
   background:none; border:none;
   color:var(--faint); cursor:pointer;
@@ -700,7 +701,7 @@ body.auth{
 .udots-menu{
   display:none;
   position:absolute; top:calc(100% + 4px); right:0;
-  z-index:50;
+  z-index:150;
   background:var(--card);
   border:1px solid var(--line);
   border-radius:10px;

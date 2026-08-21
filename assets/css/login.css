@@ -510,6 +510,10 @@ body.auth{
    10. Page — app shell  (body.app · /panel)
    ========================================================================== */
 
+/* Scales the whole panel up the same way the browser's own 110% zoom would —
+   layout, fonts and spacing all grow together, nothing is picked by hand. */
+body.app{ zoom:1.2; }
+
 .app-shell{ max-width:1180px; margin:0 auto; padding:26px 28px 70px; }
 
 /* Topbar */

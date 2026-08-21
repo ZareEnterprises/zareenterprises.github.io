@@ -3936,6 +3936,23 @@ let renderer, scene, camera, controls, currentModel, grid;
 let homePos = null, homeTarget = null;
 let initialized = false;
 
+// Renders only when something actually changes (camera moved, model loaded,
+// window resized) instead of an unconditional render loop — a permanent
+// setAnimationLoop was burning GPU time even while the camera sat still or
+// the canvas was scrolled out of view, which is what made scrolling feel
+// slow anywhere on the page once the Stage tab had been opened once.
+let renderRequested = false;
+function renderFrame(){
+  renderRequested = false;
+  controls.update();
+  renderer.render(scene, camera);
+}
+function requestRender(){
+  if(renderRequested) return;
+  renderRequested = true;
+  requestAnimationFrame(renderFrame);
+}
+
 function initScene(){
   if(initialized) return;
   initialized = true;
@@ -3982,12 +3999,11 @@ function initScene(){
     camera.aspect = wrap.clientWidth / wrap.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    requestRender();
   });
 
-  renderer.setAnimationLoop(() => {
-    controls.update();
-    renderer.render(scene, camera);
-  });
+  controls.addEventListener('change', requestRender);
+  requestRender();
 }
 
 function frameModel(object){
@@ -4008,6 +4024,7 @@ function frameModel(object){
   scene.fog.far = maxDim * 12;
   grid.position.y = box.min.y;
   controls.update();
+  requestRender();
 
   homePos = camera.position.clone();
   homeTarget = controls.target.clone();
@@ -4047,6 +4064,7 @@ document.getElementById('btn-3d-reset').addEventListener('click', () => {
   camera.position.copy(homePos);
   controls.target.copy(homeTarget);
   controls.update();
+  requestRender();
 });
 document.getElementById('btn-3d-fullscreen').addEventListener('click', () => {
   document.fullscreenElement ? document.exitFullscreen() : wrap.requestFullscreen();

@@ -22,8 +22,12 @@
 /* View-only permission lock — dims a section and blocks interaction with it
    for users whose panel permission for that section is "view", not "edit". */
 .perm-locked{
-  pointer-events:none;
-  opacity:.6;
+  /* !important: renderBandNameBar() sets inline opacity/pointer-events on
+     this same element (#band-panel-rehearsals) to dim it while no band is
+     selected — an inline style otherwise always wins over a class, which
+     was silently un-locking Rehearsals for view-only users. */
+  pointer-events:none !important;
+  opacity:.6 !important;
   filter:grayscale(.2);
   position:relative;
 }
@@ -109,8 +113,8 @@ main{ padding:28px 56px 60px; width:100%; margin:0 auto; background:var(--main-b
 .tab-btn.tab-instrumentation.active{ background:#4A7FB5; border-color:#4A7FB5; color:#0e1420; }
 .tab-btn.tab-band.active{ background:#E14A3E; border-color:#E14A3E; color:#1a0e0d; }
 .tab-btn.tab-technical.active{ background:#4C9A6A; border-color:#4C9A6A; color:#0e1a10; }
-body.theme-table{ --main-bg:#221607; }
-body.theme-instrumentation{ --main-bg:#0C1420; }
+body.theme-table{ --main-bg:#361B00; }
+body.theme-instrumentation{ --main-bg:#030c3b; }
 body.theme-band{ --main-bg:#200B0A; }
 body.theme-technical{ --main-bg:#0B1710; }
 

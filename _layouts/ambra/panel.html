@@ -60,10 +60,15 @@
         <button class="avatar-btn" id="btn-me-toggle" type="button" title="Me">ME</button>
         <div class="dropdown-panel" id="me-panel" style="min-width:230px">
           <span class="dropdown-label">Me</span>
-          <div class="field"><label>Name</label><input type="text" value="Dany"></div>
+          <div class="field"><label>Name</label><input type="text" id="me-name-field"></div>
           <div class="field"><label>Photo</label><input type="file" accept="image/*"></div>
           <div class="field"><label>Email</label><input type="email" id="me-email-field" value="you@ambralp.com"></div>
-          <div class="field" style="margin-bottom:0"><label>Password</label><input type="password" value="••••••••"></div>
+          <div class="field" style="margin-bottom:0">
+            <label>Change password</label>
+            <input type="password" id="me-new-password" placeholder="New password" autocomplete="new-password" minlength="6">
+            <button class="btn-ghost" type="button" id="btn-change-password" style="width:100%;margin-top:8px">Change Password</button>
+            <p id="me-password-msg" style="font-size:11.5px;margin:6px 0 0;display:none"></p>
+          </div>
           <div class="dropdown-sep"></div>
           <button class="dropdown-item" type="button" id="btn-logout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -209,6 +214,36 @@
     window.location.href = '/ambra/';
   });
 
+  document.getElementById('btn-change-password').addEventListener('click', async () => {
+    const input = document.getElementById('me-new-password');
+    const msg = document.getElementById('me-password-msg');
+    const btn = document.getElementById('btn-change-password');
+    const newPassword = input.value;
+
+    if (newPassword.length < 6) {
+      msg.textContent = 'Password must be at least 6 characters.';
+      msg.style.color = 'var(--error)';
+      msg.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+    btn.disabled = false;
+    btn.textContent = 'Change Password';
+
+    if (error) {
+      msg.textContent = error.message;
+      msg.style.color = 'var(--error)';
+    } else {
+      msg.textContent = 'Password updated.';
+      msg.style.color = 'var(--success)';
+      input.value = '';
+    }
+    msg.style.display = 'block';
+  });
+
   // ============================================================
   // Real data, loaded from Supabase once there's a session (see boot()
   // near the bottom). Empty until then.
@@ -288,6 +323,18 @@
     renderProjects('');
     renderFilterPills();
     renderUsers();
+    applyMeIdentity();
+  }
+
+  // Fills the avatar circle and the "Me" dropdown's Name field with the
+  // signed-in user's own data instead of the placeholder "ME" / "Dany".
+  function applyMeIdentity(){
+    const me = USERS.find(u => u.isMe);
+    if(!me) return;
+    const avatarBtn = document.getElementById('btn-me-toggle');
+    const nameField = document.getElementById('me-name-field');
+    if(avatarBtn) avatarBtn.textContent = me.initials;
+    if(nameField) nameField.value = me.name;
   }
 
   const ROLE_PRESETS = ['Team','Partner','Client'];
@@ -428,18 +475,22 @@
         </div>
         <span class="urole-pill">${u.role}</span>
         <span class="ustatus ${u.status}">${statusIcon(u.status)}${statusLabel(u.status)}</span>
+        ${u.isMe ? '<div></div>' : `
         <div class="udots-anchor">
           <button class="udots-btn" type="button" onclick="toggleUserMenu('${u.id}')">
             <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
           </button>
           <div class="udots-menu" id="udots-menu-${u.id}">
-            <button class="dropdown-item" type="button" onclick="openChangePermissions('${u.id}')">Change Permissions</button>
-            ${u.isMe ? '' : `
+            <button class="dropdown-item" type="button" onclick="openChangePermissions('${u.id}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="16" r="4"/><path d="M10.8 13.2L20 4"/><path d="M15 9l3 3"/><path d="M18 6l3 3"/></svg>
+              Change Permissions
+            </button>
             <button class="dropdown-item" type="button" onclick="handleDeleteUser('${u.id}')" style="color:var(--error)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
               Delete user
-            </button>`}
+            </button>
           </div>
+        </div>`}
         </div>
       </div>
     `).join('');

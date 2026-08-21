@@ -501,6 +501,14 @@ let palanteProjectId = null;
 
 function canEdit(key){ return PERMS[key] === 'edit'; }
 
+// Keeps currentSession in sync with the SDK's own auto-refreshed token — the
+// access_token expires (~1h) long before a tab left open all day does, and
+// without this listener authedHeaders() would keep sending the stale one,
+// making every RLS-checked call (notes, permissions) fail as unauthorized.
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+  currentSession = session;
+});
+
 // Headers for calls that need to be identified as the signed-in user (RLS-
 // checked tables like project_notes) — everything else on this page still
 // uses the bare anon-key `headers` object above.

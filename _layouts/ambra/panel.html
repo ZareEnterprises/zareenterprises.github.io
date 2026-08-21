@@ -226,6 +226,14 @@
       await boot();
       document.body.style.visibility = 'visible';
     });
+    // Keep currentSession in sync with the SDK's own auto-refreshed token —
+    // without this, a long-open tab keeps sending the original access_token
+    // forever (it silently expires after ~1h) and every Edge Function call
+    // starts failing with "Invalid session" even though the user never
+    // logged out.
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      currentSession = session;
+    });
   }
 
   document.getElementById('btn-logout').addEventListener('click', async () => {

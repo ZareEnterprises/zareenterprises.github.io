@@ -27,8 +27,6 @@
      selected — an inline style otherwise always wins over a class, which
      was silently un-locking Rehearsals for view-only users. */
   pointer-events:none !important;
-  opacity:.6 !important;
-  filter:grayscale(.2);
   position:relative;
 }
 .perm-locked::before{

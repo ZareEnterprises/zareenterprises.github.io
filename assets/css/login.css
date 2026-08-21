@@ -645,9 +645,13 @@ body.auth{
 .users-table{
   border:1px solid var(--line);
   border-radius:var(--radius);
-  overflow:hidden;
   background:var(--card);
 }
+/* Corners are rounded on the head/last-row instead of clipped via the
+   container's overflow:hidden — that would also clip the udots-menu
+   dropdown, which needs to pop out above the table. */
+.utable-head{ border-radius:var(--radius) var(--radius) 0 0; }
+.utable-row:last-child{ border-radius:0 0 var(--radius) var(--radius); }
 .utable-head, .utable-row{
   display:grid;
   grid-template-columns:2.2fr 1fr 1fr 90px 44px;

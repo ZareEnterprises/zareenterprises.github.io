@@ -77,6 +77,9 @@
         <button class="pill active" data-view="table">☰ Setlist</button>
         <button class="pill" data-view="schedule">🕐 Schedule</button>
       </div>
+      <div class="notes-mode-bar">
+        <button class="pill" id="btn-notes-mode">📝 Notes<span class="notes-badge" id="notes-badge" style="display:none"></span></button>
+      </div>
       <div class="view-by-bar stats-by-bar">
         <span class="mono-label">Statistics by:</span>
         <button class="pill" data-view="country">🌐 Country</button>
@@ -388,6 +391,28 @@
   </span>
 </footer>
 
+<!-- Manage notes modal (edit-access users: view + resolve) -->
+<div class="overlay" id="overlay-notes">
+  <div class="modal" style="max-width:480px">
+    <h2>Setlist notes</h2>
+    <p class="hint">Left by people with view-only access. Check one off once you've handled it.</p>
+    <div id="notes-list"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btn-close-notes" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Note composer / viewer popover (positioned next to whatever was clicked) -->
+<div class="note-popover" id="note-popover" style="display:none">
+  <textarea id="note-popover-textarea" placeholder="Leave a note…" maxlength="500"></textarea>
+  <div class="note-popover-view" id="note-popover-view" style="display:none"></div>
+  <div class="note-popover-actions">
+    <button class="btn ghost small" id="btn-note-cancel" type="button">Cancel</button>
+    <button class="btn small" id="btn-note-save" type="button">Save</button>
+  </div>
+</div>
+
 <!-- Add/Edit Song Modal -->
 <div class="overlay" id="overlay">
   <div class="modal">
@@ -485,8 +510,17 @@ const headers = {
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PERM_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning'];
 let PERMS = Object.fromEntries(PERM_KEYS.map(k => [k, 'view'])); // safe default until loaded
+let currentSession = null;
+let palanteProjectId = null;
 
 function canEdit(key){ return PERMS[key] === 'edit'; }
+
+// Headers for calls that need to be identified as the signed-in user (RLS-
+// checked tables like project_notes) — everything else on this page still
+// uses the bare anon-key `headers` object above.
+function authedHeaders(){
+  return { ...headers, 'Authorization': `Bearer ${currentSession.access_token}` };
+}
 
 async function loadSessionAndPermissions(){
   const { data } = await supabaseClient.auth.getSession();
@@ -494,11 +528,11 @@ async function loadSessionAndPermissions(){
     window.location.href = '/ambra/';
     return false;
   }
-  const authHeaders = { ...headers, 'Authorization': `Bearer ${data.session.access_token}` };
+  currentSession = data.session;
 
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_members?select=permissions,projects(slug)&user_id=eq.${data.session.user.id}`,
-    { headers: authHeaders }
+    `${SUPABASE_URL}/rest/v1/project_members?select=project_id,permissions,projects(slug)&user_id=eq.${data.session.user.id}`,
+    { headers: authedHeaders() }
   );
   const memberships = res.ok ? await res.json() : [];
   const mine = memberships.find(m => m.projects && m.projects.slug === 'palante');
@@ -509,6 +543,7 @@ async function loadSessionAndPermissions(){
     return false;
   }
   PERMS = Object.assign({}, PERMS, mine.permissions || {});
+  palanteProjectId = mine.project_id;
   return true;
 }
 
@@ -534,6 +569,241 @@ function applyPermissionLocks(){
   const newSetBtn = document.getElementById('btn-new-set');
   if(newSetBtn) newSetBtn.disabled = !canEdit('setlist');
 }
+
+/* ============================================================
+   SETLIST NOTES — Adobe-Acrobat-style sticky comments.
+   View-only members leave notes on the section they can't edit;
+   edit-level members see them and check them off. See
+   supabase/schema.sql section 6 for the table + RLS this relies on.
+   ============================================================ */
+let setlistNotes = [];
+let notesModeActive = false;
+
+async function loadSetlistNotes(){
+  if(!palanteProjectId){ setlistNotes = []; return; }
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.setlist&order=created_at.asc`,
+    { headers: authedHeaders() }
+  );
+  setlistNotes = res.ok ? await res.json() : [];
+  updateNotesBadge();
+}
+
+function updateNotesBadge(){
+  const unresolved = setlistNotes.filter(n => !n.resolved).length;
+  const badge = document.getElementById('notes-badge');
+  if(!badge) return;
+  badge.style.display = unresolved > 0 ? 'inline-flex' : 'none';
+  badge.textContent = unresolved > 9 ? '9+' : String(unresolved);
+}
+
+// Anchors a note to the nearest song row / set block instead of an exact
+// pixel — so it travels with that content instead of drifting when the
+// setlist reflows (rows added/removed, columns toggled, etc).
+function resolveNoteAnchor(el){
+  const songRow = el && el.closest ? el.closest('.song-row') : null;
+  if(songRow && songRow.dataset.songId){
+    const song = songs.find(s => s.id === songRow.dataset.songId);
+    return { anchor_type:'song', anchor_id: songRow.dataset.songId, anchor_label: song?.song_name || 'Song' };
+  }
+  const setBlock = el && el.closest ? el.closest('.set-block') : null;
+  if(setBlock && setBlock.dataset.setNumber){
+    return { anchor_type:'set', anchor_id: setBlock.dataset.setNumber, anchor_label: setBlock.dataset.setNumber };
+  }
+  return { anchor_type:'section', anchor_id: null, anchor_label: 'Setlist' };
+}
+
+function findAnchorElFor(note){
+  if(note.anchor_type === 'song') return document.querySelector(`.song-row[data-song-id="${CSS.escape(note.anchor_id || '')}"]`);
+  if(note.anchor_type === 'set') return document.querySelector(`.set-block[data-set-number="${CSS.escape(note.anchor_id || '')}"]`);
+  return document.getElementById('sets-container');
+}
+
+function renderNoteMarkers(){
+  document.querySelectorAll('.note-marker').forEach(m => m.remove());
+  const byAnchor = new Map();
+  setlistNotes.forEach(note => {
+    const anchorEl = findAnchorElFor(note);
+    if(!anchorEl) return;
+    if(!byAnchor.has(anchorEl)) byAnchor.set(anchorEl, []);
+    byAnchor.get(anchorEl).push(note);
+  });
+  byAnchor.forEach((notes, anchorEl) => {
+    notes.forEach((note, i) => {
+      const marker = document.createElement('div');
+      marker.className = 'note-marker' + (note.resolved ? ' resolved' : '');
+      marker.textContent = '💬';
+      marker.style.right = `${6 + i * 26}px`;
+      marker.title = note.resolved ? 'Resolved note' : 'Unresolved note';
+      marker.addEventListener('click', (e) => { e.stopPropagation(); openNotePopoverForView(note, marker); });
+      anchorEl.appendChild(marker);
+    });
+  });
+}
+
+async function createNote(anchor, body){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes`, {
+    method:'POST', headers: authedHeaders(),
+    body: JSON.stringify({
+      project_id: palanteProjectId, section:'setlist',
+      anchor_type: anchor.anchor_type, anchor_id: anchor.anchor_id, anchor_label: anchor.anchor_label,
+      body, author_id: currentSession.user.id
+    })
+  });
+  if(!res.ok){ alert('Could not save that note.'); return; }
+  await loadSetlistNotes();
+  renderNoteMarkers();
+}
+
+async function toggleResolveNote(note){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes?id=eq.${note.id}`, {
+    method:'PATCH', headers: authedHeaders(),
+    body: JSON.stringify(note.resolved
+      ? { resolved:false, resolved_by:null, resolved_at:null }
+      : { resolved:true, resolved_by: currentSession.user.id, resolved_at: new Date().toISOString() })
+  });
+  if(!res.ok){ alert('Could not update that note.'); return; }
+  await loadSetlistNotes();
+  renderNoteMarkers();
+  if(document.getElementById('overlay-notes').classList.contains('open')) renderNotesListModal();
+}
+
+// ---------- Note popover (compose a new one, or view/resolve an existing one) ----------
+function closeNotePopover(){ document.getElementById('note-popover').style.display = 'none'; }
+
+function openNoteComposer(anchor, clientX, clientY){
+  const pop = document.getElementById('note-popover');
+  const textarea = document.getElementById('note-popover-textarea');
+  document.getElementById('note-popover-view').style.display = 'none';
+  textarea.style.display = 'block';
+  textarea.value = '';
+  const saveBtn = document.getElementById('btn-note-save');
+  saveBtn.style.display = 'inline-block';
+  saveBtn.textContent = 'Save';
+  saveBtn.onclick = async () => {
+    const body = textarea.value.trim();
+    if(!body) return;
+    await createNote(anchor, body);
+    closeNotePopover();
+  };
+  document.getElementById('btn-note-cancel').textContent = 'Cancel';
+  document.getElementById('btn-note-cancel').onclick = closeNotePopover;
+  pop.style.left = Math.min(clientX, window.innerWidth - 260) + 'px';
+  pop.style.top = Math.min(clientY, window.innerHeight - 200) + 'px';
+  pop.style.display = 'block';
+  textarea.focus();
+  stopPropagationThenCloseOnOutsideClick(pop);
+}
+
+function openNotePopoverForView(note, anchorEl){
+  const pop = document.getElementById('note-popover');
+  document.getElementById('note-popover-textarea').style.display = 'none';
+  const viewDiv = document.getElementById('note-popover-view');
+  viewDiv.style.display = 'block';
+  viewDiv.textContent = note.body;
+  const saveBtn = document.getElementById('btn-note-save');
+  if(canEdit('setlist')){
+    saveBtn.style.display = 'inline-block';
+    saveBtn.textContent = note.resolved ? 'Unresolve' : 'Resolve ✓';
+    saveBtn.onclick = async () => { await toggleResolveNote(note); closeNotePopover(); };
+  } else {
+    saveBtn.style.display = 'none';
+  }
+  document.getElementById('btn-note-cancel').textContent = 'Close';
+  document.getElementById('btn-note-cancel').onclick = closeNotePopover;
+  const rect = anchorEl.getBoundingClientRect();
+  let left = rect.left, top = rect.bottom + 8;
+  if(left + 240 > window.innerWidth) left = window.innerWidth - 250;
+  if(top + 200 > window.innerHeight) top = rect.top - 208;
+  pop.style.left = Math.max(10, left) + 'px';
+  pop.style.top = Math.max(10, top) + 'px';
+  pop.style.display = 'block';
+  stopPropagationThenCloseOnOutsideClick(pop);
+}
+
+function stopPropagationThenCloseOnOutsideClick(pop){
+  pop.onclick = (e) => e.stopPropagation();
+  setTimeout(() => {
+    document.addEventListener('click', function closeOnce(){ closeNotePopover(); document.removeEventListener('click', closeOnce); }, { once:true });
+  }, 0);
+}
+
+// ---------- Comment-placement mode (view-only members) ----------
+function enterNotesMode(){
+  notesModeActive = true;
+  document.getElementById('btn-notes-mode').classList.add('active');
+  document.body.classList.add('notes-placing');
+  let catcher = document.getElementById('notes-click-catcher');
+  if(!catcher){
+    catcher = document.createElement('div');
+    catcher.id = 'notes-click-catcher';
+    catcher.className = 'notes-click-catcher';
+    catcher.addEventListener('click', handleNotesCatcherClick);
+    document.getElementById('setlist-table-view').appendChild(catcher);
+  }
+  catcher.style.display = 'block';
+}
+function exitNotesMode(){
+  notesModeActive = false;
+  document.getElementById('btn-notes-mode').classList.remove('active');
+  document.body.classList.remove('notes-placing');
+  const catcher = document.getElementById('notes-click-catcher');
+  if(catcher) catcher.style.display = 'none';
+}
+function handleNotesCatcherClick(e){
+  const catcher = e.currentTarget;
+  catcher.style.pointerEvents = 'none';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  catcher.style.pointerEvents = 'auto';
+  openNoteComposer(resolveNoteAnchor(under), e.clientX, e.clientY);
+}
+
+document.getElementById('btn-notes-mode').addEventListener('click', () => {
+  if(canEdit('setlist')){
+    renderNotesListModal();
+    document.getElementById('overlay-notes').classList.add('open');
+  } else if(notesModeActive){
+    exitNotesMode();
+  } else {
+    enterNotesMode();
+  }
+});
+['table','schedule'].forEach(v => {
+  const pill = document.querySelector(`.view-by-bar .pill[data-view="${v}"]`);
+  if(pill) pill.addEventListener('click', () => { if(notesModeActive) exitNotesMode(); });
+});
+
+// ---------- "Manage notes" modal (edit-level members) ----------
+function renderNotesListModal(){
+  const list = document.getElementById('notes-list');
+  if(!setlistNotes.length){
+    list.innerHTML = '<p class="hint" style="margin:0">No notes yet.</p>';
+    return;
+  }
+  const sorted = [...setlistNotes].sort((a, b) => (a.resolved === b.resolved) ? 0 : (a.resolved ? 1 : -1));
+  list.innerHTML = sorted.map(n => `
+    <div class="note-item ${n.resolved ? 'resolved' : ''}">
+      <button class="note-check-btn ${n.resolved ? 'is-resolved' : ''}" data-note-id="${n.id}" title="${n.resolved ? 'Mark unresolved' : 'Mark resolved'}">${n.resolved ? '✓' : ''}</button>
+      <div class="note-item-body">
+        <div class="note-item-label">${escapeHtml(n.anchor_label || 'Setlist')}</div>
+        <p class="note-item-text">${escapeHtml(n.body)}</p>
+        <div class="note-item-meta">${new Date(n.created_at).toLocaleString()}</div>
+      </div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.note-check-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const note = setlistNotes.find(x => x.id === btn.dataset.noteId);
+      if(note) await toggleResolveNote(note);
+    });
+  });
+}
+document.getElementById('btn-close-notes').addEventListener('click', () => {
+  document.getElementById('overlay-notes').classList.remove('open');
+});
+document.getElementById('overlay-notes').addEventListener('click', (e) => {
+  if(e.target.id === 'overlay-notes') document.getElementById('overlay-notes').classList.remove('open');
+});
 
 const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other'];
 const SINGER_PALETTE = ['#E0985C','#7FA6A0','#C7738C','#9AA85C','#8C93C9','#D6B24A','#B77B6E','#6FAF9E'];
@@ -923,6 +1193,7 @@ function renderSetsContainer(){
   wireEmotionFaders();
   wireSetEditing();
   wireSetDragAndDrop();
+  renderNoteMarkers();
 }
 
 function wireSetEditing(){
@@ -3902,6 +4173,8 @@ document.getElementById('btn-download-lights').addEventListener('click', () => {
   applyPermissionLocks();
   document.body.style.visibility = 'visible';
   await reload();
+  await loadSetlistNotes();
+  renderNoteMarkers();
 })();
 </script>
 <script type="importmap">

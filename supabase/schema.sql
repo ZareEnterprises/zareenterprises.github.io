@@ -177,7 +177,49 @@ create index if not exists project_member_bands_band_id_idx on public.project_me
 
 
 -- ----------------------------------------------------------------------------
--- 6. Seed data — the one real project that exists today.
+-- 6. project_notes — sticky-note style comments left by view-only members on
+--    a section they can't edit (Setlist first; more sections later). Anyone
+--    with view or edit access to that section can read/create notes there;
+--    only edit-level members (or admins) can resolve (check off) one.
+-- ----------------------------------------------------------------------------
+
+create table if not exists public.project_notes (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  section text not null,          -- 'setlist' today; 'lineup'/'band'/'technical' etc. later
+  anchor_type text not null default 'section' check (anchor_type in ('song', 'set', 'section')),
+  anchor_id text,                 -- e.g. a song id or set number; null for a section-level note
+  anchor_label text,              -- human-readable fallback (song/set name) for the resolved list
+  body text not null,
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  resolved boolean not null default false,
+  resolved_by uuid references public.profiles(id) on delete set null,
+  resolved_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists project_notes_project_section_idx on public.project_notes(project_id, section);
+
+-- Shared by project_notes' policies: does the caller have at least one of
+-- the given permission levels for this project+section? Admins always pass.
+create or replace function public.has_section_access(p_project_id uuid, p_section text, p_levels text[])
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select public.is_admin() or exists (
+    select 1 from public.project_members pm
+    where pm.project_id = p_project_id
+      and pm.user_id = auth.uid()
+      and (pm.permissions ->> p_section) = any(p_levels)
+  );
+$$;
+
+
+-- ----------------------------------------------------------------------------
+-- 7. Seed data — the one real project that exists today.
 -- ----------------------------------------------------------------------------
 
 insert into public.projects (slug, name, is_template, href)
@@ -186,7 +228,7 @@ on conflict (slug) do nothing;
 
 
 -- ----------------------------------------------------------------------------
--- 7. Row Level Security — enabled and policied last, now that every table
+-- 8. Row Level Security — enabled and policied last, now that every table
 --    these policies reference exists.
 -- ----------------------------------------------------------------------------
 
@@ -287,9 +329,40 @@ create policy "members can view their own band assignments"
     )
   );
 
+alter table public.project_notes enable row level security;
+
+drop policy if exists "admins manage all notes" on public.project_notes;
+create policy "admins manage all notes"
+  on public.project_notes for all
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "section members can view notes" on public.project_notes;
+create policy "section members can view notes"
+  on public.project_notes for select
+  to authenticated
+  using (public.has_section_access(project_id, section, array['view', 'edit']));
+
+drop policy if exists "section members can create notes" on public.project_notes;
+create policy "section members can create notes"
+  on public.project_notes for insert
+  to authenticated
+  with check (
+    author_id = auth.uid()
+    and public.has_section_access(project_id, section, array['view', 'edit'])
+  );
+
+drop policy if exists "editors can resolve notes" on public.project_notes;
+create policy "editors can resolve notes"
+  on public.project_notes for update
+  to authenticated
+  using (public.has_section_access(project_id, section, array['edit']))
+  with check (public.has_section_access(project_id, section, array['edit']));
+
 
 -- ----------------------------------------------------------------------------
--- 8. mark_my_memberships_active — called by the client right after someone
+-- 9. mark_my_memberships_active — called by the client right after someone
 --    sets their password from an invite link, so their status flips from
 --    'pending' to 'active'. security definer because a regular member has no
 --    RLS write access to project_members (only admins do) — this function
@@ -317,7 +390,7 @@ where pm.user_id = u.id and pm.status = 'pending' and u.last_sign_in_at is not n
 
 
 -- ----------------------------------------------------------------------------
--- 9. Bootstrap — run this part AFTER you've logged in at /ambra/ at least
+-- 10. Bootstrap — run this part AFTER you've logged in at /ambra/ at least
 --    once (so your row exists in auth.users / profiles). Replace the email
 --    with the one you log in with, then run just this block.
 -- ----------------------------------------------------------------------------

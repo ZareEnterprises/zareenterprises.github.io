@@ -42,8 +42,7 @@
         </button>
         <div class="dropdown-panel" id="settings-panel">
           <span class="dropdown-label">Workspace settings</span>
-          <button class="dropdown-item" type="button">Time zone</button>
-          <button class="dropdown-item" type="button">Transfer workspace</button>
+          <button class="dropdown-item" type="button" id="btn-open-timezone">Time zone</button>
           <button class="dropdown-item" type="button">Transfer project</button>
           <button class="dropdown-item" type="button">Bank details</button>
           <button class="dropdown-item" type="button">Security</button>
@@ -127,6 +126,19 @@
     </div>
   </section>
 
+</div>
+
+<!-- Time zone modal -->
+<div class="overlay" id="overlay-timezone">
+  <div class="modal" style="max-width:380px">
+    <h2>Time zone</h2>
+    <p class="hint">Used for displaying dates and times across the panel. Saved to this browser only for now — not shared across your team yet.</p>
+    <div class="field"><label>Time zone</label><select id="tz-select"></select></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-cancel-timezone" type="button">Cancel</button>
+      <button class="btn-primary" id="btn-save-timezone" type="button">Save</button>
+    </div>
+  </div>
 </div>
 
 <!-- New project modal -->
@@ -344,7 +356,26 @@
     if(nameField) nameField.value = me.name;
   }
 
-  const ROLE_PRESETS = ['Team','Partner','Client'];
+  // Saves the Name field to profiles.full_name — without this it was only
+  // ever a read-only display, which is why it fell back to showing the
+  // email (and the avatar showed an initial derived from the email) for
+  // anyone whose full_name had never been set.
+  document.getElementById('me-name-field').addEventListener('blur', async () => {
+    const field = document.getElementById('me-name-field');
+    const newName = field.value.trim();
+    const me = USERS.find(u => u.isMe);
+    if(!newName || !currentSession || !me || newName === me.name) return;
+
+    const { error } = await supabaseClient.from('profiles').update({ full_name: newName }).eq('id', currentSession.user.id);
+    if(error){ console.error('saving name', error); return; }
+
+    me.name = newName;
+    me.initials = initialsFor(newName);
+    document.getElementById('btn-me-toggle').textContent = me.initials;
+    renderUsers();
+  });
+
+  const ROLE_PRESETS = ['Admin','Team','Partner','Client'];
   let customRoles = []; // session-only — created via "Other", remembered for the rest of this visit
 
   const PERM_ROWS = [
@@ -863,8 +894,24 @@
       document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
     }
   });
-  [ 'overlay-new-project', 'overlay-user' ].forEach(id => {
+  [ 'overlay-new-project', 'overlay-user', 'overlay-timezone' ].forEach(id => {
     document.getElementById(id).addEventListener('click', (e) => { if(e.target.id === id) closeModal(id); });
+  });
+
+  // ---------- Time zone (workspace settings) ----------
+  const TZ_STORAGE_KEY = 'ambra_timezone';
+  document.getElementById('btn-open-timezone').addEventListener('click', () => {
+    document.getElementById('settings-panel').classList.remove('open');
+    const select = document.getElementById('tz-select');
+    const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [Intl.DateTimeFormat().resolvedOptions().timeZone];
+    const current = localStorage.getItem(TZ_STORAGE_KEY) || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    select.innerHTML = zones.map(z => `<option value="${z}" ${z === current ? 'selected' : ''}>${z.replace(/_/g, ' ')}</option>`).join('');
+    openModal('overlay-timezone');
+  });
+  document.getElementById('btn-cancel-timezone').addEventListener('click', () => closeModal('overlay-timezone'));
+  document.getElementById('btn-save-timezone').addEventListener('click', () => {
+    localStorage.setItem(TZ_STORAGE_KEY, document.getElementById('tz-select').value);
+    closeModal('overlay-timezone');
   });
 
   // Rendering happens once boot() resolves (see the auth guard above) — it

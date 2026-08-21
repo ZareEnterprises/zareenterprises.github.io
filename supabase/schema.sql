@@ -187,7 +187,7 @@ create table if not exists public.project_notes (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
   section text not null,          -- 'setlist' today; 'lineup'/'band'/'technical' etc. later
-  anchor_type text not null default 'section' check (anchor_type in ('song', 'set', 'section')),
+  anchor_type text not null default 'section',
   anchor_id text,                 -- e.g. a song id or set number; null for a section-level note
   anchor_label text,              -- human-readable fallback (song/set name) for the resolved list
   body text not null,
@@ -199,6 +199,13 @@ create table if not exists public.project_notes (
 );
 
 create index if not exists project_notes_project_section_idx on public.project_notes(project_id, section);
+
+-- Re-run-safe: drop and recreate so older installs pick up the newer anchor
+-- types (field-level and row-level generic anchors, coordinate anchors) that
+-- were added after this table's first release.
+alter table public.project_notes drop constraint if exists project_notes_anchor_type_check;
+alter table public.project_notes add constraint project_notes_anchor_type_check
+  check (anchor_type in ('song', 'set', 'section', 'field', 'coord', 'gfield', 'grow'));
 
 -- Shared by project_notes' policies: does the caller have at least one of
 -- the given permission levels for this project+section? Admins always pass.
@@ -359,6 +366,12 @@ create policy "editors can resolve notes"
   to authenticated
   using (public.has_section_access(project_id, section, array['edit']))
   with check (public.has_section_access(project_id, section, array['edit']));
+
+drop policy if exists "authors can delete their own notes" on public.project_notes;
+create policy "authors can delete their own notes"
+  on public.project_notes for delete
+  to authenticated
+  using (author_id = auth.uid());
 
 
 -- ----------------------------------------------------------------------------

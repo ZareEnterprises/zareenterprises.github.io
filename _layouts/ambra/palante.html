@@ -65,6 +65,9 @@
       <button class="pill" id="spotify-toggle-btn">🎧 Spotify</button>
       <div class="nav-spotify-panel" id="nav-spotify-panel" style="display:none"></div>
     </span>
+    <div class="notes-mode-bar" id="notes-mode-bar">
+      <button class="pill" id="btn-notes-mode">Notes<span class="notes-badge" id="notes-badge" style="display:none"></span></button>
+    </div>
   </span>
 </nav>
 
@@ -76,9 +79,6 @@
         <span class="mono-label">View by:</span>
         <button class="pill active" data-view="table">☰ Setlist</button>
         <button class="pill" data-view="schedule">🕐 Schedule</button>
-      </div>
-      <div class="notes-mode-bar">
-        <button class="pill" id="btn-notes-mode">📝 Notes<span class="notes-badge" id="notes-badge" style="display:none"></span></button>
       </div>
       <div class="view-by-bar stats-by-bar">
         <span class="mono-label">Statistics by:</span>
@@ -391,26 +391,12 @@
   </span>
 </footer>
 
-<!-- Manage notes modal (edit-access users: view + resolve) -->
-<div class="overlay" id="overlay-notes">
-  <div class="modal" style="max-width:480px">
-    <h2>Setlist notes</h2>
-    <p class="hint">Left by people with view-only access. Check one off once you've handled it.</p>
-    <div id="notes-list"></div>
-    <div class="modal-actions">
-      <button class="btn ghost" id="btn-close-notes" type="button">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- Note composer / viewer popover (positioned next to whatever was clicked) -->
+<!-- Note composer popover (positioned next to wherever was clicked). Once
+     saved, a note renders as a full sticky note (see .note-marker.sticky)
+     instead of reopening this popover — this is only for writing a new one. -->
 <div class="note-popover" id="note-popover" style="display:none">
-  <textarea id="note-popover-textarea" placeholder="Leave a note…" maxlength="500"></textarea>
-  <div class="note-popover-view" id="note-popover-view" style="display:none"></div>
-  <div class="note-popover-actions">
-    <button class="btn ghost small" id="btn-note-cancel" type="button">Cancel</button>
-    <button class="btn small" id="btn-note-save" type="button">Save</button>
-  </div>
+  <textarea id="note-popover-textarea" placeholder="Leave a note… (Enter to save, Shift+Enter for a new line)" maxlength="300"></textarea>
+  <div class="note-popover-actions" id="note-popover-actions"></div>
 </div>
 
 <!-- Add/Edit Song Modal -->
@@ -572,9 +558,11 @@ function applyPermissionLocks(){
 
 /* ============================================================
    SETLIST NOTES — Adobe-Acrobat-style sticky comments.
-   View-only members leave notes on the section they can't edit;
-   edit-level members see them and check them off. See
-   supabase/schema.sql section 6 for the table + RLS this relies on.
+   Anyone can leave a note via "Notes" mode; anyone can read one by
+   clicking its icon; the note's own author can remove it, and anyone
+   with edit access to Setlist can resolve it. No separate admin panel —
+   everything happens through the marker itself. See supabase/schema.sql
+   section 6 for the table + RLS this relies on.
    ============================================================ */
 let setlistNotes = [];
 let notesModeActive = false;
@@ -589,21 +577,172 @@ async function loadSetlistNotes(){
   updateNotesBadge();
 }
 
+// Covers Stage Plot + 3D Stage Model — both live under the 'stage' permission,
+// same as the rectangles table (which stays field/row-anchored like Setlist).
+let stageNotes = [];
+async function loadStageNotes(){
+  if(!palanteProjectId){ stageNotes = []; return; }
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.stage&order=created_at.asc`,
+    { headers: authedHeaders() }
+  );
+  stageNotes = res.ok ? await res.json() : [];
+  updateNotesBadge();
+}
+
+let soundNotes = [];
+async function loadSoundNotes(){
+  if(!palanteProjectId){ soundNotes = []; return; }
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.sound&order=created_at.asc`,
+    { headers: authedHeaders() }
+  );
+  soundNotes = res.ok ? await res.json() : [];
+  updateNotesBadge();
+}
+
+let lightingNotes = [];
+async function loadLightingNotes(){
+  if(!palanteProjectId){ lightingNotes = []; return; }
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.lightning&order=created_at.asc`,
+    { headers: authedHeaders() }
+  );
+  lightingNotes = res.ok ? await res.json() : [];
+  updateNotesBadge();
+}
+
+let lineupNotes = [];
+async function loadLineupNotes(){
+  if(!palanteProjectId){ lineupNotes = []; return; }
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.lineup&order=created_at.asc`,
+    { headers: authedHeaders() }
+  );
+  lineupNotes = res.ok ? await res.json() : [];
+  updateNotesBadge();
+}
+
+let membersNotes = [];
+async function loadMembersNotes(){
+  if(!palanteProjectId){ membersNotes = []; return; }
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.members&order=created_at.asc`,
+    { headers: authedHeaders() }
+  );
+  membersNotes = res.ok ? await res.json() : [];
+  updateNotesBadge();
+}
+
+let rehearsalsNotes = [];
+async function loadRehearsalsNotes(){
+  if(!palanteProjectId){ rehearsalsNotes = []; return; }
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.rehearsals&order=created_at.asc`,
+    { headers: authedHeaders() }
+  );
+  rehearsalsNotes = res.ok ? await res.json() : [];
+  updateNotesBadge();
+}
+
+async function loadAllNotes(){
+  await Promise.all([
+    loadSetlistNotes(), loadStageNotes(), loadSoundNotes(), loadLightingNotes(),
+    loadLineupNotes(), loadMembersNotes(), loadRehearsalsNotes()
+  ]);
+}
+
 function updateNotesBadge(){
-  const unresolved = setlistNotes.filter(n => !n.resolved).length;
+  const unresolved = [...setlistNotes, ...stageNotes, ...soundNotes, ...lightingNotes, ...lineupNotes, ...membersNotes, ...rehearsalsNotes].filter(n => !n.resolved).length;
   const badge = document.getElementById('notes-badge');
   if(!badge) return;
   badge.style.display = unresolved > 0 ? 'inline-flex' : 'none';
   badge.textContent = unresolved > 9 ? '9+' : String(unresolved);
 }
 
-// Anchors a note to the nearest song row / set block instead of an exact
-// pixel — so it travels with that content instead of drifting when the
-// setlist reflows (rows added/removed, columns toggled, etc).
+// Finds which specific field an element belongs to (e.g. the Genre cell)
+// via its data-field attribute or a "<name>-edit" class — covers every
+// inline-editable cell in a song row without hardcoding a field list.
+function fieldKeyFor(el){
+  if(!el || !el.closest) return null;
+  const withField = el.closest('[data-field]');
+  if(withField) return withField.dataset.field;
+  // Lineup's Singers/Instruments/Guests cells aren't plain inputs — they're
+  // a button that opens a checklist — but they do carry data-kind.
+  const withKind = el.closest('[data-kind]');
+  if(withKind) return withKind.dataset.kind;
+  const editEl = el.closest('[class*="-edit"]');
+  if(editEl){
+    // Every inline-editable field carries the shared "inline-edit" utility
+    // class PLUS its own specific "<field>-edit" class — matching the whole
+    // className against /(\S+)-edit/ greedily grabbed "inline-edit" itself
+    // (capturing "inline"), which is why every note anchored to the wrong
+    // field. Look at the actual class tokens and skip the generic one.
+    const specific = Array.from(editEl.classList).find(c => c.endsWith('-edit') && c !== 'inline-edit');
+    if(specific) return specific.slice(0, -'-edit'.length);
+  }
+  return null;
+}
+
+// Finds the DB row id an element belongs to. Checked ancestor-first (for
+// when el IS the specific input clicked), then descendant (for when el is
+// a coarser row container someone clicked without hitting a field) — most
+// rows here only carry data-id on their child inputs, not the row itself.
+function itemIdFor(el){
+  if(!el) return null;
+  // data-instrument covers Members rows specifically: a row represents a
+  // catalog instrument slot, which may not have anyone assigned to it yet
+  // (data-band-id empty in that case) — the instrument name is what's
+  // always stable there, so it's checked as a real identifier too.
+  const selector = '[data-id], [data-interlude-id], [data-song-id], [data-instrument]';
+  const ancestor = el.closest ? el.closest(selector) : null;
+  if(ancestor) return ancestor.dataset.id || ancestor.dataset.interludeId || ancestor.dataset.songId || ancestor.dataset.instrument || null;
+  const descendant = el.querySelector ? el.querySelector(selector) : null;
+  if(descendant) return descendant.dataset.id || descendant.dataset.interludeId || descendant.dataset.songId || descendant.dataset.instrument || null;
+  return null;
+}
+
+// The Technical tables (Audio Requirements, Input List, Speakers, Stage
+// rectangles, Lightning) all follow the same flat row+field shape as
+// Setlist's song rows, just with different class names — one generic
+// resolver covers all of them instead of repeating Setlist's logic 5x.
+const GENERIC_ZONES = {
+  // Lineup's rows are dense (5-8 fields each, several of them checklist
+  // buttons rather than inputs) — anchoring per-field there is fiddly to
+  // click precisely, so notes snap to the whole row instead.
+  lineup:       { containerSel:'#instr-container',          section:'lineup',     rowSelector:'.instr-row', rowOnly:true },
+  requirements: { containerSel:'#audio-panel-requirements', section:'sound',      rowSelector:'.req-row' },
+  inputlist:    { containerSel:'#audio-panel-inputlist',    section:'sound',      rowSelector:'.input-list-row' },
+  speakers:     { containerSel:'#audio-panel-speakers',     section:'sound',      rowSelector:'.speaker-row' },
+  rects:        { containerSel:'#rect-list',                section:'stage',      rowSelector:'.rect-list-item' },
+  lights:       { containerSel:'#lights-container',         section:'lightning',  rowSelector:'.lights-row' },
+  members:      { containerSel:'#member-list',               section:'members',    rowSelector:'.member-row' },
+  rehearsalNames:{ containerSel:'#rehearsal-member-picker',  section:'rehearsals', rowSelector:'.member-pick-btn' },
+  rehearsalDates:{ containerSel:'#rehearsal-dates-list',     section:'rehearsals', rowSelector:'.rehearsal-date-card' }
+};
+
+// Returns null (no note placed) if the click didn't land on a recognizable
+// row — e.g. a table header or an "+ Add row" button — rather than
+// guessing a section-level fallback location for these tables.
+function resolveGenericAnchor(row, field){
+  if(!row) return null;
+  const rowKind = row.classList[0];
+  const itemId = itemIdFor(field) || itemIdFor(row);
+  if(!itemId) return null;
+  const fieldKey = field ? fieldKeyFor(field) : null;
+  if(fieldKey) return { anchor_type:'gfield', anchor_id:`${rowKind}|${itemId}|${fieldKey}`, anchor_label: fieldKey };
+  return { anchor_type:'grow', anchor_id:`${rowKind}|${itemId}`, anchor_label: rowKind };
+}
+
+// Anchors a note to the nearest field / song row / set block instead of an
+// exact pixel — so it travels with that content instead of drifting when
+// the setlist reflows (rows added/removed, columns toggled, etc).
 function resolveNoteAnchor(el){
   const songRow = el && el.closest ? el.closest('.song-row') : null;
   if(songRow && songRow.dataset.songId){
     const song = songs.find(s => s.id === songRow.dataset.songId);
+    const field = fieldKeyFor(el);
+    if(field) return { anchor_type:'field', anchor_id:`${songRow.dataset.songId}:${field}`, anchor_label:`${field} — ${song?.song_name || 'Song'}` };
     return { anchor_type:'song', anchor_id: songRow.dataset.songId, anchor_label: song?.song_name || 'Song' };
   }
   const setBlock = el && el.closest ? el.closest('.set-block') : null;
@@ -613,46 +752,168 @@ function resolveNoteAnchor(el){
   return { anchor_type:'section', anchor_id: null, anchor_label: 'Setlist' };
 }
 
-function findAnchorElFor(note){
-  if(note.anchor_type === 'song') return document.querySelector(`.song-row[data-song-id="${CSS.escape(note.anchor_id || '')}"]`);
-  if(note.anchor_type === 'set') return document.querySelector(`.set-block[data-set-number="${CSS.escape(note.anchor_id || '')}"]`);
-  return document.getElementById('sets-container');
+// Resolves a stored anchor back to (a) the row/set/section to attach the
+// marker to and (b) — for field-level anchors — the specific field to sit
+// beside, recomputed on every render so it tracks that field even if
+// columns get reordered or resized.
+function locateAnchor(note){
+  if(note.anchor_type === 'field'){
+    const [songId, field] = (note.anchor_id || '').split(':');
+    const row = document.querySelector(`.song-row[data-song-id="${CSS.escape(songId || '')}"]`);
+    if(!row) return null;
+    const fieldEl = row.querySelector(`[data-field="${CSS.escape(field || '')}"]`) || row.querySelector(`.${field}-edit`);
+    return { container: row, fieldEl };
+  }
+  if(note.anchor_type === 'song'){
+    const row = document.querySelector(`.song-row[data-song-id="${CSS.escape(note.anchor_id || '')}"]`);
+    return row ? { container: row, fieldEl: null } : null;
+  }
+  if(note.anchor_type === 'set'){
+    const block = document.querySelector(`.set-block[data-set-number="${CSS.escape(note.anchor_id || '')}"]`);
+    return block ? { container: block, fieldEl: null } : null;
+  }
+  if(note.anchor_type === 'gfield' || note.anchor_type === 'grow'){
+    // Generic row anchoring for the Technical tables (Audio Requirements,
+    // Input List, Speakers, Stage rectangles, Lightning) — anchor_id is
+    // "<rowClass>|<itemId>|<field?>". The item's id usually lives on a
+    // child input rather than the row itself, so find it document-wide
+    // (ids are real DB UUIDs, safe to assume unique) and walk up to the row.
+    const [rowKind, itemId, field] = (note.anchor_id || '').split('|');
+    if(!rowKind || !itemId) return null;
+    const anyWithId = document.querySelector(`[data-id="${CSS.escape(itemId)}"], [data-interlude-id="${CSS.escape(itemId)}"]`);
+    const row = anyWithId ? anyWithId.closest(`.${rowKind}`) : null;
+    if(!row) return null;
+    const fieldEl = field ? (row.querySelector(`[data-field="${CSS.escape(field)}"]`) || row.querySelector(`.${field}-edit`)) : null;
+    if(fieldEl) return { container: row, fieldEl };
+    if(rowKind === 'instr-row'){
+      // Row-only Lineup notes have no field to sit beside, but a Lineup
+      // row is only one line tall — far shorter than a sticky note — so
+      // nesting the marker inside the row itself squeezes it into that
+      // tiny box. Anchor it to the row's own rect instead, positioned
+      // against the row's *parent* (which has real room), the same way a
+      // field-level note positions against its field's rect.
+      return { container: row.parentElement || row, fieldEl: row };
+    }
+    return { container: row, fieldEl };
+  }
+  const container = document.getElementById('sets-container');
+  return container ? { container, fieldEl: null } : null;
+}
+
+// A note is a real sticky note, sized to its own text, showing right on the
+// page — not a collapsed icon you have to click to read. Shared by both
+// render functions below (field/row-anchored and coordinate-anchored).
+function buildStickyNoteEl(note){
+  const el = document.createElement('div');
+  el.className = 'note-marker sticky';
+  const isAuthor = currentSession && note.author_id === currentSession.user.id;
+  const canResolve = canEdit(note.section);
+  el.innerHTML =
+    '<p class="note-sticky-text"></p>' +
+    '<div class="note-sticky-actions">' +
+    (canResolve ? '<button type="button" class="note-sticky-btn resolve" title="Resolve">✓</button>' : '') +
+    (isAuthor ? '<button type="button" class="note-sticky-btn delete" title="Remove">✕</button>' : '') +
+    '</div>';
+  el.querySelector('.note-sticky-text').textContent = note.body; // textContent, not innerHTML — no XSS from a note's own text
+  const resolveBtn = el.querySelector('.note-sticky-btn.resolve');
+  if(resolveBtn) resolveBtn.addEventListener('click', async (e) => { e.stopPropagation(); await toggleResolveNote(note); });
+  const deleteBtn = el.querySelector('.note-sticky-btn.delete');
+  if(deleteBtn) deleteBtn.addEventListener('click', async (e) => { e.stopPropagation(); await deleteNote(note); });
+  return el;
 }
 
 function renderNoteMarkers(){
-  document.querySelectorAll('.note-marker').forEach(m => m.remove());
-  const byAnchor = new Map();
-  setlistNotes.forEach(note => {
-    const anchorEl = findAnchorElFor(note);
-    if(!anchorEl) return;
-    if(!byAnchor.has(anchorEl)) byAnchor.set(anchorEl, []);
-    byAnchor.get(anchorEl).push(note);
+  document.querySelectorAll('.note-marker:not(.coord)').forEach(m => m.remove());
+  const byContainer = new Map();
+  [...setlistNotes, ...stageNotes, ...soundNotes, ...lightingNotes, ...lineupNotes, ...membersNotes, ...rehearsalsNotes]
+    .filter(n => !n.resolved && n.anchor_type !== 'coord') // coord-anchored notes are handled by renderCoordNoteMarkers()
+    .forEach(note => {
+    const loc = locateAnchor(note);
+    if(!loc) return;
+    if(!byContainer.has(loc.container)) byContainer.set(loc.container, []);
+    byContainer.get(loc.container).push({ note, fieldEl: loc.fieldEl });
   });
-  byAnchor.forEach((notes, anchorEl) => {
-    notes.forEach((note, i) => {
-      const marker = document.createElement('div');
-      marker.className = 'note-marker' + (note.resolved ? ' resolved' : '');
-      marker.textContent = '💬';
-      marker.style.right = `${6 + i * 26}px`;
-      marker.title = note.resolved ? 'Resolved note' : 'Unresolved note';
-      marker.addEventListener('click', (e) => { e.stopPropagation(); openNotePopoverForView(note, marker); });
-      anchorEl.appendChild(marker);
+  byContainer.forEach((entries, container) => {
+    let stackIndex = 0; // for notes with no specific field to sit beside
+    entries.forEach(({ note, fieldEl }) => {
+      const marker = buildStickyNoteEl(note);
+      if(fieldEl){
+        const containerRect = container.getBoundingClientRect();
+        const fieldRect = fieldEl.getBoundingClientRect();
+        marker.style.top = Math.max(2, fieldRect.top - containerRect.top - 10) + 'px';
+        marker.style.left = (fieldRect.right - containerRect.left - 10) + 'px';
+        marker.style.right = 'auto';
+      } else {
+        marker.style.top = `${6 + stackIndex * 96}px`;
+        marker.style.right = '6px';
+        stackIndex++;
+      }
+      container.appendChild(marker);
     });
   });
 }
 
-async function createNote(anchor, body){
+// ---------- Coordinate-anchored notes (Schedule, Stage Plot, 3D Stage Model) ----------
+// These three don't have addressable "fields" the way a table row does (a
+// timeline, a static image, a camera-driven 3D scene) — so a note just
+// stores where inside its container it was placed, as a % of that
+// container's own box. Percentages (not pixels) means no recalculation is
+// needed on scroll/resize — the marker is a normal child of the container
+// positioned with left/top in %, so it moves with it automatically.
+const COORD_ZONES = {
+  schedule:  { selector:'.schedule-wrap',        label:'Schedule' },
+  stageplot: { selector:'#stage-plot-display',   label:'Stage Plot' },
+  stage3d:   { selector:'#stage3d-canvas-wrap',  label:'3D Stage Model' }
+};
+
+function resolveCoordAnchor(zoneKey, container, clientX, clientY){
+  const rect = container.getBoundingClientRect();
+  const xPct = ((clientX - rect.left) / rect.width).toFixed(4);
+  const yPct = ((clientY - rect.top) / rect.height).toFixed(4);
+  return { anchor_type:'coord', anchor_id:`${zoneKey}|${xPct},${yPct}`, anchor_label: COORD_ZONES[zoneKey]?.label || zoneKey };
+}
+
+function locateCoordAnchor(note){
+  const [zoneKey, coords] = (note.anchor_id || '').split('|');
+  const zone = COORD_ZONES[zoneKey];
+  if(!zone || !coords) return null;
+  const container = document.querySelector(zone.selector);
+  if(!container) return null;
+  const [xPct, yPct] = coords.split(',').map(Number);
+  return { container, xPct, yPct };
+}
+
+function renderCoordNoteMarkers(){
+  document.querySelectorAll('.note-marker.coord').forEach(m => m.remove());
+  [...setlistNotes, ...stageNotes].filter(n => n.anchor_type === 'coord' && !n.resolved).forEach(note => {
+    const loc = locateCoordAnchor(note);
+    if(!loc) return;
+    const marker = buildStickyNoteEl(note);
+    marker.classList.add('coord');
+    marker.style.top = `${loc.yPct * 100}%`;
+    marker.style.left = `${loc.xPct * 100}%`;
+    marker.style.right = 'auto';
+    loc.container.appendChild(marker);
+  });
+}
+
+function renderAllNoteMarkers(){
+  renderNoteMarkers();
+  renderCoordNoteMarkers();
+}
+
+async function createNote(section, anchor, body){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes`, {
     method:'POST', headers: authedHeaders(),
     body: JSON.stringify({
-      project_id: palanteProjectId, section:'setlist',
+      project_id: palanteProjectId, section,
       anchor_type: anchor.anchor_type, anchor_id: anchor.anchor_id, anchor_label: anchor.anchor_label,
       body, author_id: currentSession.user.id
     })
   });
   if(!res.ok){ alert('Could not save that note.'); return; }
-  await loadSetlistNotes();
-  renderNoteMarkers();
+  await loadAllNotes();
+  renderAllNoteMarkers();
 }
 
 async function toggleResolveNote(note){
@@ -663,31 +924,54 @@ async function toggleResolveNote(note){
       : { resolved:true, resolved_by: currentSession.user.id, resolved_at: new Date().toISOString() })
   });
   if(!res.ok){ alert('Could not update that note.'); return; }
-  await loadSetlistNotes();
-  renderNoteMarkers();
-  if(document.getElementById('overlay-notes').classList.contains('open')) renderNotesListModal();
+  await loadAllNotes();
+  renderAllNoteMarkers();
 }
 
-// ---------- Note popover (compose a new one, or view/resolve an existing one) ----------
-function closeNotePopover(){ document.getElementById('note-popover').style.display = 'none'; }
+async function deleteNote(note){
+  if(!confirm('Remove this note?')) return;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes?id=eq.${note.id}`, { method:'DELETE', headers: authedHeaders() });
+  if(!res.ok){ alert('Could not remove that note.'); return; }
+  await loadAllNotes();
+  renderAllNoteMarkers();
+}
 
-function openNoteComposer(anchor, clientX, clientY){
+// ---------- Note popover (compose a new one, or view/resolve/delete an existing one) ----------
+// Tracked so closeNotePopover() can cancel it explicitly — otherwise a
+// popover closed via a button (instead of an actual outside click) left
+// this listener armed, and it fired on the *next* unrelated click (e.g.
+// the next "place a note" click), instantly closing whatever had just
+// opened. That's what made placing a second note need two clicks.
+let popoverOutsideCloseListener = null;
+
+function closeNotePopover(){
+  document.getElementById('note-popover').style.display = 'none';
+  if(popoverOutsideCloseListener){
+    document.removeEventListener('click', popoverOutsideCloseListener);
+    popoverOutsideCloseListener = null;
+  }
+}
+
+function openNoteComposer(section, anchor, clientX, clientY){
   const pop = document.getElementById('note-popover');
   const textarea = document.getElementById('note-popover-textarea');
-  document.getElementById('note-popover-view').style.display = 'none';
   textarea.style.display = 'block';
   textarea.value = '';
-  const saveBtn = document.getElementById('btn-note-save');
-  saveBtn.style.display = 'inline-block';
-  saveBtn.textContent = 'Save';
-  saveBtn.onclick = async () => {
+  document.getElementById('note-popover-actions').innerHTML =
+    '<button class="btn ghost small" id="btn-note-cancel" type="button">Cancel</button>' +
+    '<button class="btn small" id="btn-note-save" type="button">Save</button>';
+
+  const submit = async () => {
     const body = textarea.value.trim();
     if(!body) return;
-    await createNote(anchor, body);
+    await createNote(section, anchor, body);
     closeNotePopover();
   };
-  document.getElementById('btn-note-cancel').textContent = 'Cancel';
+  document.getElementById('btn-note-save').onclick = submit;
   document.getElementById('btn-note-cancel').onclick = closeNotePopover;
+  // Enter saves (Shift+Enter still inserts a newline for a multi-line note).
+  textarea.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); submit(); } };
+
   pop.style.left = Math.min(clientX, window.innerWidth - 260) + 'px';
   pop.style.top = Math.min(clientY, window.innerHeight - 200) + 'px';
   pop.style.display = 'block';
@@ -695,40 +979,34 @@ function openNoteComposer(anchor, clientX, clientY){
   stopPropagationThenCloseOnOutsideClick(pop);
 }
 
-function openNotePopoverForView(note, anchorEl){
-  const pop = document.getElementById('note-popover');
-  document.getElementById('note-popover-textarea').style.display = 'none';
-  const viewDiv = document.getElementById('note-popover-view');
-  viewDiv.style.display = 'block';
-  viewDiv.textContent = note.body;
-  const saveBtn = document.getElementById('btn-note-save');
-  if(canEdit('setlist')){
-    saveBtn.style.display = 'inline-block';
-    saveBtn.textContent = note.resolved ? 'Unresolve' : 'Resolve ✓';
-    saveBtn.onclick = async () => { await toggleResolveNote(note); closeNotePopover(); };
-  } else {
-    saveBtn.style.display = 'none';
-  }
-  document.getElementById('btn-note-cancel').textContent = 'Close';
-  document.getElementById('btn-note-cancel').onclick = closeNotePopover;
-  const rect = anchorEl.getBoundingClientRect();
-  let left = rect.left, top = rect.bottom + 8;
-  if(left + 240 > window.innerWidth) left = window.innerWidth - 250;
-  if(top + 200 > window.innerHeight) top = rect.top - 208;
-  pop.style.left = Math.max(10, left) + 'px';
-  pop.style.top = Math.max(10, top) + 'px';
-  pop.style.display = 'block';
-  stopPropagationThenCloseOnOutsideClick(pop);
-}
-
 function stopPropagationThenCloseOnOutsideClick(pop){
   pop.onclick = (e) => e.stopPropagation();
+  if(popoverOutsideCloseListener){
+    document.removeEventListener('click', popoverOutsideCloseListener);
+    popoverOutsideCloseListener = null;
+  }
   setTimeout(() => {
-    document.addEventListener('click', function closeOnce(){ closeNotePopover(); document.removeEventListener('click', closeOnce); }, { once:true });
+    popoverOutsideCloseListener = () => closeNotePopover();
+    document.addEventListener('click', popoverOutsideCloseListener, { once:true });
   }, 0);
 }
 
-// ---------- Comment-placement mode (view-only members) ----------
+// The Notes button only shows on tabs that actually have a wired zone:
+// Setlist (setlist + schedule) and Technical > Stage (stage plot + 3D).
+// It's not exposed on Lineup/Band/Sound/Lightning yet.
+function updateNotesModeBarVisibility(){
+  const tab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  // All four tabs are wired now: Setlist (setlist+schedule), Lineup,
+  // Band (members + rehearsal names/dates — not the availability heatmap),
+  // and Technical (sound, stage+plot+3D, lightning).
+  const visible = tab === 'table' || tab === 'instrumentation' || tab === 'band' || tab === 'technical';
+  document.getElementById('notes-mode-bar').style.display = visible ? 'flex' : 'none';
+  if(!visible && notesModeActive) exitNotesMode();
+}
+
+// ---------- Comment-placement mode ----------
+// One catcher covering the whole <main> (every tab), not just Setlist — the
+// click handler below figures out which zone (if any) was clicked.
 function enterNotesMode(){
   notesModeActive = true;
   document.getElementById('btn-notes-mode').classList.add('active');
@@ -739,7 +1017,7 @@ function enterNotesMode(){
     catcher.id = 'notes-click-catcher';
     catcher.className = 'notes-click-catcher';
     catcher.addEventListener('click', handleNotesCatcherClick);
-    document.getElementById('setlist-table-view').appendChild(catcher);
+    document.querySelector('main').appendChild(catcher);
   }
   catcher.style.display = 'block';
 }
@@ -750,59 +1028,71 @@ function exitNotesMode(){
   const catcher = document.getElementById('notes-click-catcher');
   if(catcher) catcher.style.display = 'none';
 }
+
+// Finds whatever's under a point by comparing bounding rects instead of
+// document.elementFromPoint() — a section someone doesn't have edit access
+// to is exactly the section that's pointer-events:none (see
+// applyPermissionLocks), so elementFromPoint sees straight through the
+// whole thing and never finds the real field/row underneath.
+function findByPointInside(container, selector, x, y){
+  const candidates = container.querySelectorAll(selector);
+  let best = null;
+  for(const el of candidates){
+    const r = el.getBoundingClientRect();
+    if(x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) best = el;
+  }
+  return best;
+}
+function isPointInRect(el, x, y){
+  const r = el.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+function isRendered(el){
+  return !!el && el.offsetParent !== null;
+}
+
+// Single entry point that figures out which of the wired zones (if any) a
+// click landed in, and how to anchor a note there. Checked in priority
+// order so a click inside a song row (nested inside the whole Setlist view)
+// still resolves to the specific field, not just "somewhere in Setlist".
+function resolveClickAnchor(clientX, clientY){
+  const setlistView = document.getElementById('setlist-table-view');
+  if(isRendered(setlistView) && isPointInRect(setlistView, clientX, clientY)){
+    const field = findByPointInside(setlistView, '[data-field], [class*="-edit"]', clientX, clientY);
+    const row = field ? field.closest('.song-row, .set-block') : findByPointInside(setlistView, '.song-row, .set-block', clientX, clientY);
+    return { section:'setlist', anchor: resolveNoteAnchor(field || row) };
+  }
+  for(const zone of Object.values(GENERIC_ZONES)){
+    const container = document.querySelector(zone.containerSel);
+    if(isRendered(container) && isPointInRect(container, clientX, clientY)){
+      const field = zone.rowOnly ? null : findByPointInside(container, '[data-field], [class*="-edit"]', clientX, clientY);
+      const row = field ? field.closest(zone.rowSelector) : findByPointInside(container, zone.rowSelector, clientX, clientY);
+      const anchor = resolveGenericAnchor(row, field);
+      return anchor ? { section: zone.section, anchor } : null;
+    }
+  }
+  for(const [zoneKey, zone] of Object.entries(COORD_ZONES)){
+    const container = document.querySelector(zone.selector);
+    if(isRendered(container) && isPointInRect(container, clientX, clientY)){
+      const section = zoneKey === 'schedule' ? 'setlist' : 'stage';
+      return { section, anchor: resolveCoordAnchor(zoneKey, container, clientX, clientY) };
+    }
+  }
+  return null;
+}
+
 function handleNotesCatcherClick(e){
-  const catcher = e.currentTarget;
-  catcher.style.pointerEvents = 'none';
-  const under = document.elementFromPoint(e.clientX, e.clientY);
-  catcher.style.pointerEvents = 'auto';
-  openNoteComposer(resolveNoteAnchor(under), e.clientX, e.clientY);
+  const resolved = resolveClickAnchor(e.clientX, e.clientY);
+  if(!resolved) return; // click landed somewhere with no wired zone yet
+  openNoteComposer(resolved.section, resolved.anchor, e.clientX, e.clientY);
 }
 
 document.getElementById('btn-notes-mode').addEventListener('click', () => {
-  if(canEdit('setlist')){
-    renderNotesListModal();
-    document.getElementById('overlay-notes').classList.add('open');
-  } else if(notesModeActive){
-    exitNotesMode();
-  } else {
-    enterNotesMode();
-  }
+  if(notesModeActive) exitNotesMode(); else enterNotesMode();
 });
 ['table','schedule'].forEach(v => {
   const pill = document.querySelector(`.view-by-bar .pill[data-view="${v}"]`);
   if(pill) pill.addEventListener('click', () => { if(notesModeActive) exitNotesMode(); });
-});
-
-// ---------- "Manage notes" modal (edit-level members) ----------
-function renderNotesListModal(){
-  const list = document.getElementById('notes-list');
-  if(!setlistNotes.length){
-    list.innerHTML = '<p class="hint" style="margin:0">No notes yet.</p>';
-    return;
-  }
-  const sorted = [...setlistNotes].sort((a, b) => (a.resolved === b.resolved) ? 0 : (a.resolved ? 1 : -1));
-  list.innerHTML = sorted.map(n => `
-    <div class="note-item ${n.resolved ? 'resolved' : ''}">
-      <button class="note-check-btn ${n.resolved ? 'is-resolved' : ''}" data-note-id="${n.id}" title="${n.resolved ? 'Mark unresolved' : 'Mark resolved'}">${n.resolved ? '✓' : ''}</button>
-      <div class="note-item-body">
-        <div class="note-item-label">${escapeHtml(n.anchor_label || 'Setlist')}</div>
-        <p class="note-item-text">${escapeHtml(n.body)}</p>
-        <div class="note-item-meta">${new Date(n.created_at).toLocaleString()}</div>
-      </div>
-    </div>
-  `).join('');
-  list.querySelectorAll('.note-check-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const note = setlistNotes.find(x => x.id === btn.dataset.noteId);
-      if(note) await toggleResolveNote(note);
-    });
-  });
-}
-document.getElementById('btn-close-notes').addEventListener('click', () => {
-  document.getElementById('overlay-notes').classList.remove('open');
-});
-document.getElementById('overlay-notes').addEventListener('click', (e) => {
-  if(e.target.id === 'overlay-notes') document.getElementById('overlay-notes').classList.remove('open');
 });
 
 const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other'];
@@ -2054,6 +2344,7 @@ function renderInstrumentation(){
   updateInstrHead();
   if(songs.length === 0){
     container.innerHTML = '<div class="empty-note">No songs yet. Add songs from the Setlist tab first.</div>';
+    renderNoteMarkers();
     return;
   }
   container.innerHTML = '';
@@ -2137,6 +2428,7 @@ function renderInstrumentation(){
   });
 
   wireExpandables();
+  renderNoteMarkers();
 }
 
 function openChecklistPanel(wrap){
@@ -2360,6 +2652,7 @@ function renderMemberPicker(){
   const members = band.filter(b => b.artist_name);
   if(members.length === 0){
     picker.innerHTML = '<div class="empty-note" style="border:none;">Add band members with names in Members first.</div>';
+    renderNoteMarkers();
     return;
   }
   picker.innerHTML = members.map(b => `
@@ -2377,6 +2670,7 @@ function renderMemberPicker(){
       renderRehearsalGrid();
     });
   });
+  renderNoteMarkers();
 }
 
 document.getElementById('btn-save-rehearsal-range').addEventListener('click', async () => {
@@ -2542,6 +2836,7 @@ function renderMemberList(){
   document.getElementById('band-count').textContent = `${instrumentCatalog.length} INSTRUMENTS`;
   if(instrumentCatalog.length === 0){
     container.innerHTML = '<div class="empty-note" style="border:none;">Add an instrument on the left — it will show up here right away, ready for a name.</div>';
+    renderNoteMarkers();
     return;
   }
   container.innerHTML = '';
@@ -2560,8 +2855,8 @@ function renderMemberList(){
     row.innerHTML = `
       <div class="member-row-main">
         <span class="member-instrument">${escapeHtml(cat.name)}${secondLine}</span>
-        <input type="text" class="member-artist-input" value="${escapeAttr(existing?.artist_name || '')}" placeholder="Type artist name…">
-        <input type="text" class="member-outfit-input" value="${escapeAttr(existing?.outfit_size || '')}" placeholder="Size">
+        <input type="text" class="member-artist-input" data-field="artist_name" value="${escapeAttr(existing?.artist_name || '')}" placeholder="Type artist name…">
+        <input type="text" class="member-outfit-input" data-field="outfit_size" value="${escapeAttr(existing?.outfit_size || '')}" placeholder="Size">
         <select class="member-role-select">
           ${roleOptions.map(r => `<option value="${escapeAttr(r.name)}" ${r.name === currentRole ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
           <option value="__other__">Other…</option>
@@ -2645,6 +2940,7 @@ function renderMemberList(){
   container.querySelectorAll('.member-comments-input').forEach(inp => {
     inp.addEventListener('change', () => upsertMember(inp.closest('.member-row'), 'comments', inp.value));
   });
+  renderNoteMarkers();
 }
 
 function renderBand(){
@@ -2918,6 +3214,7 @@ function renderSchedule(){
   if(unscheduled.length){
     unscheduledEl.innerHTML = `<p class="hint" style="margin-top:16px">Not scheduled yet (no time set): ${unscheduled.map(s => escapeHtml(s.set_number)).join(', ')} — set a time for them in the Setlist tab.</p>`;
   }
+  renderCoordNoteMarkers();
 }
 
 function renderRehearsalDatesBox(){
@@ -2938,10 +3235,10 @@ function renderRehearsalDatesBox(){
         <span class="rd-card-label">Rehearsal ${i+1}</span>
         <button class="rd-remove-btn" data-id="${r.id}">✕</button>
       </div>
-      <input type="text" class="rd-card-input rd-date-input" data-id="${r.id}" value="${escapeAttr(r.date_text || '')}" placeholder="Date">
-      <input type="text" class="rd-card-input rd-time-input" data-id="${r.id}" value="${escapeAttr(r.time_text || '')}" placeholder="Time">
-      <input type="text" class="rd-card-input rd-location-input" data-id="${r.id}" value="${escapeAttr(r.location_text || '')}" placeholder="Location">
-      <input type="text" class="rd-card-input rd-location-link-input" data-id="${r.id}" value="${escapeAttr(r.location_link || '')}" placeholder="Location link (optional)">
+      <input type="text" class="rd-card-input rd-date-input" data-id="${r.id}" data-field="date_text" value="${escapeAttr(r.date_text || '')}" placeholder="Date">
+      <input type="text" class="rd-card-input rd-time-input" data-id="${r.id}" data-field="time_text" value="${escapeAttr(r.time_text || '')}" placeholder="Time">
+      <input type="text" class="rd-card-input rd-location-input" data-id="${r.id}" data-field="location_text" value="${escapeAttr(r.location_text || '')}" placeholder="Location">
+      <input type="text" class="rd-card-input rd-location-link-input" data-id="${r.id}" data-field="location_link" value="${escapeAttr(r.location_link || '')}" placeholder="Location link (optional)">
       <div class="rd-song-dropzone" data-rehearsal-id="${r.id}">${chips || '<span class="rd-dropzone-hint">Drag songs here</span>'}</div>
     </div>`;
   }).join('') + `
@@ -2994,6 +3291,7 @@ function renderRehearsalDatesBox(){
   document.getElementById('btn-add-rehearsal-date').style.display = rehearsalDates.length >= 8 ? 'none' : 'inline-block';
 
   renderRehearsalSongPicker();
+  renderNoteMarkers();
 }
 
 let draggedSongForRehearsal = null;
@@ -3033,6 +3331,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
     else if(btn.dataset.tab === 'band') renderBand();
     else if(btn.dataset.tab === 'technical') renderAudioRequirements();
+    updateNotesModeBarVisibility();
   });
 });
 
@@ -3066,6 +3365,7 @@ function renderRectList(){
   const list = document.getElementById('rect-list');
   if(stageRectangles.length === 0){
     list.innerHTML = '<div class="empty-note" style="border:none;padding:14px 0;">No rectangles yet.</div>';
+    renderNoteMarkers();
     return;
   }
   list.innerHTML = stageRectangles.map(r => `
@@ -3083,6 +3383,7 @@ function renderRectList(){
       renderStage();
     });
   });
+  renderNoteMarkers();
 }
 
 function renderStageVisualizer(){
@@ -3200,6 +3501,7 @@ function renderStagePlot(){
     display.innerHTML = '<div class="empty-note" style="border:none;">No stage plot uploaded yet.</div>';
     uploadBtn.style.display = 'inline-block';
   }
+  renderCoordNoteMarkers();
 }
 document.getElementById('btn-upload-plot').addEventListener('click', () => {
   document.getElementById('stage-plot-input').click();
@@ -3479,6 +3781,7 @@ function renderLights(){
       renderLights();
     });
   });
+  renderNoteMarkers();
 }
 
 document.querySelectorAll('.tech-subtabs .tech-subtab').forEach(btn => {
@@ -3490,6 +3793,7 @@ document.querySelectorAll('.tech-subtabs .tech-subtab').forEach(btn => {
     if(btn.dataset.sub === 'audio') renderAudioRequirements();
     else if(btn.dataset.sub === 'stage') renderStage();
     else if(btn.dataset.sub === 'lights') renderLights();
+    updateNotesModeBarVisibility();
   });
 });
 
@@ -3536,6 +3840,7 @@ function renderAudioRequirements(){
       await fetchAudioRequirements();
     });
   });
+  renderNoteMarkers();
 }
 document.getElementById('btn-add-req-row').addEventListener('click', async () => {
   await fetch(`${SUPABASE_URL}/rest/v1/audio_requirements`, {
@@ -3628,6 +3933,7 @@ function renderInputList(){
       });
     });
   });
+  renderNoteMarkers();
 }
 document.addEventListener('click', () => document.querySelectorAll('.color-popover').forEach(p => p.remove()));
 
@@ -3646,6 +3952,7 @@ function renderSpeakerTables(){
   wrap.innerHTML = '';
   if(speakerTables.length === 0){
     wrap.innerHTML = '<div class="empty-note">No tables yet — click "+ Add table" to start.</div>';
+    renderNoteMarkers();
     return;
   }
   speakerTables.forEach(tbl => {
@@ -3725,6 +4032,7 @@ function renderSpeakerTables(){
       renderSpeakerTables();
     });
   });
+  renderNoteMarkers();
 }
 document.getElementById('btn-add-speaker-table').addEventListener('click', async () => {
   const name = prompt('Name for this speaker table (e.g. "Option 1: Stage Only"):');
@@ -4173,8 +4481,9 @@ document.getElementById('btn-download-lights').addEventListener('click', () => {
   applyPermissionLocks();
   document.body.style.visibility = 'visible';
   await reload();
-  await loadSetlistNotes();
-  renderNoteMarkers();
+  await loadAllNotes();
+  renderAllNoteMarkers();
+  updateNotesModeBarVisibility();
 })();
 </script>
 <script type="importmap">
@@ -4316,6 +4625,7 @@ function addModel(gltf){
   loaderEl.style.display = 'none';
   emptyEl.style.display = 'none';
   renderer.domElement.style.display = 'block';
+  if(window.renderCoordNoteMarkers) window.renderCoordNoteMarkers();
 }
 
 function loadFromURL(url, isInitialCheck){

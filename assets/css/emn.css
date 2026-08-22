@@ -959,21 +959,23 @@
   cursor: pointer;
   user-select: none;
 }
+.emn-tool .stage-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  max-width: 96vw;
+  padding: 0 36px; /* nudges the hint text and play button in from the edges */
+  margin-bottom: 14px;
+}
 .emn-tool .stage-hint {
-  align-self: flex-start;
-  margin-top: 10px;
+  justify-self: start;
   font-size: 12.5px;
   color: var(--muted);
-  margin-bottom: 14px;
   letter-spacing: .02em;
 }
-.emn-tool .stage-toolbar {
-  align-self: flex-end;
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
 .emn-tool .play-btn {
+  justify-self: end;
   padding: 5px 14px;
   border: 1.5px solid var(--red);
   border-radius: 999px;
@@ -997,13 +999,11 @@
   overflow-x: auto;
 }
 .emn-tool .staff-key-label {
-  display: block;
-  text-align: center;
+  justify-self: center;
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
   letter-spacing: .02em;
-  margin-bottom: 14px;
 }
 .emn-tool #staff-wrap svg { display: block; margin: 0 auto; }
 .emn-tool .meta-row {

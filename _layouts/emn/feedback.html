@@ -6,7 +6,7 @@
 <title>Obtén Feedback — EMN</title>
 <meta name="description" content="Simulacro de audición a Berklee. Recibe feedback desde dentro de Berklee.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="/assets/css/emn.css">
+<link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
 </head>
 <body>
 <div class="wrap fb-wrap">
@@ -315,7 +315,7 @@
 
 </div>
 
-<script src="/assets/js/site.js"></script>
+<script src="/assets/js/site.js?v={{ site.time | date: '%s' }}"></script>
 <script>
 (function () {
   'use strict';

@@ -1181,30 +1181,23 @@ function generate(){
     }
   }
 
-  // Every measure in column c (1st, 2nd, 3rd, 4th of a row) gets the exact
-  // same width in every row, so barlines line up vertically with the row(s)
-  // below — matters once there's more than one row (8 measures). With a
-  // single row this reduces to just fitting that row's own content exactly,
-  // so 4 measures always fits with no scrollbar either.
   const rowMargin = 40; // 20px left + 20px right, per row
   let available = Math.max(340, window.innerWidth - 140);
   if(state.measures === 1) available = available / 2; // a single measure shouldn't stretch across the whole width
+  else if(state.measures === 2) available = available * 0.65; // two measures dividing the full width each looked just as stretched
   const columnsUsed = Math.min(state.measures, MEASURES_PER_ROW);
 
-  const colBase = [], colMaxCount = [];
-  for(let c=0; c<columnsUsed; c++){
-    colBase[c] = c===0 ? 170 : 60; // column 0 always reserves clef+key(+time on row 1)
-    let maxCount = 1;
-    for(let m=c; m<state.measures; m+=MEASURES_PER_ROW) maxCount = Math.max(maxCount, measureFlats[m].length);
-    colMaxCount[c] = maxCount;
-  }
-  const totalBase = colBase.reduce((a,b)=>a+b, 0);
-  const totalCount = colMaxCount.reduce((a,b)=>a+b, 0);
-  const spacing = Math.max(1, Math.floor((available - rowMargin - totalBase) / Math.max(1, totalCount)));
-  const colWidth = colBase.map((b,c) => b + colMaxCount[c]*spacing);
+  // Every measure in a row gets the SAME width: the available row width
+  // divided equally among the columns used. This is what guarantees both
+  // that all measures match (2, 4, or 8) AND that a full row always fits
+  // without a horizontal scrollbar — the per-stave Formatter call below
+  // sizes each stave's actual note spacing to whatever room it has, so a
+  // narrower share for the clef/key/time column just spaces its notes a
+  // little tighter instead of needing extra reserved width.
+  const uniformWidth = Math.floor((available - rowMargin) / columnsUsed);
 
   const measureWidths = [];
-  for(let m=0; m<state.measures; m++) measureWidths.push(colWidth[m % MEASURES_PER_ROW]);
+  for(let m=0; m<state.measures; m++) measureWidths.push(uniformWidth);
 
   const rowCount = Math.ceil(state.measures / MEASURES_PER_ROW);
   const rowWidths = [];

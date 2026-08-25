@@ -45,17 +45,33 @@
 
 <div class="main" id="mainStage">
   <div class="stage-header">
-    <div class="stage-hint">Click anywhere to generate a new exercise</div>
+    <div class="mode-toggle-row">
+      <span class="mode-toggle-label" id="melodyLabel">Melody</span>
+      <label class="mode-toggle">
+        <input type="checkbox" id="rhythmModeToggle">
+        <span class="mode-toggle-track"><span class="mode-toggle-thumb"></span></span>
+      </label>
+      <span class="mode-toggle-label" id="rhythmLabel">Rhythm</span>
+    </div>
     <b class="staff-key-label" id="hintKey">C Major</b>
-    <button type="button" class="play-btn" id="btnPlay">▶ Play melody</button>
+    <div class="header-right-group">
+      <button type="button" class="dictation-btn" id="btnDictation">Dictation Mode</button>
+      <button type="button" class="play-btn" id="btnPlay">▶ Play melody</button>
+    </div>
   </div>
   <div id="staff-wrap">
     <div id="output"></div>
   </div>
   <div class="meta-row">
-    <span>Meter <b id="metaMeter">4/4</b></span>
-    <span>Measures <b id="metaMeasures">4</b></span>
-    <span>Difficulty <b id="metaDiff">Easy</b></span>
+    <div class="meta-stats">
+      <span>Meter <b id="metaMeter">4/4</b></span>
+      <span>Measures <b id="metaMeasures">4</b></span>
+      <span>Difficulty <b id="metaDiff">Easy</b></span>
+    </div>
+    <div class="record-row" id="recordRow">
+      <button type="button" class="record-btn" id="btnRecord">● Record</button>
+      <span class="record-status" id="recordStatus"></span>
+    </div>
   </div>
 </div>
 
@@ -76,7 +92,7 @@
   </div>
   <div class="panel-body">
 
-    <div class="section">
+    <div class="section pitch-section">
       <h3>1 · Key</h3>
       <div class="row2" style="margin-bottom:10px;">
         <div class="chip active" data-quality-mode="major">Major</div>
@@ -85,18 +101,18 @@
       <div class="chip-row" id="tonicRow"></div>
     </div>
 
-    <div class="section">
+    <div class="section pitch-section">
       <h3>Scale quality <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></h3>
       <div class="chip-row" id="qualityRow"></div>
     </div>
 
-    <div class="section">
+    <div class="section pitch-section">
       <h3>2 · Scale degrees available</h3>
       <p class="hint">Uncheck a degree to remove that note from the melody pool.</p>
       <div class="check-grid" id="degreeGrid"></div>
     </div>
 
-    <div class="section">
+    <div class="section pitch-section">
       <h3>3 · Absolute pitch limits</h3>
       <div class="range-inputs">
         <div style="flex:1"><label>Not lower than</label><select id="lowLimit" class="field"></select></div>
@@ -104,7 +120,7 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section pitch-section">
       <h3>4 · Register</h3>
       <p class="hint">Middle = the 7 scale notes centered on the staff. Combine registers freely.</p>
       <div class="check-grid" id="registerGrid"></div>
@@ -794,7 +810,8 @@ const state = {
   measures: 4,
   meter: '4/4',
   diff: 'easy',
-  population: 'average'
+  population: 'average',
+  rhythmMode: false
 };
 
 const rangeList = buildNaturalRangeList();
@@ -933,6 +950,95 @@ document.querySelectorAll('#populationRow .chip').forEach(c=>{
     generate();
   };
 });
+
+// Melody / Rhythm toggle -- rhythm mode ignores pitch entirely (every note
+// renders/plays on a fixed reference pitch, see generate()), so the
+// pitch-related settings (Key, Scale quality, Degrees, Absolute pitch
+// limits, Register) are locked behind a gray overlay while it's on.
+const rhythmModeToggle = document.getElementById('rhythmModeToggle');
+const melodyLabel = document.getElementById('melodyLabel');
+const rhythmLabel = document.getElementById('rhythmLabel');
+melodyLabel.classList.add('on');
+rhythmModeToggle.onchange = ()=>{
+  state.rhythmMode = rhythmModeToggle.checked;
+  melodyLabel.classList.toggle('on', !state.rhythmMode);
+  rhythmLabel.classList.toggle('on', state.rhythmMode);
+  document.querySelectorAll('.pitch-section').forEach(s=>s.classList.toggle('locked', state.rhythmMode));
+  generate();
+};
+
+// Dictation mode -- latching push button: hides the score so the exercise
+// can only be heard (via Play melody), not read. Doesn't affect generation.
+const btnDictation = document.getElementById('btnDictation');
+const staffWrap = document.getElementById('staff-wrap');
+btnDictation.onclick = (e)=>{
+  e.stopPropagation();
+  const active = btnDictation.classList.toggle('active');
+  // visibility, not display -- the score's box keeps its space reserved so
+  // nothing below it (meta-row, footer) shifts up when it's hidden.
+  staffWrap.style.visibility = active ? 'hidden' : '';
+};
+
+// Voice recording -- same MediaRecorder pattern as interview-prep.html, but
+// capped at 1 minute (vs. that page's 3) and with no download: the point
+// here is just to hear yourself back against the exercise, not keep a file.
+const RECORD_LIMIT = 60;
+let recRecorder = null, recStream = null, recChunks = [], recTicker = null, recElapsed = 0;
+const btnRecord = document.getElementById('btnRecord');
+const recordStatus = document.getElementById('recordStatus');
+
+async function startRecording(){
+  recordStatus.innerHTML = '';
+  try {
+    recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    const insecure = !window.isSecureContext;
+    recordStatus.innerHTML = '<span class="record-note warn">' + (insecure
+      ? 'Recording needs an https:// address.'
+      : 'No microphone access — allow it in your browser to record.') + '</span>';
+    return;
+  }
+  recChunks = [];
+  recRecorder = new MediaRecorder(recStream);
+  recRecorder.ondataavailable = (e) => { if(e.data.size) recChunks.push(e.data); };
+  recRecorder.onstop = publishRecording;
+  recRecorder.start();
+  recElapsed = 0;
+  btnRecord.textContent = '■ Stop (1:00)';
+  btnRecord.classList.add('recording');
+  recTicker = setInterval(() => {
+    recElapsed++;
+    const remaining = RECORD_LIMIT - recElapsed;
+    btnRecord.textContent = `■ Stop (0:${String(remaining).padStart(2, '0')})`;
+    if(recElapsed >= RECORD_LIMIT) stopRecording();
+  }, 1000);
+}
+
+function stopRecording(){
+  clearInterval(recTicker); recTicker = null;
+  btnRecord.textContent = '● Record';
+  btnRecord.classList.remove('recording');
+  if(recRecorder && recRecorder.state !== 'inactive') recRecorder.stop();
+  if(recStream){ recStream.getTracks().forEach(t => t.stop()); recStream = null; }
+}
+
+function publishRecording(){
+  const blob = new Blob(recChunks, { type: recRecorder.mimeType || 'audio/webm' });
+  const url = URL.createObjectURL(blob);
+  recordStatus.innerHTML = '';
+  const player = document.createElement('audio');
+  player.controls = true;
+  player.setAttribute('controlsList', 'nodownload'); // native players offer a Download entry in their own menu otherwise
+  player.oncontextmenu = (e) => e.preventDefault();
+  player.src = url;
+  recordStatus.appendChild(player);
+}
+
+btnRecord.onclick = (e) => {
+  e.stopPropagation();
+  if(recRecorder && recRecorder.state !== 'inactive') stopRecording();
+  else startRecording();
+};
 
 /* ============================= PANEL TOGGLE ============================= */
 const panel = document.getElementById('panel');
@@ -1127,9 +1233,24 @@ function generate(){
     if(isRowStart && !isFirst){ x = 20; y += ROW_HEIGHT; }
     const w = measureWidths[m];
     const stave = new VF.Stave(x, y, w);
+    if(state.rhythmMode){
+      // setNumLines(1) draws line 0 -- the TOP line of the normal 5-line
+      // grid -- which sits well above where notes actually render (they're
+      // all pinned to 'b/4', the middle line, index 2). Keeping the full
+      // 5-line grid but only showing line 2 (the middle one) puts the single
+      // visible line exactly where the notes and the clef symbol sit.
+      stave.setConfigForLines([
+        { visible: false }, { visible: false }, { visible: true },
+        { visible: false }, { visible: false }
+      ]);
+    }
     if(isRowStart){
-      stave.addClef('treble');
-      stave.addKeySignature(vfKeySig);
+      if(state.rhythmMode){
+        stave.addClef('percussion'); // renders as the double-bar rhythm-staff symbol, not a pitched clef
+      } else {
+        stave.addClef('treble');
+        stave.addKeySignature(vfKeySig); // no key signature in rhythm mode -- there's no pitch for it to alter
+      }
       if(isFirst) stave.addTimeSignature(state.meter);
     }
     stave.setContext(ctx).draw();
@@ -1147,20 +1268,29 @@ function generate(){
         note = new VF.StaveNote({ keys:['b/4'], duration: spec.dur + 'r' });
         playbackSeq.push({ ticks: specTicks(spec), midi: null });
       } else {
-        const pick = weightedPick(pool, prevMidi, usageCounts);
-        prevMidi = pick.midi;
-        usageCounts[pick.midi] = (usageCounts[pick.midi] || 0) + 1;
-        const octave = letterOctave(pick.midi);
-        const vfKey = vfKeyString(pick.letter, pick.totalAlt, octave);
-        note = new VF.StaveNote({ keys:[vfKey], duration: spec.dur });
-        playbackSeq.push({ ticks: specTicks(spec), midi: pick.midi });
+        let vfKey, midiForPlayback, accidentalAlt = null;
+        if(state.rhythmMode){
+          // Rhythm mode ignores pitch entirely -- every note sits on the
+          // same fixed reference pitch (B4, the treble staff's middle
+          // line), so only the rhythm reads.
+          vfKey = 'b/4';
+          midiForPlayback = 71;
+        } else {
+          const pick = weightedPick(pool, prevMidi, usageCounts);
+          prevMidi = pick.midi;
+          usageCounts[pick.midi] = (usageCounts[pick.midi] || 0) + 1;
+          const octave = letterOctave(pick.midi);
+          vfKey = vfKeyString(pick.letter, pick.totalAlt, octave);
+          midiForPlayback = pick.midi;
 
-        const memKey = pick.letter + octave;
-        const baseline = measureAcc.hasOwnProperty(memKey) ? measureAcc[memKey] : keySigAlteration(pick.letter, sig);
-        if(pick.totalAlt !== baseline){
-          note.addModifier(new VF.Accidental(ALT_SYMBOL[pick.totalAlt]), 0);
+          const memKey = pick.letter + octave;
+          const baseline = measureAcc.hasOwnProperty(memKey) ? measureAcc[memKey] : keySigAlteration(pick.letter, sig);
+          if(pick.totalAlt !== baseline) accidentalAlt = pick.totalAlt;
+          measureAcc[memKey] = pick.totalAlt;
         }
-        measureAcc[memKey] = pick.totalAlt;
+        note = new VF.StaveNote({ keys:[vfKey], duration: spec.dur });
+        playbackSeq.push({ ticks: specTicks(spec), midi: midiForPlayback });
+        if(accidentalAlt !== null) note.addModifier(new VF.Accidental(ALT_SYMBOL[accidentalAlt]), 0);
       }
       if(spec.dots){
         for(let d=0; d<spec.dots; d++) VF.Dot.buildAndAttach([note], {all:true});
@@ -1242,6 +1372,10 @@ function midiToSampleUrl(midi){
 // count-in; without this file present, playback just skips the count-in and
 // starts the melody right away (loadBuffer's fetch fails, caught below).
 const CLICK_URL = '/assets/sounds/click.mp3';
+// Rhythm mode plays every note on this one sample instead of the pitch it
+// would otherwise resolve to (pitch is meaningless in rhythm mode) — reuses
+// the existing E4 piano sample rather than needing a separate percussion file.
+const RHYTHM_SAMPLE_URL = '/assets/sounds/piano/E4.mp3';
 
 const QUARTER_BPM = 92; // fixed practice tempo — no tempo control in this tool yet
 const SECONDS_PER_TICK = 60 / QUARTER_BPM / 4; // 4 ticks (sixteenths) per quarter note
@@ -1301,6 +1435,12 @@ async function playMelody(){
   // Count-in click is optional — no click.mp3 yet just means no count-in.
   let clickBuffer = null;
   try { clickBuffer = await loadBuffer(CLICK_URL); } catch { /* no count-in available */ }
+  // Rhythm-mode sample is optional too — no rhythm-hit.mp3 yet just means it
+  // falls back to the piano B4 sample already loaded above.
+  let rhythmHitLoaded = false;
+  if(state.rhythmMode){
+    try { await loadBuffer(RHYTHM_SAMPLE_URL); rhythmHitLoaded = true; } catch { /* falls back to piano */ }
+  }
   if(myToken !== playbackToken) return; // superseded while loading
 
   btn.disabled = false;
@@ -1318,7 +1458,8 @@ async function playMelody(){
   }
   for(const ev of playbackSeq){
     if(ev.midi != null){
-      const buffer = await bufferCache[midiToSampleUrl(ev.midi)];
+      const url = rhythmHitLoaded ? RHYTHM_SAMPLE_URL : midiToSampleUrl(ev.midi);
+      const buffer = await bufferCache[url];
       scheduleHit(ctx, buffer, t0 + cursor, sources);
     }
     cursor += ev.ticks * SECONDS_PER_TICK;

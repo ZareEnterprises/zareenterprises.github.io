@@ -1034,6 +1034,23 @@
   max-width: 96vw;
   overflow-x: auto;
 }
+.emn-tool .bpm-row {
+  display: flex; justify-content: flex-start;
+  width: 100%; max-width: 96vw; padding: 0 36px; margin-top: 10px;
+}
+.emn-tool .bpm-control { display: flex; align-items: center; gap: 8px; }
+.emn-tool .bpm-btn {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  border: 1.5px solid var(--red); background: var(--panel); color: var(--ink);
+  font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .12s ease;
+}
+.emn-tool .bpm-btn:hover { background: var(--red); color: #fff; }
+.emn-tool .bpm-value {
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  color: var(--muted); min-width: 56px; text-align: center;
+}
 .emn-tool .staff-key-label {
   justify-self: center;
   font-size: 13px;

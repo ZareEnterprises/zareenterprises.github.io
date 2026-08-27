@@ -62,6 +62,13 @@
   <div id="staff-wrap">
     <div id="output"></div>
   </div>
+  <div class="bpm-row">
+    <div class="bpm-control" id="bpmControl">
+      <button type="button" class="bpm-btn" id="bpmMinus">−5</button>
+      <span class="bpm-value" id="bpmValue">92 BPM</span>
+      <button type="button" class="bpm-btn" id="bpmPlus">+5</button>
+    </div>
+  </div>
   <div class="meta-row">
     <div class="meta-stats">
       <span>Meter <b id="metaMeter">4/4</b></span>
@@ -811,7 +818,8 @@ const state = {
   meter: '4/4',
   diff: 'easy',
   population: 'average',
-  rhythmMode: false
+  rhythmMode: false,
+  bpm: 92
 };
 
 const rangeList = buildNaturalRangeList();
@@ -1038,6 +1046,25 @@ btnRecord.onclick = (e) => {
   e.stopPropagation();
   if(recRecorder && recRecorder.state !== 'inactive') stopRecording();
   else startRecording();
+};
+
+// BPM control -- only affects playback timing (secondsPerTick(), read live
+// by playMelody()), never the generated rhythm/pitch itself, so it doesn't
+// need to trigger generate(). Lives inside #staff-wrap but stays visible
+// during Dictation Mode via its own visibility:visible override (see CSS).
+const BPM_MIN = 30, BPM_MAX = 240;
+const bpmValue = document.getElementById('bpmValue');
+function renderBpm(){ bpmValue.textContent = state.bpm + ' BPM'; }
+renderBpm();
+document.getElementById('bpmMinus').onclick = (e) => {
+  e.stopPropagation();
+  state.bpm = Math.max(BPM_MIN, state.bpm - 5);
+  renderBpm();
+};
+document.getElementById('bpmPlus').onclick = (e) => {
+  e.stopPropagation();
+  state.bpm = Math.min(BPM_MAX, state.bpm + 5);
+  renderBpm();
 };
 
 /* ============================= PANEL TOGGLE ============================= */
@@ -1365,13 +1392,46 @@ function midiToSampleUrl(midi){
 // count-in; without this file present, playback just skips the count-in and
 // starts the melody right away (loadBuffer's fetch fails, caught below).
 const CLICK_URL = '/assets/sounds/click.mp3';
-// Rhythm mode plays every note on this one sample instead of the pitch it
-// would otherwise resolve to (pitch is meaningless in rhythm mode) — reuses
-// the existing E4 piano sample rather than needing a separate percussion file.
-const RHYTHM_SAMPLE_URL = '/assets/sounds/piano/E4.mp3';
+function secondsPerTick(){ return 60 / state.bpm / 4; } // 4 ticks (sixteenths) per quarter note, read live so the BPM control takes effect immediately
 
-const QUARTER_BPM = 92; // fixed practice tempo — no tempo control in this tool yet
-const SECONDS_PER_TICK = 60 / QUARTER_BPM / 4; // 4 ticks (sixteenths) per quarter note
+// Rhythm mode plays every note on a synthesized dry click instead of a piano
+// pitch — pitch is meaningless there, and a piano sample (even a fixed one)
+// still sounds like a piano. A short bandpass-filtered noise burst with a
+// fast decay reads as a woodblock/click hit, no audio file needed.
+function scheduleRhythmClick(ctx, when, sources){
+  // Soft tom / short kick: a low-frequency oscillator sweep with a longer
+  // decay, plus only a faint noise transient for the attack -- round and
+  // low instead of sharp/metallic.
+  const bodyDur = 0.18;
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(150, when);
+  osc.frequency.exponentialRampToValueAtTime(80, when + bodyDur);
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0.9, when);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, when + bodyDur);
+  osc.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  osc.start(when);
+  osc.stop(when + bodyDur + 0.01);
+
+  const noiseDur = 0.015;
+  const bufferSize = Math.floor(ctx.sampleRate * noiseDur);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const noiseSource = ctx.createBufferSource();
+  noiseSource.buffer = buffer;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.15, when);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, when + noiseDur);
+  noiseSource.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noiseSource.start(when);
+  noiseSource.stop(when + noiseDur + 0.01);
+
+  sources.push(osc, noiseSource);
+}
 
 let audioCtx = null;
 const bufferCache = {}; // url -> decoded AudioBuffer (or in-flight Promise)
@@ -1402,7 +1462,8 @@ function countInBeatSeconds(){
   const meter = state.meter;
   const total = METER_TICKS[meter] || 16;
   const starts = beatStartsForMeter(meter);
-  return starts.map((s, i) => ((i + 1 < starts.length ? starts[i + 1] : total) - s) * SECONDS_PER_TICK);
+  const spt = secondsPerTick();
+  return starts.map((s, i) => ((i + 1 < starts.length ? starts[i + 1] : total) - s) * spt);
 }
 
 let playbackToken = 0; // bumped on every play/stop so a stale scheduled run can no-op
@@ -1414,7 +1475,9 @@ async function playMelody(){
   const ctx = getAudioCtx();
   if(ctx.state === 'suspended') await ctx.resume();
 
-  const urls = [...new Set(playbackSeq.filter(e => e.midi != null).map(e => midiToSampleUrl(e.midi)))];
+  // Rhythm mode doesn't need any piano samples at all -- every note is the
+  // synthesized click instead (see scheduleRhythmClick).
+  const urls = state.rhythmMode ? [] : [...new Set(playbackSeq.filter(e => e.midi != null).map(e => midiToSampleUrl(e.midi)))];
   btn.disabled = true;
   btn.textContent = 'Loading…';
   try {
@@ -1428,12 +1491,6 @@ async function playMelody(){
   // Count-in click is optional — no click.mp3 yet just means no count-in.
   let clickBuffer = null;
   try { clickBuffer = await loadBuffer(CLICK_URL); } catch { /* no count-in available */ }
-  // Rhythm-mode sample is optional too — no rhythm-hit.mp3 yet just means it
-  // falls back to the piano B4 sample already loaded above.
-  let rhythmHitLoaded = false;
-  if(state.rhythmMode){
-    try { await loadBuffer(RHYTHM_SAMPLE_URL); rhythmHitLoaded = true; } catch { /* falls back to piano */ }
-  }
   if(myToken !== playbackToken) return; // superseded while loading
 
   btn.disabled = false;
@@ -1442,6 +1499,7 @@ async function playMelody(){
 
   const sources = [];
   const t0 = ctx.currentTime + 0.05;
+  const spt = secondsPerTick();
   let cursor = 0; // seconds elapsed since t0
   if(clickBuffer){
     countInBeatSeconds().forEach(beatSec => {
@@ -1451,11 +1509,14 @@ async function playMelody(){
   }
   for(const ev of playbackSeq){
     if(ev.midi != null){
-      const url = rhythmHitLoaded ? RHYTHM_SAMPLE_URL : midiToSampleUrl(ev.midi);
-      const buffer = await bufferCache[url];
-      scheduleHit(ctx, buffer, t0 + cursor, sources);
+      if(state.rhythmMode){
+        scheduleRhythmClick(ctx, t0 + cursor, sources);
+      } else {
+        const buffer = await bufferCache[midiToSampleUrl(ev.midi)];
+        scheduleHit(ctx, buffer, t0 + cursor, sources);
+      }
     }
-    cursor += ev.ticks * SECONDS_PER_TICK;
+    cursor += ev.ticks * spt;
   }
   const totalSeconds = cursor;
   activeSources = sources;

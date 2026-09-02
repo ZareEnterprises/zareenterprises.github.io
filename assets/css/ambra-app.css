@@ -128,9 +128,22 @@ body.theme-technical{ --main-bg:#0B1710; }
 .pill.active{ background:var(--green); border-color:var(--green); color:#0e1a10; font-weight:600; }
 
 /* ---------- Setlist notes ---------- */
-.notes-mode-bar{ display:flex; align-items:center; }
+.notes-mode-bar{ display:flex; align-items:center; gap:6px; }
 .notes-mode-bar .pill{ position:relative; }
 .notes-mode-bar .pill.active{ background:#fff; border-color:#fff; color:#1a1310; }
+.notes-dropdown-anchor{ position:relative; }
+.notes-dropdown-toggle{ padding:7px 9px; font-size:10px; }
+.notes-dropdown-panel{
+  position:absolute; top:calc(100% + 8px); right:0; z-index:150;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px;
+  padding:6px; min-width:190px; box-shadow:0 16px 40px rgba(0,0,0,.5);
+}
+.dropdown-item{
+  display:block; width:100%; text-align:left; background:none; border:none;
+  color:var(--text); font-family:'Inter',sans-serif; font-size:12.5px;
+  padding:9px 11px; border-radius:8px; cursor:pointer; transition:.12s;
+}
+.dropdown-item:hover{ background:var(--surface-2); }
 .notes-badge{
   display:inline-flex; align-items:center; justify-content:center;
   min-width:16px; height:16px; padding:0 4px; margin-left:6px;
@@ -687,7 +700,7 @@ main{ position:relative; }
 /* Schedule */
 .schedule-wrap{ display:grid; grid-template-columns:70px 1fr; gap:0; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; max-width:760px; margin:0 auto; position:relative; }
 
-.schedule-block.narrow{ display:flex !important; align-items:center; justify-content:flex-start !important; padding:2px 10px; text-align:left; }
+.schedule-block.narrow{ display:flex !important; align-items:flex-start; justify-content:flex-start !important; padding:2px 10px; text-align:left; }
 .narrow-line{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#1a1310; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .narrow-line b{ font-family:'Fraunces',serif; font-size:12px; }
 .schedule-ruler{ position:relative; border-right:1px solid var(--line); background:var(--surface-2); }

@@ -67,6 +67,12 @@
     </span>
     <div class="notes-mode-bar" id="notes-mode-bar">
       <button class="pill" id="btn-notes-mode">Notes<span class="notes-badge" id="notes-badge" style="display:none"></span></button>
+      <span class="notes-dropdown-anchor">
+        <button class="pill notes-dropdown-toggle" id="btn-notes-dropdown-toggle" title="Notes actions">▾</button>
+        <div class="notes-dropdown-panel" id="notes-dropdown-panel" style="display:none">
+          <button class="dropdown-item" id="btn-resolve-all-notes">✓ Mark all as resolved</button>
+        </div>
+      </span>
     </div>
   </span>
 </nav>
@@ -936,6 +942,26 @@ async function toggleResolveNote(note){
   renderAllNoteMarkers();
 }
 
+// Bulk-resolves every unresolved note across all sections in one request.
+// RLS still applies per-row (see "editors can resolve notes" in
+// schema.sql), so a user without edit access to a given section just won't
+// have that section's notes affected — no separate client-side filtering
+// needed here.
+async function resolveAllNotes(){
+  const all = [...setlistNotes, ...stageNotes, ...soundNotes, ...lightingNotes, ...lineupNotes, ...membersNotes, ...rehearsalsNotes];
+  const unresolved = all.filter(n => !n.resolved);
+  if(!unresolved.length) return;
+  if(!confirm(`Mark all ${unresolved.length} unresolved note${unresolved.length > 1 ? 's' : ''} as resolved?`)) return;
+  const ids = unresolved.map(n => n.id).join(',');
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes?id=in.(${ids})`, {
+    method:'PATCH', headers: authedHeaders(),
+    body: JSON.stringify({ resolved:true, resolved_by: currentSession.user.id, resolved_at: new Date().toISOString() })
+  });
+  if(!res.ok){ alert('Could not resolve all notes.'); return; }
+  await loadAllNotes();
+  renderAllNoteMarkers();
+}
+
 async function deleteNote(note){
   if(!confirm('Remove this note?')) return;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes?id=eq.${note.id}`, { method:'DELETE', headers: authedHeaders() });
@@ -1627,6 +1653,21 @@ async function reorderSets(draggedName, targetName, before){
   const idx = list.findIndex(s => s.set_number === targetName);
   const insertIndex = idx === -1 ? list.length : (before ? idx : idx + 1);
   list.splice(insertIndex, 0, dragged);
+
+  // Sets with a scheduled time must stay in chronological order relative to
+  // each other — a drop that would put a later-timed set before an
+  // earlier-timed one (or vice versa) is rejected outright. Sets with no
+  // time aren't constrained at all; they can sit anywhere in the list.
+  let lastTime = null;
+  for(const s of list){
+    if(!s.set_time) continue;
+    if(lastTime !== null && s.set_time < lastTime){
+      alert("Can't drop it there — it would put sets with a scheduled time out of chronological order.");
+      return;
+    }
+    lastTime = s.set_time;
+  }
+
   await Promise.all(list.map((s, i) =>
     fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${s.id}`, { method:'PATCH', headers, body: JSON.stringify({ set_order: i + 1 }) })
   ));
@@ -3228,12 +3269,12 @@ function renderSchedule(){
     block.style.background = hexToRgba(s.color || '#D98A3D', 0.85);
     block.style.borderColor = s.color || '#D98A3D';
     const songCount = songs.filter(sg => sg.set_number === s.set_number).length;
-    if(height < 34){
-      block.classList.add('narrow');
-      block.innerHTML = `<span class="narrow-line"><b>${escapeHtml(s.set_number)}</b> · ${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
-    } else {
-      block.innerHTML = `<b>${escapeHtml(s.set_number)}</b><span>${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
-    }
+    // Always one line, pinned to the top of the block — blocks can now be
+    // much taller (they stretch to the next set's start time), and a
+    // two-line label centered inside a tall block just floats awkwardly
+    // in empty space instead of reading like a normal calendar event.
+    block.classList.add('narrow');
+    block.innerHTML = `<span class="narrow-line"><b>${escapeHtml(s.set_number)}</b> · ${s.set_time.slice(0,5)} · ${s.set_duration || '—'}${songCount ? ` · ${songCount} songs` : ''}</span>`;
     track.appendChild(block);
   });
 
@@ -4273,6 +4314,23 @@ document.getElementById('spotify-toggle-btn').addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
   const panel = document.getElementById('nav-spotify-panel');
   if(panel.style.display !== 'none' && !e.target.closest('.nav-spotify-anchor')){
+    panel.style.display = 'none';
+  }
+});
+
+document.getElementById('btn-notes-dropdown-toggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const panel = document.getElementById('notes-dropdown-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('btn-resolve-all-notes').addEventListener('click', async (e) => {
+  e.stopPropagation();
+  document.getElementById('notes-dropdown-panel').style.display = 'none';
+  await resolveAllNotes();
+});
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notes-dropdown-panel');
+  if(panel.style.display !== 'none' && !e.target.closest('.notes-dropdown-anchor')){
     panel.style.display = 'none';
   }
 });

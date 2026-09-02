@@ -3166,7 +3166,7 @@ function renderSchedule(){
     startHour = Math.max(0, earliest - 2);
   }
   const endHour = 24;
-  const PX_PER_HOUR = 100;
+  const PX_PER_HOUR = 180; // taller scale so close/simultaneous set times don't visually overlap
   const PAD = 20;
   const totalHeight = (endHour - startHour) * PX_PER_HOUR + PAD * 2;
 
@@ -3196,11 +3196,29 @@ function renderSchedule(){
   unscheduledEl.innerHTML = '';
   const unscheduled = [];
 
+  // Sorted purely to find each set's immediate successor by start time — a
+  // block's height comes from that gap, not from its own set_duration text,
+  // so the timeline stays visually contiguous (one set's block ends exactly
+  // where the next one's begins) even if that field is stale or missing.
+  const byStartTime = [...timedSets].sort((a, b) => {
+    const [ah, am] = a.set_time.split(':').map(Number);
+    const [bh, bm] = b.set_time.split(':').map(Number);
+    return (ah * 60 + am) - (bh * 60 + bm);
+  });
+
   sets.forEach(s => {
     if(!s.set_time){ unscheduled.push(s); return; }
     const [hh, mm] = s.set_time.split(':').map(Number);
     const startMinutes = (hh * 60 + mm) - startHour * 60;
-    const durMin = parseDurationMinutes(s.set_duration);
+    const next = byStartTime[byStartTime.indexOf(s) + 1];
+    let durMin;
+    if(next){
+      const [nh, nm] = next.set_time.split(':').map(Number);
+      durMin = (nh * 60 + nm) - (hh * 60 + mm);
+      if(durMin <= 0) durMin = parseDurationMinutes(s.set_duration); // next set's time is equal/earlier (data issue) — fall back
+    } else {
+      durMin = parseDurationMinutes(s.set_duration); // last set of the day has no "next" to reach
+    }
     const top = PAD + (startMinutes / 60) * PX_PER_HOUR;
     const height = Math.max((durMin / 60) * PX_PER_HOUR, 20);
     const block = document.createElement('div');

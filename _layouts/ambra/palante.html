@@ -66,7 +66,7 @@
       <div class="nav-spotify-panel" id="nav-spotify-panel" style="display:none"></div>
     </span>
     <div class="notes-mode-bar" id="notes-mode-bar">
-      <button class="pill" id="btn-notes-mode">Notes<span class="notes-badge" id="notes-badge" style="display:none"></span></button>
+      <button class="pill" id="btn-notes-mode">📝 Notes<span class="notes-badge" id="notes-badge" style="display:none"></span></button>
       <span class="notes-dropdown-anchor">
         <button class="pill notes-dropdown-toggle" id="btn-notes-dropdown-toggle" title="Notes actions">▾</button>
         <div class="notes-dropdown-panel" id="notes-dropdown-panel" style="display:none">
@@ -441,6 +441,18 @@
     <div class="modal-actions" style="justify-content:center">
       <button class="btn" id="btn-delete-band-confirm" style="background:var(--surface);color:var(--text);border:1px solid var(--line)">Eliminar</button>
       <button class="btn" id="btn-delete-band-cancel" style="background:var(--emo-alta);color:#fff">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic in-app confirm modal (replaces window.confirm() where used via confirmInApp()) -->
+<div class="overlay" id="overlay-confirm">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <h2 id="confirm-modal-title">Are you sure?</h2>
+    <p class="hint" id="confirm-modal-message" style="margin-bottom:20px"></p>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn" id="btn-confirm-modal-cancel" style="background:var(--surface);color:var(--text);border:1px solid var(--line)">Cancel</button>
+      <button class="btn" id="btn-confirm-modal-ok" style="background:var(--emo-alta);color:#fff">Confirm</button>
     </div>
   </div>
 </div>
@@ -930,6 +942,31 @@ async function createNote(section, anchor, body){
   renderAllNoteMarkers();
 }
 
+// In-app replacement for window.confirm() — that's a native browser dialog
+// that pops up outside the page itself; this shows a styled modal inside
+// the app instead, using the same overlay/modal pattern as the rest of the
+// app's confirmation dialogs (e.g. "Delete band?").
+function confirmInApp(message, title){
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('overlay-confirm');
+    document.getElementById('confirm-modal-title').textContent = title || 'Are you sure?';
+    document.getElementById('confirm-modal-message').textContent = message;
+    const okBtn = document.getElementById('btn-confirm-modal-ok');
+    const cancelBtn = document.getElementById('btn-confirm-modal-cancel');
+    const cleanup = (result) => {
+      overlay.classList.remove('open');
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      overlay.onclick = null;
+      resolve(result);
+    };
+    okBtn.onclick = () => cleanup(true);
+    cancelBtn.onclick = () => cleanup(false);
+    overlay.onclick = (e) => { if(e.target === overlay) cleanup(false); };
+    overlay.classList.add('open');
+  });
+}
+
 async function toggleResolveNote(note){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes?id=eq.${note.id}`, {
     method:'PATCH', headers: authedHeaders(),
@@ -951,7 +988,7 @@ async function resolveAllNotes(){
   const all = [...setlistNotes, ...stageNotes, ...soundNotes, ...lightingNotes, ...lineupNotes, ...membersNotes, ...rehearsalsNotes];
   const unresolved = all.filter(n => !n.resolved);
   if(!unresolved.length) return;
-  if(!confirm(`Mark all ${unresolved.length} unresolved note${unresolved.length > 1 ? 's' : ''} as resolved?`)) return;
+  if(!(await confirmInApp(`Mark all ${unresolved.length} unresolved note${unresolved.length > 1 ? 's' : ''} as resolved?`))) return;
   const ids = unresolved.map(n => n.id).join(',');
   const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes?id=in.(${ids})`, {
     method:'PATCH', headers: authedHeaders(),
@@ -1819,7 +1856,7 @@ function wireRowActions(){
   });
   document.querySelectorAll('.del-set').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if(!confirm('Delete this set? Songs inside it will become unassigned.')) return;
+      if(!(await confirmInApp('Delete this set? Songs inside it will become unassigned.'))) return;
       await fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${btn.dataset.setId}`, { method:'DELETE', headers });
       await reload();
     });

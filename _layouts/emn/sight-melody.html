@@ -46,12 +46,9 @@
 <div class="main" id="mainStage">
   <div class="stage-header">
     <div class="mode-toggle-row">
-      <span class="mode-toggle-label" id="melodyLabel">Melody</span>
-      <label class="mode-toggle">
-        <input type="checkbox" id="rhythmModeToggle">
-        <span class="mode-toggle-track"><span class="mode-toggle-thumb"></span></span>
-      </label>
-      <span class="mode-toggle-label" id="rhythmLabel">Rhythm</span>
+      <button type="button" class="mode-btn active" id="modeMelodyBtn" data-mode="melody">Melody</button>
+      <button type="button" class="mode-btn" id="modeRhythmBtn" data-mode="rhythm">Rhythm</button>
+      <button type="button" class="mode-btn" id="modeHarmonyBtn" data-mode="harmony">Harmony</button>
     </div>
     <b class="staff-key-label" id="hintKey">C Major</b>
     <div class="header-right-group">
@@ -113,13 +110,13 @@
       <div class="chip-row" id="qualityRow"></div>
     </div>
 
-    <div class="section pitch-section">
+    <div class="section melody-pool-section">
       <h3>2 · Scale degrees available</h3>
       <p class="hint">Uncheck a degree to remove that note from the melody pool.</p>
       <div class="check-grid" id="degreeGrid"></div>
     </div>
 
-    <div class="section pitch-section">
+    <div class="section melody-pool-section">
       <h3>3 · Absolute pitch limits</h3>
       <div class="range-inputs">
         <div style="flex:1"><label>Not lower than</label><select id="lowLimit" class="field"></select></div>
@@ -127,7 +124,7 @@
       </div>
     </div>
 
-    <div class="section pitch-section">
+    <div class="section melody-pool-section">
       <h3>4 · Register</h3>
       <p class="hint">Middle = the 7 scale notes centered on the staff. Combine registers freely.</p>
       <div class="check-grid" id="registerGrid"></div>
@@ -818,7 +815,7 @@ const state = {
   meter: '4/4',
   diff: 'easy',
   population: 'average',
-  rhythmMode: false,
+  mode: 'melody', // 'melody' | 'rhythm' | 'harmony'
   bpm: 92
 };
 
@@ -959,21 +956,22 @@ document.querySelectorAll('#populationRow .chip').forEach(c=>{
   };
 });
 
-// Melody / Rhythm toggle -- rhythm mode ignores pitch entirely (every note
-// renders/plays on a fixed reference pitch, see generate()), so the
-// pitch-related settings (Key, Scale quality, Degrees, Absolute pitch
-// limits, Register) are locked behind a gray overlay while it's on.
-const rhythmModeToggle = document.getElementById('rhythmModeToggle');
-const melodyLabel = document.getElementById('melodyLabel');
-const rhythmLabel = document.getElementById('rhythmLabel');
-melodyLabel.classList.add('on');
-rhythmModeToggle.onchange = ()=>{
-  state.rhythmMode = rhythmModeToggle.checked;
-  melodyLabel.classList.toggle('on', !state.rhythmMode);
-  rhythmLabel.classList.toggle('on', state.rhythmMode);
-  document.querySelectorAll('.pitch-section').forEach(s=>s.classList.toggle('locked', state.rhythmMode));
-  generate();
-};
+// Melody / Rhythm / Harmony mode buttons.
+// - Rhythm ignores pitch entirely (every note renders/plays on a fixed
+//   reference pitch, see generate()), so ALL pitch-related settings (Key,
+//   Scale quality, Degrees, Absolute pitch limits, Register) are locked.
+// - Harmony still needs the Key/Scale quality (chords are built from that
+//   scale), but the melody-pool settings (Degrees, Absolute pitch limits,
+//   Register) don't apply -- there's no melody being picked note-by-note.
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.mode = btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.pitch-section').forEach(s => s.classList.toggle('locked', state.mode === 'rhythm'));
+    document.querySelectorAll('.melody-pool-section').forEach(s => s.classList.toggle('locked', state.mode !== 'melody'));
+    generate();
+  });
+});
 
 // Dictation mode -- latching push button: hides the score so the exercise
 // can only be heard (via Play melody), not read. Doesn't affect generation.
@@ -1148,6 +1146,98 @@ function weightedPick(pool, prevMidi, usageCounts){
   return pool[pool.length-1];
 }
 
+// ---------- Harmony mode: diatonic 7th chords, rhythm restricted to a few values ----------
+// Builds the 7 seventh chords diatonic to the current scale, stacked from
+// SCALE DEGREES (root, +2, +4, +6 degrees) rather than fixed semitone
+// intervals -- the standard way to derive chords from any scale, so this is
+// correct for every mode already defined above (major, dorian, harmonic
+// minor, etc.), not just the major/minor case. Quality is read off the
+// actual measured intervals rather than hardcoded per mode, so a mode like
+// harmonic minor correctly comes out with its real qualities (i m(maj7),
+// III maj7#5, vii dim7, ...) without a per-mode table.
+const SEVENTH_QUALITIES = {
+  '4,7,11': 'maj7',
+  '4,7,10': '7',
+  '3,7,10': 'm7',
+  '3,6,10': 'm7b5',
+  '3,6,9':  'dim7',
+  '3,7,11': 'm(maj7)',
+  '4,8,11': 'maj7#5',
+  '4,8,10': '7#5'
+};
+function buildDiatonicChords(tonicKey, modeId, isMinorTonic){
+  const spelling = buildScaleSpelling(tonicKey, modeId, isMinorTonic);
+  return spelling.map((root, i) => {
+    const third = spelling[(i + 2) % 7];
+    const fifth = spelling[(i + 4) % 7];
+    const seventh = spelling[(i + 6) % 7];
+    const iv3 = ((third.pc - root.pc) % 12 + 12) % 12;
+    const iv5 = ((fifth.pc - root.pc) % 12 + 12) % 12;
+    const iv7 = ((seventh.pc - root.pc) % 12 + 12) % 12;
+    let suffix = SEVENTH_QUALITIES[`${iv3},${iv5},${iv7}`];
+    if(!suffix){
+      // Fallback for any interval combo not in the table above (shouldn't
+      // happen for the modes defined in this file, but keeps this safe):
+      // read the triad quality off the same intervals and just add a 7th.
+      const triadSuffix = iv3 === 3 && iv5 === 7 ? 'm' : iv3 === 3 && iv5 === 6 ? 'dim' : iv3 === 4 && iv5 === 8 ? 'aug' : '';
+      suffix = triadSuffix + '7';
+    }
+    const accidental = root.totalAlt === 0 ? '' : (root.totalAlt > 0 ? '#'.repeat(root.totalAlt) : 'b'.repeat(-root.totalAlt));
+    return { degree: i + 1, label: `${root.letter}${accidental}${suffix}` };
+  });
+}
+
+// Chord durations ("obligados") are restricted to whole/half/quarter notes
+// -- no dots, no rests, no eighths/sixteenths/tuplets. Fills the measure by
+// repeatedly picking a random value that still fits.
+const HARMONY_DURATIONS = [
+  { dur: 'w', ticks: 16 }, { dur: 'h', ticks: 8 }, { dur: 'q', ticks: 4 }
+];
+// Whole/half/quarter are all multiples of 4 ticks, so they can only exactly
+// fill a measure whose total is itself a multiple of 4 -- true for every
+// meter here except 7/8 (14 ticks) and 9/8 (18 ticks). This eighth note is
+// a silent fallback used only when the remainder can't be reached any other
+// way, so those two meters don't crash instead of quietly staying unused
+// everywhere else.
+const HARMONY_FALLBACK_DURATION = { dur: '8', ticks: 2 };
+function harmonyRhythmForMeasure(measureTicks){
+  const seq = [];
+  let remaining = measureTicks;
+  while(remaining > 0){
+    let choices = HARMONY_DURATIONS.filter(d => d.ticks <= remaining);
+    if(!choices.length || remaining % 4 !== 0) choices = choices.concat(HARMONY_FALLBACK_DURATION);
+    const pick = choices[Math.floor(Math.random() * choices.length)];
+    seq.push(pick);
+    remaining -= pick.ticks;
+  }
+  return seq;
+}
+
+// Each rhythm event is a plain notehead on a fixed reference pitch (b/4,
+// same convention as Rhythm mode -- pitch is meaningless here too) with its
+// own randomly-picked diatonic 7th chord symbol drawn above it. Standard
+// lead-sheet "rhythm with chords" notation, just with regular noteheads
+// instead of slash noteheads.
+function renderHarmonyMeasure(ctx, stave, measureTicks, chords){
+  const rhythm = harmonyRhythmForMeasure(measureTicks);
+  const vfNotes = rhythm.map(r => new VF.StaveNote({ keys:['b/4'], duration: r.dur }));
+
+  const voice = new VF.Voice({ num_beats: measureTicks, beat_value: 16 });
+  voice.setStrict(false);
+  voice.addTickables(vfNotes);
+  const formatWidth = Math.max(40, stave.getNoteEndX() - stave.getNoteStartX() - 12);
+  new VF.Formatter().joinVoices([voice]).format([voice], formatWidth);
+  voice.draw(ctx, stave);
+
+  const y = stave.getYForLine(0) - 24; // clears note stems, which stick up above the top staff line
+  ctx.setFont('Fraunces', 14, 'bold');
+  vfNotes.forEach(note => {
+    const label = chords[Math.floor(Math.random() * chords.length)].label;
+    ctx.fillText(label, note.getAbsoluteX(), y);
+  });
+  ctx.setFont('Inter', 10);
+}
+
 let playbackSeq = []; // rebuilt each generate(): [{ticks, midi|null}] in performance order — feeds playMelody()
 
 function generate(){
@@ -1157,6 +1247,7 @@ function generate(){
   const isMinorTonic = state.qualityMode==='minor';
   const vfKeySig = vexKeySpec(state.tonicKey, isMinorTonic);
   const sig = effectiveSignature(state.tonicKey, isMinorTonic);
+  const chords = state.mode === 'harmony' ? buildDiatonicChords(state.tonicKey, state.modeId, isMinorTonic) : null;
 
   const outputSvg = document.getElementById('output');
   outputSvg.innerHTML = '';
@@ -1173,38 +1264,42 @@ function generate(){
   // Pass 1: generate all rhythm sequences first, then flatten each into
   // individual note/rest specs with beat-aligned rests, so stave width can
   // be driven by actual event count rather than a generic guess.
+  // Harmony mode has no rhythm in the score at all yet, so this whole pass
+  // is skipped there — measureFlats stays empty and is never read for it.
   const measureFlats = [];
   const popCfg = POPULATION_CONFIG[state.population] || POPULATION_CONFIG.average;
-  for(let m=0; m<state.measures; m++){
-    const maxRestTicks = Math.max(2, Math.round(measureTicks * popCfg.restFraction));
-    const popOpts = {
-      maxRestTicks,
-      maxSingleRestTicks: popCfg.maxSingleRestTicks,
-      pairedRestsOnly: popCfg.pairedRestsOnly
-    };
-    if(m===0){
-      // First measure: no rest on beat 1, at most 2 rest events total —
-      // checked AFTER rest-splitting, since a single rest atom can split
-      // into two events if it crosses a beat boundary.
-      let flat, okFlat = null;
-      for(let attempt=0; attempt<40; attempt++){
-        const seq = buildSeq({...popOpts, beatStarts, noRestFirstBeat:true, maxRests:2, minNotes:2});
-        flat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts);
-        let pos=0, restCount=0, restOnBeat1=false;
-        flat.forEach(spec=>{
-          if(spec.rest){ restCount++; if(pos<firstBeatEnd) restOnBeat1=true; }
-          pos += specTicks(spec);
-        });
-        if(!restOnBeat1 && restCount<=2){ okFlat = flat; break; }
+  if(state.mode !== 'harmony'){
+    for(let m=0; m<state.measures; m++){
+      const maxRestTicks = Math.max(2, Math.round(measureTicks * popCfg.restFraction));
+      const popOpts = {
+        maxRestTicks,
+        maxSingleRestTicks: popCfg.maxSingleRestTicks,
+        pairedRestsOnly: popCfg.pairedRestsOnly
+      };
+      if(m===0){
+        // First measure: no rest on beat 1, at most 2 rest events total —
+        // checked AFTER rest-splitting, since a single rest atom can split
+        // into two events if it crosses a beat boundary.
+        let flat, okFlat = null;
+        for(let attempt=0; attempt<40; attempt++){
+          const seq = buildSeq({...popOpts, beatStarts, noRestFirstBeat:true, maxRests:2, minNotes:2});
+          flat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts);
+          let pos=0, restCount=0, restOnBeat1=false;
+          flat.forEach(spec=>{
+            if(spec.rest){ restCount++; if(pos<firstBeatEnd) restOnBeat1=true; }
+            pos += specTicks(spec);
+          });
+          if(!restOnBeat1 && restCount<=2){ okFlat = flat; break; }
+        }
+        if(!okFlat){
+          const seq = buildSeq({beatStarts, maxRestTicks:0, noRestFirstBeat:true, minNotes:2});
+          okFlat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts);
+        }
+        measureFlats.push(okFlat);
+      } else {
+        const seq = buildSeq({...popOpts, beatStarts, minNotes:2});
+        measureFlats.push(mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts));
       }
-      if(!okFlat){
-        const seq = buildSeq({beatStarts, maxRestTicks:0, noRestFirstBeat:true, minNotes:2});
-        okFlat = mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts);
-      }
-      measureFlats.push(okFlat);
-    } else {
-      const seq = buildSeq({...popOpts, beatStarts, minNotes:2});
-      measureFlats.push(mergeEighthRestPairs(flattenAndSplitRests(seq, beatStarts, measureTicks), beatStarts));
     }
   }
 
@@ -1253,7 +1348,7 @@ function generate(){
     if(isRowStart && !isFirst){ x = 20; y += ROW_HEIGHT; }
     const w = measureWidths[m];
     const stave = new VF.Stave(x, y, w);
-    if(state.rhythmMode){
+    if(state.mode === 'rhythm'){
       // setNumLines(1) draws line 0 -- the TOP line of the normal 5-line
       // grid -- which sits well above where notes actually render (they're
       // all pinned to 'b/4', the middle line, index 2). Keeping the full
@@ -1265,15 +1360,21 @@ function generate(){
       ]);
     }
     if(isRowStart){
-      if(state.rhythmMode){
+      if(state.mode === 'rhythm'){
         stave.addClef('percussion'); // renders as the double-bar rhythm-staff symbol, not a pitched clef
       } else {
         stave.addClef('treble');
-        stave.addKeySignature(vfKeySig); // no key signature in rhythm mode -- there's no pitch for it to alter
+        stave.addKeySignature(vfKeySig); // Harmony still needs this -- chords are built from this same key
       }
       if(isFirst) stave.addTimeSignature(state.meter);
     }
     stave.setContext(ctx).draw();
+
+    if(state.mode === 'harmony'){
+      renderHarmonyMeasure(ctx, stave, measureTicks, chords);
+      x += w;
+      continue;
+    }
 
     const flat = measureFlats[m];
     const vfNotes = [];
@@ -1289,7 +1390,7 @@ function generate(){
         playbackSeq.push({ ticks: specTicks(spec), midi: null });
       } else {
         let vfKey, midiForPlayback, accidentalAlt = null;
-        if(state.rhythmMode){
+        if(state.mode === 'rhythm'){
           // Rhythm mode ignores pitch entirely -- every note sits on the
           // same fixed reference pitch (B4, the treble staff's middle
           // line), so only the rhythm reads.
@@ -1388,11 +1489,25 @@ function midiToSampleUrl(midi){
   const octave = Math.floor(midi / 12) - 1;
   return `/assets/sounds/piano/${PIANO_PC_NAMES[pc]}${octave}.mp3`;
 }
-// Count-in click — drop a single percussion hit here to enable the 1-bar
-// count-in; without this file present, playback just skips the count-in and
-// starts the melody right away (loadBuffer's fetch fails, caught below).
-const CLICK_URL = '/assets/sounds/click.mp3';
 function secondsPerTick(){ return 60 / state.bpm / 4; } // 4 ticks (sixteenths) per quarter note, read live so the BPM control takes effect immediately
+
+// Count-in click -- a clean, short metronome-style tick, deliberately
+// different from scheduleRhythmClick's low/round tom sound below so the
+// count-in bar is never confused with the melody/rhythm that follows it.
+function scheduleCountInClick(ctx, when, sources){
+  const duration = 0.05;
+  const osc = ctx.createOscillator();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(1000, when);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.5, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(when);
+  osc.stop(when + duration + 0.01);
+  sources.push(osc);
+}
 
 // Rhythm mode plays every note on a synthesized dry click instead of a piano
 // pitch — pitch is meaningless there, and a piano sample (even a fixed one)
@@ -1448,22 +1563,45 @@ async function loadBuffer(url){
   bufferCache[url] = p;
   return p;
 }
-function scheduleHit(ctx, buffer, when, sources){
+// stopAt always cuts the sample off instead of letting its full natural
+// decay ring out -- these are real piano recordings with several seconds
+// of tail regardless of the written note value. Without an unconditional
+// cutoff, any note NOT immediately followed by a rest (i.e. most of them)
+// would ring out its full raw sample length, which is what was surfacing
+// as a lingering extra layer under the following notes. A short linear
+// fade into the cutoff avoids an audible click from stopping cold.
+function scheduleHit(ctx, buffer, when, sources, stopAt){
   const source = ctx.createBufferSource();
   source.buffer = buffer;
-  source.connect(ctx.destination);
+  const gain = ctx.createGain();
+  source.connect(gain);
+  gain.connect(ctx.destination);
   source.start(when);
+  const RELEASE = 0.03;
+  gain.gain.setValueAtTime(1, Math.max(when, stopAt - RELEASE));
+  gain.gain.linearRampToValueAtTime(0, stopAt);
+  source.stop(stopAt + 0.01);
   sources.push(source);
 }
-// One count-in bar in the CURRENT meter — same beat grid fillMeasure() uses
-// (beatStartsForMeter), so a 6/8 count-in clicks twice (dotted-quarter beats)
-// while a 4/4 one clicks four times, not a generic "4 clicks" regardless of meter.
+// Count-in matches the piece's own meter and its real pulse:
+// - simple meters (2/4, 3/4, 4/4, C, 5/4, 6/4): one quarter-note click per beat
+// - compound meters (6/8, 9/8, 12/8): one click per DOTTED-quarter beat --
+//   2, 3, 4 respectively -- the actual pulse of those meters, not a
+//   quarter-note approximation
+// - 7/8: 7 individual eighth-note clicks -- it's additively grouped (2+2+3),
+//   with no single clean quarter/dotted-quarter pulse to count off instead
 function countInBeatSeconds(){
-  const meter = state.meter;
-  const total = METER_TICKS[meter] || 16;
-  const starts = beatStartsForMeter(meter);
   const spt = secondsPerTick();
-  return starts.map((s, i) => ((i + 1 < starts.length ? starts[i + 1] : total) - s) * spt);
+  if(isCompound(state.meter)){
+    const beatCount = beatStartsForMeter(state.meter).length; // 6/8->2, 9/8->3, 12/8->4
+    return Array(beatCount).fill(6 * spt); // dotted quarter = 6 ticks
+  }
+  if(state.meter === '7/8'){
+    return Array(7).fill(2 * spt); // 7 eighth notes, 2 ticks each
+  }
+  const ticks = METER_TICKS[state.meter] || 16;
+  const clickCount = Math.max(1, Math.round(ticks / 4));
+  return Array(clickCount).fill(4 * spt); // quarter note = 4 ticks
 }
 
 let playbackToken = 0; // bumped on every play/stop so a stale scheduled run can no-op
@@ -1477,7 +1615,7 @@ async function playMelody(){
 
   // Rhythm mode doesn't need any piano samples at all -- every note is the
   // synthesized click instead (see scheduleRhythmClick).
-  const urls = state.rhythmMode ? [] : [...new Set(playbackSeq.filter(e => e.midi != null).map(e => midiToSampleUrl(e.midi)))];
+  const urls = state.mode === 'rhythm' ? [] : [...new Set(playbackSeq.filter(e => e.midi != null).map(e => midiToSampleUrl(e.midi)))];
   btn.disabled = true;
   btn.textContent = 'Loading…';
   try {
@@ -1488,9 +1626,6 @@ async function playMelody(){
     console.error('Could not load piano samples', err);
     return;
   }
-  // Count-in click is optional — no click.mp3 yet just means no count-in.
-  let clickBuffer = null;
-  try { clickBuffer = await loadBuffer(CLICK_URL); } catch { /* no count-in available */ }
   if(myToken !== playbackToken) return; // superseded while loading
 
   btn.disabled = false;
@@ -1501,19 +1636,27 @@ async function playMelody(){
   const t0 = ctx.currentTime + 0.05;
   const spt = secondsPerTick();
   let cursor = 0; // seconds elapsed since t0
-  if(clickBuffer){
-    countInBeatSeconds().forEach(beatSec => {
-      scheduleHit(ctx, clickBuffer, t0 + cursor, sources);
-      cursor += beatSec;
-    });
-  }
-  for(const ev of playbackSeq){
+  // Count-in bar -- synthesized, no file to load, so it's never skipped.
+  countInBeatSeconds().forEach(beatSec => {
+    scheduleCountInClick(ctx, t0 + cursor, sources);
+    cursor += beatSec;
+  });
+  for(let i = 0; i < playbackSeq.length; i++){
+    const ev = playbackSeq[i];
     if(ev.midi != null){
-      if(state.rhythmMode){
+      if(state.mode === 'rhythm'){
         scheduleRhythmClick(ctx, t0 + cursor, sources);
       } else {
         const buffer = await bufferCache[midiToSampleUrl(ev.midi)];
-        scheduleHit(ctx, buffer, t0 + cursor, sources);
+        // Every note gets a cutoff -- a rest right after gets an almost
+        // immediate one so the silence reads as silence; a following note
+        // (or the end of the piece) gets a short natural tail instead of
+        // none at all, so it doesn't sound clipped but also never rings
+        // out the sample's full multi-second length unattended.
+        const next = playbackSeq[i + 1];
+        const noteEndTime = t0 + cursor + ev.ticks * spt;
+        const stopAt = (next && next.midi == null) ? noteEndTime : noteEndTime + 0.25;
+        scheduleHit(ctx, buffer, t0 + cursor, sources, stopAt);
       }
     }
     cursor += ev.ticks * spt;

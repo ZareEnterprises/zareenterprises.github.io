@@ -1062,31 +1062,23 @@
 
 .emn-tool .mode-toggle-row {
   justify-self: start;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 6px;
 }
-.emn-tool .mode-toggle-label {
-  font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 600;
-  letter-spacing: .03em; color: var(--muted); transition: color .12s ease;
+.emn-tool .mode-btn {
+  padding: 6px 13px; border-radius: 999px; border: 1.5px solid var(--line);
+  background: var(--panel); color: var(--muted);
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: .02em; cursor: pointer; transition: all .12s ease;
 }
-.emn-tool .mode-toggle-label.on { color: var(--ink); }
-.emn-tool .mode-toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
-.emn-tool .mode-toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
-.emn-tool .mode-toggle-track {
-  position: absolute; inset: 0; background: var(--line); border-radius: 20px;
-  transition: background .15s ease; pointer-events: none;
-}
-.emn-tool .mode-toggle-thumb {
-  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s ease;
-}
-.emn-tool .mode-toggle input:checked + .mode-toggle-track { background: var(--red); }
-.emn-tool .mode-toggle input:checked + .mode-toggle-track .mode-toggle-thumb { transform: translateX(18px); }
+.emn-tool .mode-btn:hover { border-color: var(--red); color: var(--ink); }
+.emn-tool .mode-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
 
 /* Rhythm mode: pitch-related settings (Key, Scale quality, Degrees, Absolute
    pitch limits, Register) don't apply, so they're covered with a gray layer
    and can't be clicked -- rather than just disabling inputs one by one. */
-.emn-tool .section.pitch-section { position: relative; }
-.emn-tool .section.pitch-section.locked::after {
+.emn-tool .section.pitch-section, .emn-tool .section.melody-pool-section { position: relative; }
+.emn-tool .section.pitch-section.locked::after,
+.emn-tool .section.melody-pool-section.locked::after {
   content: ''; position: absolute; inset: -6px;
   background: rgba(120,120,120,.55); border-radius: 10px; z-index: 5;
 }

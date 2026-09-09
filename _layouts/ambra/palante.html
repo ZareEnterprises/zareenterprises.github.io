@@ -86,6 +86,7 @@
         <span class="mono-label">View by:</span>
         <button class="pill active" data-view="table">☰ Setlist</button>
         <button class="pill" data-view="schedule">🕐 Schedule</button>
+        <button class="pill live-mode-btn" id="btnLiveMode" type="button">🔴 Live Mode</button>
       </div>
       <div class="view-by-bar stats-by-bar">
         <span class="mono-label">Statistics by:</span>
@@ -446,6 +447,35 @@
   </div>
 </div>
 
+<!-- Live Mode: full-screen run-of-show view (past/now/next), single-operator
+     controlled with a big Next/Previous. Built for tablets in landscape but
+     works on a computer too -- everything is just big touch targets. -->
+<div class="live-mode-overlay" id="liveModeOverlay" style="display:none">
+  <div class="live-mode-topbar">
+    <button class="live-mode-exit" id="btnExitLiveMode" type="button">✕ Exit Live Mode</button>
+    <div class="live-mode-clock" id="liveModeClock">--:--:--</div>
+  </div>
+  <div class="live-mode-strip" id="liveModeStrip">
+    <button class="live-mode-panel live-mode-prev" id="liveModePrevPanel" type="button">
+      <span class="live-mode-tag">Just happened</span>
+      <div class="live-mode-panel-body" id="liveModePrevBody"></div>
+    </button>
+    <div class="live-mode-panel live-mode-now" id="liveModeNowPanel">
+      <span class="live-mode-tag">Now</span>
+      <div class="live-mode-panel-body" id="liveModeNowBody"></div>
+      <div class="live-mode-drift" id="liveModeDrift"></div>
+    </div>
+    <button class="live-mode-panel live-mode-next" id="liveModeNextPanel" type="button">
+      <span class="live-mode-tag">Next</span>
+      <div class="live-mode-panel-body" id="liveModeNextBody"></div>
+    </button>
+  </div>
+  <div class="live-mode-controls">
+    <button class="live-mode-nav-btn" id="btnLivePrev" type="button">◀ Previous</button>
+    <button class="live-mode-nav-btn live-mode-nav-next" id="btnLiveNext" type="button">Next ▶</button>
+  </div>
+</div>
+
 <!-- Generic in-app confirm modal (replaces window.confirm() where used via confirmInApp()) -->
 <div class="overlay" id="overlay-confirm">
   <div class="modal" style="max-width:400px;text-align:center">
@@ -482,7 +512,7 @@
       <div class="field"><label>Select songs (optional — you can leave this empty for breaks, sound setup, speeches, etc.)</label></div>
       <div class="set-builder-list" id="set-builder-list"></div>
     </div>
-    <p class="hint" id="interlude-hint" style="display:none">This set will use Description / Mics needed / To whom / Props rows instead of songs — you'll add them after creating the set.</p>
+    <p class="hint" id="interlude-hint" style="display:none">This set will use Description / Mics needed / To whom / Comments rows instead of songs — you'll add them after creating the set.</p>
     <div class="field"><label>Color</label>
       <div class="color-swatches" id="color-swatches"></div>
     </div>
@@ -2249,7 +2279,7 @@ async function ensureDefaultInstruments(song){
 function renderInterludeRows(container, setInfo){
   container.innerHTML = `
     <div class="interlude-head">
-      <span></span><span>Description</span><span>Mics needed</span><span>To whom</span><span>Props</span><span></span>
+      <span></span><span>Description</span><span>Mics needed</span><span>To whom</span><span>Comments</span><span></span>
     </div>
     <div class="interlude-rows" data-set-id="${setInfo.id}"></div>
     <button class="btn ghost small btn-add-interlude-row" data-set-id="${setInfo.id}" style="margin:12px 20px">+ Add</button>
@@ -2271,7 +2301,7 @@ function renderInterludeRows(container, setInfo){
       <input type="text" data-id="${item.id}" data-field="description" value="${escapeAttr(item.description || '')}" placeholder="Description">
       <input type="text" data-id="${item.id}" data-field="mics_needed" value="${escapeAttr(item.mics_needed || '')}" placeholder="Mics needed">
       <input type="text" data-id="${item.id}" data-field="to_whom" value="${escapeAttr(item.to_whom || '')}" placeholder="To whom">
-      <input type="text" data-id="${item.id}" data-field="props" value="${escapeAttr(item.props || '')}" placeholder="Props">
+      <input type="text" data-id="${item.id}" data-field="props" value="${escapeAttr(item.props || '')}" placeholder="Comments">
       <button class="interlude-remove-btn" title="Remove">✕</button>
     `;
     rowsDiv.appendChild(row);
@@ -3440,9 +3470,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-document.querySelectorAll('.view-by-bar .pill').forEach(pill => {
+document.querySelectorAll('.view-by-bar .pill:not(.live-mode-btn)').forEach(pill => {
   pill.addEventListener('click', () => {
-    document.querySelectorAll('.view-by-bar .pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.view-by-bar .pill:not(.live-mode-btn)').forEach(p => p.classList.remove('active'));
     pill.classList.add('active');
     const view = pill.dataset.view;
     document.getElementById('setlist-table-view').style.display = view === 'table' ? 'block' : 'none';
@@ -3453,6 +3483,186 @@ document.querySelectorAll('.view-by-bar .pill').forEach(pill => {
     if(view === 'schedule') renderSchedule();
     else if(view !== 'table') renderChart(view);
   });
+});
+
+/* ============ LIVE MODE ============
+   Full-screen run-of-show view: past / now / next, single operator advances
+   it with Next/Previous (or by tapping the side panels). Built for a tablet
+   in landscape but the same layout works fine on a computer too. Steps
+   through `sets` in the same set_order used everywhere else (Schedule,
+   Lineup, Lights) -- not a separate data source. */
+function liveModeOrderedSets(){
+  return [...sets].sort((a,b) => (a.set_order||0) - (b.set_order||0));
+}
+
+function formatSetTime(setInfo){
+  if(!setInfo.set_time) return null;
+  const [hh, mm] = setInfo.set_time.split(':').map(Number);
+  const period = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${String(mm).padStart(2,'0')} ${period}`;
+}
+
+// Flattens a set (song set or interlude) into what Live Mode actually shows:
+// its name, scheduled time (if any), a short subtitle, and its line items
+// (song names, or interlude item descriptions).
+function describeSetForLiveMode(setInfo){
+  const timeLabel = formatSetTime(setInfo);
+  if(setInfo.set_type === 'interlude'){
+    const items = interludeItems.filter(it => it.set_id === setInfo.id).sort((a,b)=>(a.item_order||0)-(b.item_order||0));
+    return {
+      name: setInfo.set_number,
+      timeLabel,
+      sub: 'Interlude',
+      lines: items.map(it => it.description || 'Untitled item')
+    };
+  }
+  const setSongs = songs.filter(s => s.set_number === setInfo.set_number).sort((a,b)=>(a.song_order||0)-(b.song_order||0));
+  return {
+    name: setInfo.set_number,
+    timeLabel,
+    sub: setSongs.length ? `${setSongs.length} song${setSongs.length>1?'s':''}` : 'No songs yet',
+    lines: setSongs.map(s => s.song_name || 'Untitled')
+  };
+}
+
+// panelEl is the outer .live-mode-panel (not just its body) so its border
+// can pick up the set's own color -- bodyEl is where the content goes.
+function renderLiveModePanelBody(panelEl, bodyEl, setInfo, maxLines){
+  panelEl.style.borderColor = setInfo && setInfo.color ? setInfo.color : '';
+  if(!setInfo){ bodyEl.innerHTML = '<span class="lm-empty">—</span>'; return; }
+  const d = describeSetForLiveMode(setInfo);
+  const shown = maxLines ? d.lines.slice(0, maxLines) : d.lines;
+  const extra = d.lines.length - shown.length;
+  bodyEl.innerHTML = `
+    <span class="lm-set-name">${escapeHtml(d.name)}</span>
+    ${d.timeLabel ? `<span class="lm-set-time">${d.timeLabel}</span>` : ''}
+    <span class="lm-set-sub">${escapeHtml(d.sub)}</span>
+    ${shown.length ? `<div class="lm-song-list">${shown.map(l => `<span class="lm-song-item">${escapeHtml(l)}</span>`).join('')}${extra > 0 ? `<span class="lm-song-item">+${extra} more</span>` : ''}</div>` : ''}
+  `;
+}
+
+let liveModeIndex = 0;
+let liveModeClockTimer = null;
+
+// Opening Live Mode mid-show should land near where the show actually is,
+// not always at set #1 -- the last set whose scheduled time has already
+// passed is the best guess for "what should be happening right now".
+function liveModeBestStartIndex(orderedSets){
+  const now = new Date();
+  const nowMinutes = now.getHours()*60 + now.getMinutes();
+  let best = 0;
+  orderedSets.forEach((s, i) => {
+    if(!s.set_time) return;
+    const [hh, mm] = s.set_time.split(':').map(Number);
+    if(hh*60+mm <= nowMinutes) best = i;
+  });
+  return best;
+}
+
+function renderLiveModePanels(){
+  const orderedSets = liveModeOrderedSets();
+  const prevBtn = document.getElementById('btnLivePrev');
+  const nextBtn = document.getElementById('btnLiveNext');
+  const prevPanel = document.getElementById('liveModePrevPanel');
+  const nowPanel = document.getElementById('liveModeNowPanel');
+  const nextPanel = document.getElementById('liveModeNextPanel');
+  if(!orderedSets.length){
+    prevPanel.style.borderColor = ''; nowPanel.style.borderColor = ''; nextPanel.style.borderColor = '';
+    document.getElementById('liveModeNowBody').innerHTML = '<span class="lm-empty">No sets yet — add some in Setlist first.</span>';
+    document.getElementById('liveModePrevBody').innerHTML = '';
+    document.getElementById('liveModeNextBody').innerHTML = '';
+    document.getElementById('liveModeDrift').style.display = 'none';
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    return;
+  }
+  liveModeIndex = Math.max(0, Math.min(liveModeIndex, orderedSets.length - 1));
+  renderLiveModePanelBody(prevPanel, document.getElementById('liveModePrevBody'), orderedSets[liveModeIndex - 1] || null, 3);
+  renderLiveModePanelBody(nowPanel, document.getElementById('liveModeNowBody'), orderedSets[liveModeIndex], 8);
+  renderLiveModePanelBody(nextPanel, document.getElementById('liveModeNextBody'), orderedSets[liveModeIndex + 1] || null, 3);
+  prevBtn.disabled = liveModeIndex <= 0;
+  nextBtn.disabled = liveModeIndex >= orderedSets.length - 1;
+  updateLiveModeDrift();
+}
+
+// "783 min" doesn't read as anything at a glance -- past an hour, show it
+// as hours + minutes instead.
+function formatDriftMinutes(absMin){
+  if(absMin < 60) return `${absMin} min`;
+  const h = Math.floor(absMin / 60), m = absMin % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+// Compares the real clock against the current set's scheduled time — this
+// is what actually answers "are we missing anything" at a glance.
+function updateLiveModeDrift(){
+  const orderedSets = liveModeOrderedSets();
+  const driftEl = document.getElementById('liveModeDrift');
+  const current = orderedSets[liveModeIndex];
+  if(!current || !current.set_time){ driftEl.style.display = 'none'; return; }
+  const [hh, mm] = current.set_time.split(':').map(Number);
+  const now = new Date();
+  const diffMin = Math.round((now.getHours()*60 + now.getMinutes() + now.getSeconds()/60) - (hh*60+mm));
+  driftEl.style.display = 'block';
+  if(Math.abs(diffMin) <= 2){
+    driftEl.className = 'live-mode-drift on-time';
+    driftEl.textContent = '● On time';
+  } else if(diffMin > 0){
+    driftEl.className = 'live-mode-drift behind';
+    driftEl.textContent = `● ${formatDriftMinutes(diffMin)} behind schedule`;
+  } else {
+    driftEl.className = 'live-mode-drift ahead';
+    driftEl.textContent = `● ${formatDriftMinutes(Math.abs(diffMin))} ahead of schedule`;
+  }
+}
+
+function updateLiveClock(){
+  document.getElementById('liveModeClock').textContent =
+    new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+// Carousel feel: the whole strip drifts toward the direction of travel and
+// fades, THEN the content underneath swaps, THEN it settles back in from
+// the opposite side -- like the timeline itself panned past.
+function goLiveMode(delta){
+  const strip = document.getElementById('liveModeStrip');
+  const outClass = delta > 0 ? 'lm-shift-left' : 'lm-shift-right';
+  const inClass = delta > 0 ? 'lm-shift-right' : 'lm-shift-left';
+  strip.classList.add(outClass);
+  setTimeout(() => {
+    liveModeIndex += delta;
+    renderLiveModePanels();
+    strip.classList.remove(outClass);
+    strip.classList.add(inClass);
+    void strip.offsetWidth; // force layout so the class swap below actually transitions
+    strip.classList.remove(inClass);
+  }, 180);
+}
+
+function openLiveMode(){
+  const orderedSets = liveModeOrderedSets();
+  liveModeIndex = orderedSets.length ? liveModeBestStartIndex(orderedSets) : 0;
+  renderLiveModePanels();
+  updateLiveClock();
+  liveModeClockTimer = setInterval(() => { updateLiveClock(); updateLiveModeDrift(); }, 1000);
+  document.getElementById('liveModeOverlay').style.display = 'flex';
+}
+function closeLiveMode(){
+  document.getElementById('liveModeOverlay').style.display = 'none';
+  clearInterval(liveModeClockTimer);
+  liveModeClockTimer = null;
+}
+
+document.getElementById('btnLiveMode').addEventListener('click', openLiveMode);
+document.getElementById('btnExitLiveMode').addEventListener('click', closeLiveMode);
+document.getElementById('btnLivePrev').addEventListener('click', () => goLiveMode(-1));
+document.getElementById('btnLiveNext').addEventListener('click', () => goLiveMode(1));
+// Tapping the side panels themselves also navigates -- bigger, more natural
+// touch targets than the buttons alone on a tablet.
+document.getElementById('liveModePrevPanel').addEventListener('click', () => { if(liveModeIndex > 0) goLiveMode(-1); });
+document.getElementById('liveModeNextPanel').addEventListener('click', () => {
+  if(liveModeIndex < liveModeOrderedSets().length - 1) goLiveMode(1);
 });
 
 /* ============ STAGE TAB ============ */

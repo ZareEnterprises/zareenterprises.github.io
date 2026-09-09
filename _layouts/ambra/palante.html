@@ -2341,12 +2341,6 @@ function wireInterludeDragAndDrop(rowsDiv, setInfo, container){
   });
 }
 
-function parseSetNumber(setName){
-  if(!setName) return null;
-  const m = setName.trim().match(/^set\s*(\d{1,2})$/i);
-  return m ? parseInt(m[1], 10) : null;
-}
-
 let lineupVisibleCols = { tonality:true, singers:true, instruments:true, guests:true, arranger:true, version:true, comments:true, band:false };
 
 function getLineupColumns(){
@@ -2436,12 +2430,18 @@ function renderInstrumentation(){
   container.innerHTML = '';
   const cols = getLineupColumns();
   const gridCols = `1.3fr ${cols.map(c => c.width).join(' ')}`;
+  // Same order as Setlist itself: each song's set's own set_order (the real,
+  // drag-and-drop-arranged order — same field Schedule and Lights already
+  // sort by), then song_order within that set. The previous approach parsed
+  // digits out of the set's name (only matching "Set 1", "Set 2", ...), so
+  // any custom-named or interlude set fell through to a null match and got
+  // pushed to the very end regardless of its real position in the setlist.
   let orderedSongs = [...songs].sort((a, b) => {
-    const na = parseSetNumber(a.set_number), nb = parseSetNumber(b.set_number);
-    if(na !== null && nb !== null) return na - nb || (a.song_order||0) - (b.song_order||0);
-    if(na !== null) return -1;
-    if(nb !== null) return 1;
-    return (a.song_order||0) - (b.song_order||0);
+    const setA = sets.find(s => s.set_number === a.set_number);
+    const setB = sets.find(s => s.set_number === b.set_number);
+    const orderA = setA ? (setA.set_order || 0) : Infinity;
+    const orderB = setB ? (setB.set_order || 0) : Infinity;
+    return orderA - orderB || (a.song_order||0) - (b.song_order||0);
   });
   if(lineupSingerSort){
     const matches = orderedSongs.filter(s => (s.singers || '').split('/').map(x => x.trim()).includes(lineupSingerSort));

@@ -455,20 +455,8 @@
     <button class="live-mode-exit" id="btnExitLiveMode" type="button">✕ Exit Live Mode</button>
     <div class="live-mode-clock" id="liveModeClock">--:--:--</div>
   </div>
-  <div class="live-mode-strip" id="liveModeStrip">
-    <button class="live-mode-panel live-mode-prev" id="liveModePrevPanel" type="button">
-      <span class="live-mode-tag">Just happened</span>
-      <div class="live-mode-panel-body" id="liveModePrevBody"></div>
-    </button>
-    <div class="live-mode-panel live-mode-now" id="liveModeNowPanel">
-      <span class="live-mode-tag">Now</span>
-      <div class="live-mode-panel-body" id="liveModeNowBody"></div>
-      <div class="live-mode-drift" id="liveModeDrift"></div>
-    </div>
-    <button class="live-mode-panel live-mode-next" id="liveModeNextPanel" type="button">
-      <span class="live-mode-tag">Next</span>
-      <div class="live-mode-panel-body" id="liveModeNextBody"></div>
-    </button>
+  <div class="live-mode-strip-viewport" id="liveModeStripViewport">
+    <div class="live-mode-track" id="liveModeTrack"></div>
   </div>
   <div class="live-mode-controls">
     <button class="live-mode-nav-btn" id="btnLivePrev" type="button">◀ Previous</button>
@@ -3526,24 +3514,60 @@ function describeSetForLiveMode(setInfo){
   };
 }
 
-// panelEl is the outer .live-mode-panel (not just its body) so its border
-// can pick up the set's own color -- bodyEl is where the content goes.
-function renderLiveModePanelBody(panelEl, bodyEl, setInfo, maxLines){
-  panelEl.style.borderColor = setInfo && setInfo.color ? setInfo.color : '';
-  if(!setInfo){ bodyEl.innerHTML = '<span class="lm-empty">—</span>'; return; }
-  const d = describeSetForLiveMode(setInfo);
-  const shown = maxLines ? d.lines.slice(0, maxLines) : d.lines;
-  const extra = d.lines.length - shown.length;
-  bodyEl.innerHTML = `
-    <span class="lm-set-name">${escapeHtml(d.name)}</span>
-    ${d.timeLabel ? `<span class="lm-set-time">${d.timeLabel}</span>` : ''}
-    <span class="lm-set-sub">${escapeHtml(d.sub)}</span>
-    ${shown.length ? `<div class="lm-song-list">${shown.map(l => `<span class="lm-song-item">${escapeHtml(l)}</span>`).join('')}${extra > 0 ? `<span class="lm-song-item">+${extra} more</span>` : ''}</div>` : ''}
-  `;
+const LIVE_MODE_ROLE_LABELS = { prev:'Just happened', now:'Now', next:'Next' };
+
+// Builds one slide: role is 'prev' | 'now' | 'next' and drives both the tag
+// label and the "is-now" emphasis styling. widthPx is set inline because
+// slide count changes transiently during a push (see goLiveMode()) and each
+// slide must stay a fixed, equal width regardless of how many currently
+// exist in the track.
+function createLiveModeSlide(setInfo, role, widthPx){
+  const isNow = role === 'now';
+  const slide = document.createElement('div');
+  slide.className = 'live-mode-slide' + (isNow ? ' is-now' : '');
+  slide.dataset.role = role;
+  slide.style.width = widthPx + 'px';
+
+  const panel = document.createElement('div');
+  panel.className = 'live-mode-panel';
+  panel.style.borderColor = setInfo && setInfo.color ? setInfo.color : '';
+
+  const tag = document.createElement('span');
+  tag.className = 'live-mode-tag';
+  tag.textContent = LIVE_MODE_ROLE_LABELS[role];
+  panel.appendChild(tag);
+
+  const body = document.createElement('div');
+  body.className = 'live-mode-panel-body';
+  if(!setInfo){
+    body.innerHTML = '<span class="lm-empty">—</span>';
+  } else {
+    const d = describeSetForLiveMode(setInfo);
+    const maxLines = isNow ? 8 : 3;
+    const shown = d.lines.slice(0, maxLines);
+    const extra = d.lines.length - shown.length;
+    body.innerHTML = `
+      <span class="lm-set-name">${escapeHtml(d.name)}</span>
+      ${d.timeLabel ? `<span class="lm-set-time">${d.timeLabel}</span>` : ''}
+      <span class="lm-set-sub">${escapeHtml(d.sub)}</span>
+      ${shown.length ? `<div class="lm-song-list">${shown.map(l => `<span class="lm-song-item">${escapeHtml(l)}</span>`).join('')}${extra > 0 ? `<span class="lm-song-item">+${extra} more</span>` : ''}</div>` : ''}
+    `;
+  }
+  panel.appendChild(body);
+
+  if(isNow){
+    const drift = document.createElement('div');
+    drift.className = 'live-mode-drift';
+    panel.appendChild(drift);
+  }
+
+  slide.appendChild(panel);
+  return slide;
 }
 
 let liveModeIndex = 0;
 let liveModeClockTimer = null;
+let liveModeAnimating = false;
 
 // Opening Live Mode mid-show should land near where the show actually is,
 // not always at set #1 -- the last set whose scheduled time has already
@@ -3560,27 +3584,34 @@ function liveModeBestStartIndex(orderedSets){
   return best;
 }
 
-function renderLiveModePanels(){
-  const orderedSets = liveModeOrderedSets();
+// Full, from-scratch rebuild of the track at rest: exactly 3 slides (prev,
+// now, next), no transform, no transition. Always the end state after any
+// push settles -- goLiveMode() only ever adds a temporary 4th slide and
+// animates toward what this function would render anyway.
+function renderLiveModeTrack(){
+  const track = document.getElementById('liveModeTrack');
+  const viewport = document.getElementById('liveModeStripViewport');
   const prevBtn = document.getElementById('btnLivePrev');
   const nextBtn = document.getElementById('btnLiveNext');
-  const prevPanel = document.getElementById('liveModePrevPanel');
-  const nowPanel = document.getElementById('liveModeNowPanel');
-  const nextPanel = document.getElementById('liveModeNextPanel');
+  const orderedSets = liveModeOrderedSets();
+
+  track.style.transition = 'none';
+  track.style.transform = '';
+  track.innerHTML = '';
+
   if(!orderedSets.length){
-    prevPanel.style.borderColor = ''; nowPanel.style.borderColor = ''; nextPanel.style.borderColor = '';
-    document.getElementById('liveModeNowBody').innerHTML = '<span class="lm-empty">No sets yet — add some in Setlist first.</span>';
-    document.getElementById('liveModePrevBody').innerHTML = '';
-    document.getElementById('liveModeNextBody').innerHTML = '';
-    document.getElementById('liveModeDrift').style.display = 'none';
+    track.appendChild(createLiveModeSlide(null, 'now', viewport.clientWidth));
     prevBtn.disabled = true;
     nextBtn.disabled = true;
     return;
   }
+
   liveModeIndex = Math.max(0, Math.min(liveModeIndex, orderedSets.length - 1));
-  renderLiveModePanelBody(prevPanel, document.getElementById('liveModePrevBody'), orderedSets[liveModeIndex - 1] || null, 3);
-  renderLiveModePanelBody(nowPanel, document.getElementById('liveModeNowBody'), orderedSets[liveModeIndex], 8);
-  renderLiveModePanelBody(nextPanel, document.getElementById('liveModeNextBody'), orderedSets[liveModeIndex + 1] || null, 3);
+  const slideWidth = viewport.clientWidth / 3;
+  [['prev', -1], ['now', 0], ['next', 1]].forEach(([role, offset]) => {
+    track.appendChild(createLiveModeSlide(orderedSets[liveModeIndex + offset] || null, role, slideWidth));
+  });
+
   prevBtn.disabled = liveModeIndex <= 0;
   nextBtn.disabled = liveModeIndex >= orderedSets.length - 1;
   updateLiveModeDrift();
@@ -3597,10 +3628,10 @@ function formatDriftMinutes(absMin){
 // Compares the real clock against the current set's scheduled time — this
 // is what actually answers "are we missing anything" at a glance.
 function updateLiveModeDrift(){
+  const driftEl = document.querySelector('.live-mode-slide.is-now .live-mode-drift');
   const orderedSets = liveModeOrderedSets();
-  const driftEl = document.getElementById('liveModeDrift');
   const current = orderedSets[liveModeIndex];
-  if(!current || !current.set_time){ driftEl.style.display = 'none'; return; }
+  if(!driftEl || !current || !current.set_time){ if(driftEl) driftEl.style.display = 'none'; return; }
   const [hh, mm] = current.set_time.split(':').map(Number);
   const now = new Date();
   const diffMin = Math.round((now.getHours()*60 + now.getMinutes() + now.getSeconds()/60) - (hh*60+mm));
@@ -3612,8 +3643,11 @@ function updateLiveModeDrift(){
     driftEl.className = 'live-mode-drift behind';
     driftEl.textContent = `● ${formatDriftMinutes(diffMin)} behind schedule`;
   } else {
+    // "X ahead of schedule" implies you somehow ran early -- confusing when
+    // the truth is just "this hasn't started yet". "Starts in X" says the
+    // same thing (now is before its scheduled time) without that confusion.
     driftEl.className = 'live-mode-drift ahead';
-    driftEl.textContent = `● ${formatDriftMinutes(Math.abs(diffMin))} ahead of schedule`;
+    driftEl.textContent = `● Starts in ${formatDriftMinutes(Math.abs(diffMin))}`;
   }
 }
 
@@ -3622,31 +3656,60 @@ function updateLiveClock(){
     new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 }
 
-// Carousel feel: the whole strip drifts toward the direction of travel and
-// fades, THEN the content underneath swaps, THEN it settles back in from
-// the opposite side -- like the timeline itself panned past.
+// Real sliding-window carousel: push lands ON the neighboring slide, not
+// across the whole visible area. A temporary 4th slide is added on the
+// incoming side, the track slides by exactly one slide-width (so each
+// existing slide moves into its neighbor's old spot), and once that
+// settles the track is fully rebuilt at rest via renderLiveModeTrack().
 function goLiveMode(delta){
-  const strip = document.getElementById('liveModeStrip');
-  const outClass = delta > 0 ? 'lm-shift-left' : 'lm-shift-right';
-  const inClass = delta > 0 ? 'lm-shift-right' : 'lm-shift-left';
-  strip.classList.add(outClass);
+  if(liveModeAnimating) return;
+  const orderedSets = liveModeOrderedSets();
+  const proposedIndex = liveModeIndex + delta;
+  if(!orderedSets.length || proposedIndex < 0 || proposedIndex > orderedSets.length - 1) return;
+
+  liveModeAnimating = true;
+  const track = document.getElementById('liveModeTrack');
+  const viewport = document.getElementById('liveModeStripViewport');
+  const slideWidth = viewport.clientWidth / 3;
+  const DURATION = 280;
+
+  if(delta > 0){
+    // Next: append what will become the new "next" slide, then slide the
+    // whole track one width to the left -- old "now" ends up where "prev"
+    // was, old "next" ends up where "now" was, this new one lands in "next".
+    const incoming = createLiveModeSlide(orderedSets[proposedIndex + 1] || null, 'next', slideWidth);
+    track.appendChild(incoming);
+    track.style.transition = `transform ${DURATION}ms ease`;
+    void track.offsetWidth;
+    track.style.transform = `translateX(${-slideWidth}px)`;
+  } else {
+    // Previous: prepend what will become the new "prev" slide. Adding it at
+    // the front would otherwise instantly shove the visible 3 to the right,
+    // so the track is first nudged +slideWidth (with transitions off) to
+    // cancel that out before animating back to 0.
+    const incoming = createLiveModeSlide(orderedSets[proposedIndex - 1] || null, 'prev', slideWidth);
+    track.insertBefore(incoming, track.firstChild);
+    track.style.transition = 'none';
+    track.style.transform = `translateX(${slideWidth}px)`;
+    void track.offsetWidth;
+    track.style.transition = `transform ${DURATION}ms ease`;
+    track.style.transform = 'translateX(0)';
+  }
+
   setTimeout(() => {
-    liveModeIndex += delta;
-    renderLiveModePanels();
-    strip.classList.remove(outClass);
-    strip.classList.add(inClass);
-    void strip.offsetWidth; // force layout so the class swap below actually transitions
-    strip.classList.remove(inClass);
-  }, 180);
+    liveModeIndex = proposedIndex;
+    renderLiveModeTrack();
+    liveModeAnimating = false;
+  }, DURATION);
 }
 
 function openLiveMode(){
   const orderedSets = liveModeOrderedSets();
   liveModeIndex = orderedSets.length ? liveModeBestStartIndex(orderedSets) : 0;
-  renderLiveModePanels();
+  document.getElementById('liveModeOverlay').style.display = 'flex';
+  renderLiveModeTrack(); // after display:flex, so viewport.clientWidth is real
   updateLiveClock();
   liveModeClockTimer = setInterval(() => { updateLiveClock(); updateLiveModeDrift(); }, 1000);
-  document.getElementById('liveModeOverlay').style.display = 'flex';
 }
 function closeLiveMode(){
   document.getElementById('liveModeOverlay').style.display = 'none';
@@ -3658,11 +3721,52 @@ document.getElementById('btnLiveMode').addEventListener('click', openLiveMode);
 document.getElementById('btnExitLiveMode').addEventListener('click', closeLiveMode);
 document.getElementById('btnLivePrev').addEventListener('click', () => goLiveMode(-1));
 document.getElementById('btnLiveNext').addEventListener('click', () => goLiveMode(1));
-// Tapping the side panels themselves also navigates -- bigger, more natural
-// touch targets than the buttons alone on a tablet.
-document.getElementById('liveModePrevPanel').addEventListener('click', () => { if(liveModeIndex > 0) goLiveMode(-1); });
-document.getElementById('liveModeNextPanel').addEventListener('click', () => {
-  if(liveModeIndex < liveModeOrderedSets().length - 1) goLiveMode(1);
+// Tapping the side slides themselves also navigates -- bigger, more natural
+// touch targets than the buttons alone on a tablet. Delegated on the
+// viewport (not the slides directly), since goLiveMode() and every re-render
+// replace the slide elements entirely.
+document.getElementById('liveModeStripViewport').addEventListener('click', (e) => {
+  const slide = e.target.closest('.live-mode-slide');
+  if(!slide) return;
+  if(slide.dataset.role === 'prev'){ if(liveModeIndex > 0) goLiveMode(-1); }
+  else if(slide.dataset.role === 'next'){
+    if(liveModeIndex < liveModeOrderedSets().length - 1) goLiveMode(1);
+  }
+});
+
+// One-finger swipe (iPad, or any touchscreen) navigates like a real
+// carousel -- swipe left to advance, right to go back. Ignores multi-touch
+// entirely (e.touches.length !== 1) so a two-finger gesture never gets
+// mistaken for a swipe.
+let liveModeTouchStartX = null;
+let liveModeTouchStartY = null;
+const liveModeStripViewportEl = document.getElementById('liveModeStripViewport');
+liveModeStripViewportEl.addEventListener('touchstart', (e) => {
+  if(e.touches.length !== 1){ liveModeTouchStartX = null; return; }
+  liveModeTouchStartX = e.touches[0].clientX;
+  liveModeTouchStartY = e.touches[0].clientY;
+}, { passive: true });
+liveModeStripViewportEl.addEventListener('touchend', (e) => {
+  if(liveModeTouchStartX == null) return;
+  const touch = e.changedTouches[0];
+  const dx = touch.clientX - liveModeTouchStartX;
+  const dy = touch.clientY - liveModeTouchStartY;
+  liveModeTouchStartX = null;
+  const SWIPE_THRESHOLD = 50; // px -- and must be more horizontal than vertical, so it doesn't fight a vertical song-list scroll
+  if(Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)){
+    e.preventDefault(); // a real swipe, not a tap -- don't let a synthetic click also fire and double-navigate
+    if(dx < 0){ if(liveModeIndex < liveModeOrderedSets().length - 1) goLiveMode(1); }
+    else { if(liveModeIndex > 0) goLiveMode(-1); }
+  }
+});
+
+// Rotating an iPad mid-show would otherwise leave every slide at its old
+// fixed pixel width. Only re-renders while Live Mode is actually open and
+// idle, so it never fights an in-flight push animation.
+window.addEventListener('resize', () => {
+  if(document.getElementById('liveModeOverlay').style.display !== 'none' && !liveModeAnimating){
+    renderLiveModeTrack();
+  }
 });
 
 /* ============ STAGE TAB ============ */

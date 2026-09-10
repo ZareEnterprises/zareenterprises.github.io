@@ -110,6 +110,7 @@
                 <label class="filter-chip active"><input type="checkbox" data-field="country" checked> Country</label>
                 <label class="filter-chip active"><input type="checkbox" data-field="duration" checked> Duration</label>
                 <label class="filter-chip"><input type="checkbox" data-field="guests"> Special guest</label>
+                <label class="filter-chip"><input type="checkbox" data-field="comments"> Comments</label>
                 <label class="filter-chip" id="setlist-band-filter-chip"><input type="checkbox" data-field="band"> Band</label>
               </div>
             </div>
@@ -1367,6 +1368,7 @@ function getActiveInfoColumns(){
     { key:'genre', label:'Genre' },
     { key:'country', label:'Country' },
     { key:'guests', label:'Special guest' },
+    { key:'comments', label:'Comments' },
     { key:'band', label:'Band' },
     { key:'duration', label:'Duration' },
   ].filter(c => visibleFields[c.key]);
@@ -1393,6 +1395,9 @@ function renderSongRow(song, containerSetName, draggableOn){
     }
     if(c.key === 'guests'){
       return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="—">`;
+    }
+    if(c.key === 'comments'){
+      return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="—">`;
     }
     if(c.key === 'band'){
       return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="band_name" value="${escapeAttr(song.band_name || '')}" placeholder="—">`;
@@ -3502,7 +3507,7 @@ function describeSetForLiveMode(setInfo){
       name: setInfo.set_number,
       timeLabel,
       sub: 'Interlude',
-      lines: items.map(it => it.description || 'Untitled item')
+      lines: items.map(it => ({ text: it.description || 'Untitled item', comment: null }))
     };
   }
   const setSongs = songs.filter(s => s.set_number === setInfo.set_number).sort((a,b)=>(a.song_order||0)-(b.song_order||0));
@@ -3510,7 +3515,7 @@ function describeSetForLiveMode(setInfo){
     name: setInfo.set_number,
     timeLabel,
     sub: setSongs.length ? `${setSongs.length} song${setSongs.length>1?'s':''}` : 'No songs yet',
-    lines: setSongs.map(s => s.song_name || 'Untitled')
+    lines: setSongs.map(s => ({ text: s.song_name || 'Untitled', comment: s.comments || null }))
   };
 }
 
@@ -3550,7 +3555,7 @@ function createLiveModeSlide(setInfo, role, widthPx){
       <span class="lm-set-name">${escapeHtml(d.name)}</span>
       ${d.timeLabel ? `<span class="lm-set-time">${d.timeLabel}</span>` : ''}
       <span class="lm-set-sub">${escapeHtml(d.sub)}</span>
-      ${shown.length ? `<div class="lm-song-list">${shown.map(l => `<span class="lm-song-item">${escapeHtml(l)}</span>`).join('')}${extra > 0 ? `<span class="lm-song-item">+${extra} more</span>` : ''}</div>` : ''}
+      ${shown.length ? `<div class="lm-song-list">${shown.map(l => `<span class="lm-song-item">${escapeHtml(l.text)}${l.comment ? `<span class="lm-song-comment"> — ${escapeHtml(l.comment)}</span>` : ''}</span>`).join('')}${extra > 0 ? `<span class="lm-song-item">+${extra} more</span>` : ''}</div>` : ''}
     `;
   }
   panel.appendChild(body);

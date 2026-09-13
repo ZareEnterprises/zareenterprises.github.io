@@ -165,9 +165,12 @@
 <div class="overlay" id="overlay-new-project">
   <div class="modal">
     <h2>New project</h2>
-    <p class="hint">Double-click a template to open a blank copy of its setup — same lineup, technical &amp; band configuration, no setlist data. Or start from nothing.</p>
+    <div class="field"><label>Project name</label><input type="text" id="new-project-name" placeholder="e.g. Barrio Latino 2027"></div>
+    <button class="btn-primary" id="btn-create-project" type="button">Create</button>
+
+    <p class="hint" style="margin-top:24px">Or double-click a template to use it instead:</p>
     <div class="template-grid" id="template-grid"></div>
-    <button class="btn-outline" id="btn-blank-project" type="button">Start without a template</button>
+
     <div class="modal-actions">
       <button class="btn-ghost" id="btn-cancel-new-project" type="button">Cancel</button>
     </div>
@@ -482,11 +485,17 @@
   }
   function handleDeleteProject(id){ console.log('[visual only] delete project', id); }
   function handleArchiveProject(id){ console.log('[visual only] archive project', id); }
-  function handleToggleTemplate(id){
+  async function handleToggleTemplate(id){
     const p = PROJECTS.find(x => x.id === id);
     if(!p) return;
     p.isTemplate = !p.isTemplate;
     renderProjects(document.getElementById('project-search-input').value);
+    const { error } = await supabaseClient.from('projects').update({ is_template: p.isTemplate }).eq('id', id);
+    if(error){
+      p.isTemplate = !p.isTemplate;
+      renderProjects(document.getElementById('project-search-input').value);
+      alert('Could not update that project:\n' + error.message);
+    }
   }
 
   document.getElementById('btn-search-toggle').addEventListener('click', () => {
@@ -498,6 +507,11 @@
   document.getElementById('project-search-input').addEventListener('input', (e) => renderProjects(e.target.value));
 
   // ---------- New project modal ----------
+  // Every project — template or blank — runs on the same Pa'Lante app
+  // (Setlist, Lineup, Band, Technical, Transportation, the musician link…).
+  // "Template" here just means Pa'Lante is the one and only setup; a new
+  // project always starts genuinely empty because nothing in Supabase has
+  // its project_id yet, not because anything gets copied.
   function renderTemplates(){
     const wrap = document.getElementById('template-grid');
     const templates = PROJECTS.filter(p => p.isTemplate);
@@ -509,16 +523,50 @@
       </div>
     `).join('');
   }
-  function handleUseTemplate(id){
-    const p = PROJECTS.find(x => x.id === id);
-    console.log('[visual only] open blank copy of', p.name, '— same config, no setlist data');
-    closeModal('overlay-new-project');
+
+  async function createProject(name){
+    const trimmed = (name || '').trim();
+    if(!trimmed) return null;
+    const baseSlug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+    let slug = baseSlug, n = 2;
+    while(PROJECTS.some(p => p.slug === slug)){ slug = `${baseSlug}-${n++}`; }
+
+    const { data, error } = await supabaseClient
+      .from('projects')
+      .insert({ name: trimmed, slug, href: `/project/?p=${slug}`, is_template: false })
+      .select();
+    if(error){ alert('Could not create that project:\n' + error.message); return null; }
+    const project = data[0];
+
+    if(currentSession){
+      await supabaseClient.from('project_members').insert({
+        project_id: project.id, user_id: currentSession.user.id, role: 'Admin', status: 'active',
+        permissions: Object.fromEntries(PERM_COUNT_KEYS.map(k => [k, 'edit']))
+      });
+    }
+    return project;
   }
-  function openNewProjectModal(){ renderTemplates(); openModal('overlay-new-project'); }
-  document.getElementById('btn-blank-project').addEventListener('click', () => {
-    console.log('[visual only] start new project without a template');
+
+  async function startNewProject(){
+    const nameField = document.getElementById('new-project-name');
+    const name = nameField.value;
+    if(!name.trim()){ alert("Give the project a name first."); nameField.focus(); return; }
+    const project = await createProject(name);
+    if(!project) return;
+    nameField.value = '';
     closeModal('overlay-new-project');
-  });
+    await loadProjects();
+    renderProjects(document.getElementById('project-search-input').value);
+    window.open(project.href, '_blank', 'noopener');
+  }
+  function handleUseTemplate(id){ startNewProject(); }
+  function openNewProjectModal(){
+    document.getElementById('new-project-name').value = '';
+    renderTemplates();
+    openModal('overlay-new-project');
+  }
+  document.getElementById('btn-create-project').addEventListener('click', startNewProject);
+  document.getElementById('new-project-name').addEventListener('keydown', (e) => { if(e.key === 'Enter') startNewProject(); });
   document.getElementById('btn-cancel-new-project').addEventListener('click', () => closeModal('overlay-new-project'));
 
   // ---------- Users ----------

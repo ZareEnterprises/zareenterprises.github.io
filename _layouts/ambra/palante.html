@@ -584,7 +584,13 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PERM_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning'];
 let PERMS = Object.fromEntries(PERM_KEYS.map(k => [k, 'view'])); // safe default until loaded
 let currentSession = null;
-let palanteProjectId = null;
+let currentProjectId = null;
+let currentProjectName = null;
+// This one layout serves every project (see /musico/ for the same pattern) —
+// bare /palante/ keeps working as the original Pa'Lante project via this
+// default slug; a new project's href is /project/?p=<its slug> instead
+// (same layout, served at a second permalink — see pages/ambra-project.markdown).
+const PROJECT_SLUG = new URLSearchParams(location.search).get('p') || 'palante';
 
 function canEdit(key){ return PERMS[key] === 'edit'; }
 
@@ -612,11 +618,11 @@ async function loadSessionAndPermissions(){
   currentSession = data.session;
 
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_members?select=project_id,permissions,projects(slug)&user_id=eq.${data.session.user.id}`,
+    `${SUPABASE_URL}/rest/v1/project_members?select=project_id,permissions,projects(slug,name)&user_id=eq.${data.session.user.id}`,
     { headers: authedHeaders() }
   );
   const memberships = res.ok ? await res.json() : [];
-  const mine = memberships.find(m => m.projects && m.projects.slug === 'palante');
+  const mine = memberships.find(m => m.projects && m.projects.slug === PROJECT_SLUG);
 
   if(!mine){
     // Logged in, but not a member of this project.
@@ -624,7 +630,8 @@ async function loadSessionAndPermissions(){
     return false;
   }
   PERMS = Object.assign({}, PERMS, mine.permissions || {});
-  palanteProjectId = mine.project_id;
+  currentProjectId = mine.project_id;
+  currentProjectName = mine.projects.name;
   return true;
 }
 
@@ -663,9 +670,9 @@ let setlistNotes = [];
 let notesModeActive = false;
 
 async function loadSetlistNotes(){
-  if(!palanteProjectId){ setlistNotes = []; return; }
+  if(!currentProjectId){ setlistNotes = []; return; }
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.setlist&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${currentProjectId}&section=eq.setlist&order=created_at.asc`,
     { headers: authedHeaders() }
   );
   setlistNotes = res.ok ? await res.json() : [];
@@ -676,9 +683,9 @@ async function loadSetlistNotes(){
 // same as the rectangles table (which stays field/row-anchored like Setlist).
 let stageNotes = [];
 async function loadStageNotes(){
-  if(!palanteProjectId){ stageNotes = []; return; }
+  if(!currentProjectId){ stageNotes = []; return; }
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.stage&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${currentProjectId}&section=eq.stage&order=created_at.asc`,
     { headers: authedHeaders() }
   );
   stageNotes = res.ok ? await res.json() : [];
@@ -687,9 +694,9 @@ async function loadStageNotes(){
 
 let soundNotes = [];
 async function loadSoundNotes(){
-  if(!palanteProjectId){ soundNotes = []; return; }
+  if(!currentProjectId){ soundNotes = []; return; }
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.sound&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${currentProjectId}&section=eq.sound&order=created_at.asc`,
     { headers: authedHeaders() }
   );
   soundNotes = res.ok ? await res.json() : [];
@@ -698,9 +705,9 @@ async function loadSoundNotes(){
 
 let lightingNotes = [];
 async function loadLightingNotes(){
-  if(!palanteProjectId){ lightingNotes = []; return; }
+  if(!currentProjectId){ lightingNotes = []; return; }
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.lightning&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${currentProjectId}&section=eq.lightning&order=created_at.asc`,
     { headers: authedHeaders() }
   );
   lightingNotes = res.ok ? await res.json() : [];
@@ -709,9 +716,9 @@ async function loadLightingNotes(){
 
 let lineupNotes = [];
 async function loadLineupNotes(){
-  if(!palanteProjectId){ lineupNotes = []; return; }
+  if(!currentProjectId){ lineupNotes = []; return; }
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.lineup&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${currentProjectId}&section=eq.lineup&order=created_at.asc`,
     { headers: authedHeaders() }
   );
   lineupNotes = res.ok ? await res.json() : [];
@@ -720,9 +727,9 @@ async function loadLineupNotes(){
 
 let membersNotes = [];
 async function loadMembersNotes(){
-  if(!palanteProjectId){ membersNotes = []; return; }
+  if(!currentProjectId){ membersNotes = []; return; }
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.members&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${currentProjectId}&section=eq.members&order=created_at.asc`,
     { headers: authedHeaders() }
   );
   membersNotes = res.ok ? await res.json() : [];
@@ -731,9 +738,9 @@ async function loadMembersNotes(){
 
 let rehearsalsNotes = [];
 async function loadRehearsalsNotes(){
-  if(!palanteProjectId){ rehearsalsNotes = []; return; }
+  if(!currentProjectId){ rehearsalsNotes = []; return; }
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${palanteProjectId}&section=eq.rehearsals&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/project_notes?select=*&project_id=eq.${currentProjectId}&section=eq.rehearsals&order=created_at.asc`,
     { headers: authedHeaders() }
   );
   rehearsalsNotes = res.ok ? await res.json() : [];
@@ -1001,7 +1008,7 @@ async function createNote(section, anchor, body){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes`, {
     method:'POST', headers: authedHeaders(),
     body: JSON.stringify({
-      project_id: palanteProjectId, section,
+      project_id: currentProjectId, section,
       anchor_type: anchor.anchor_type, anchor_id: anchor.anchor_id, anchor_label: anchor.anchor_label,
       body, author_id: currentSession.user.id
     })
@@ -1282,11 +1289,11 @@ function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;'
 function escapeAttr(str){ return escapeHtml(str); }
 
 async function fetchSongs(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/songs?select=*&order=song_order.asc.nullslast`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/songs?select=*&project_id=eq.${currentProjectId}&order=song_order.asc.nullslast`, { headers });
   songs = res.ok ? await res.json() : [];
 }
 async function fetchSets(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets?select=*&order=set_order.asc.nullslast`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets?select=*&project_id=eq.${currentProjectId}&order=set_order.asc.nullslast`, { headers });
   sets = res.ok ? await res.json() : [];
 }
 async function fetchBand(){
@@ -1327,16 +1334,16 @@ async function fetchSpeakerItems(){
   speakerItems = res.ok ? await res.json() : [];
 }
 async function fetchStageRectangles(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_rectangles?select=*`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_rectangles?select=*&project_id=eq.${currentProjectId}`, { headers });
   stageRectangles = res.ok ? await res.json() : [];
 }
 async function fetchStageSettings(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_settings?select=*&limit=1`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_settings?select=*&project_id=eq.${currentProjectId}&limit=1`, { headers });
   const arr = res.ok ? await res.json() : [];
   stageSettings = arr[0] || null;
 }
 async function fetchEventInfo(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/event_info?select=*&limit=1`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/event_info?select=*&project_id=eq.${currentProjectId}&limit=1`, { headers });
   const arr = res.ok ? await res.json() : [];
   eventInfo = arr[0] || null;
 }
@@ -1365,7 +1372,7 @@ async function fetchBandProfile(){
   bandProfile = arr[0] || null;
 }
 async function fetchBands(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/bands?select=*&order=item_order.asc.nullslast`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/bands?select=*&project_id=eq.${currentProjectId}&order=item_order.asc.nullslast`, { headers });
   allBands = res.ok ? await res.json() : [];
   if(!activeBandId || !allBands.find(b => b.id === activeBandId)){
     activeBandId = allBands[0]?.id || null;
@@ -1380,7 +1387,7 @@ async function fetchBands(){
   }
 }
 async function fetchMusicSheets(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?select=*&limit=1`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?select=*&project_id=eq.${currentProjectId}&limit=1`, { headers });
   const arr = res.ok ? await res.json() : [];
   musicSheets = arr[0] || null;
 }
@@ -1389,16 +1396,16 @@ async function fetchStageEquipment(){
   stageEquipment = res.ok ? await res.json() : [];
 }
 async function fetchLightCues(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/light_cues?select=*&order=cue_order.asc.nullslast`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/light_cues?select=*&project_id=eq.${currentProjectId}&order=cue_order.asc.nullslast`, { headers });
   lightCues = res.ok ? await res.json() : [];
 }
 async function fetchSpotifyEmbed(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?select=*&limit=1`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed?select=*&project_id=eq.${currentProjectId}&limit=1`, { headers });
   const arr = res.ok ? await res.json() : [];
   spotifyEmbed = arr[0] || null;
 }
 async function fetchGenres(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/genres?select=*&order=name.asc`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/genres?select=*&project_id=eq.${currentProjectId}&order=name.asc`, { headers });
   genres = res.ok ? await res.json() : [];
 }
 async function fetchInstrumentCatalog(){
@@ -1554,7 +1561,7 @@ function renderSpotifyEmbedBox(){
     document.getElementById('btn-spotify-save').addEventListener('click', async () => {
       const link = document.getElementById('spotify-link-input').value.trim();
       if(!link) return;
-      await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed`, { method:'POST', headers, body: JSON.stringify({ link }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/spotify_embed`, { method:'POST', headers, body: JSON.stringify({ link, project_id: currentProjectId }) });
       await fetchSpotifyEmbed();
       renderSpotifyEmbedBox();
     });
@@ -1868,7 +1875,7 @@ function wireInlineGenreCombo(input, panel){
     let value = input.value;
     if(opt.dataset.add){
       value = opt.dataset.add;
-      await fetch(`${SUPABASE_URL}/rest/v1/genres`, { method:'POST', headers, body: JSON.stringify({ name: value }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/genres`, { method:'POST', headers, body: JSON.stringify({ name: value, project_id: currentProjectId }) });
       await fetchGenres();
     } else if(opt.dataset.value){
       value = opt.dataset.value;
@@ -1915,13 +1922,34 @@ function wireEmotionFaders(){
   });
 }
 
+// "+ Add" creates a blank song directly in its set's rows — no modal — so
+// the empty Song/Artist/Genre/Duration cells are right there ready to type
+// into, same as any other row.
+async function addBlankSongInline(targetSet){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/songs`, {
+    method:'POST', headers,
+    body: JSON.stringify({
+      song_name: '',
+      song_order: songs.length + 1,
+      set_number: targetSet || null,
+      emotion_level: 'media',
+      project_id: currentProjectId
+    })
+  });
+  if(!res.ok){ alert('Could not add that song:\n' + await res.text()); return; }
+  const [created] = await res.json();
+  await fetchSongs();
+  renderTable();
+  document.querySelector(`.song-row[data-song-id="${created.id}"] .title-edit`)?.focus();
+}
+
 function wireRowActions(){
   document.querySelectorAll('.btn-add-song-inline').forEach(btn => {
-    btn.addEventListener('click', () => openModal(null, btn.dataset.targetSet));
+    btn.addEventListener('click', () => addBlankSongInline(btn.dataset.targetSet));
   });
   document.querySelectorAll('.row-remove-btn').forEach(b => b.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if(!confirm('Delete this song from the setlist?')) return;
+    if(!(await confirmInApp('Delete this song from the setlist?'))) return;
     await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${b.dataset.id}`, { method:'DELETE', headers });
     await fetchSongs();
     renderSetsContainer();
@@ -1958,7 +1986,7 @@ async function saveSetField(setName, field, value){
   if(existing){
     res = await fetch(`${SUPABASE_URL}/rest/v1/sets?id=eq.${existing.id}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: value }) });
   } else {
-    res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: setName, set_order: sets.length+1, [field]: value }) });
+    res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: setName, set_order: sets.length+1, [field]: value, project_id: currentProjectId }) });
   }
   if(!res.ok){
     alert('Could not save that value:\n' + await res.text());
@@ -2054,10 +2082,28 @@ document.addEventListener('click', (e) => {
   }
 });
 
+const SETLIST_FILTERS_KEY = 'ambra_setlist_filters';
+function saveSetlistFilters(){
+  try { localStorage.setItem(SETLIST_FILTERS_KEY, JSON.stringify(visibleFields)); } catch(e){}
+}
+function loadSetlistFilters(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETLIST_FILTERS_KEY) || 'null');
+    if(saved) Object.assign(visibleFields, saved);
+  } catch(e){}
+  document.querySelectorAll('#filters-dropdown .filter-chip input[data-field]').forEach(chk => {
+    const val = !!visibleFields[chk.dataset.field];
+    chk.checked = val;
+    chk.closest('.filter-chip').classList.toggle('active', val);
+  });
+}
+loadSetlistFilters();
+
 document.querySelectorAll('#filters-dropdown .filter-chip input[data-field]').forEach(chk => {
   chk.addEventListener('change', () => {
     visibleFields[chk.dataset.field] = chk.checked;
     chk.closest('.filter-chip').classList.toggle('active', chk.checked);
+    saveSetlistFilters();
     renderTable();
   });
 });
@@ -2172,7 +2218,7 @@ document.getElementById('btn-set-confirm').addEventListener('click', async () =>
   const sm = document.getElementById('set-start-minute').value;
   const startTime = (sh && sm) ? `${sh}:${sm}` : '';
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: 9999, color, set_type: selectedSetType, set_time: startTime || null }) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/sets`, { method:'POST', headers, body: JSON.stringify({ set_number: name, set_order: 9999, color, set_type: selectedSetType, set_time: startTime || null, project_id: currentProjectId }) });
   if(!res.ok){
     const errText = await res.text();
     alert('Could not create the set:\n' + errText);
@@ -2230,7 +2276,7 @@ generoPanel.addEventListener('click', async (e) => {
   if(!opt) return;
   if(opt.dataset.add){
     const name = opt.dataset.add;
-    await fetch(`${SUPABASE_URL}/rest/v1/genres`, { method:'POST', headers, body: JSON.stringify({ name }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/genres`, { method:'POST', headers, body: JSON.stringify({ name, project_id: currentProjectId }) });
     await fetchGenres();
     generoInput.value = name;
   } else if(opt.dataset.value){
@@ -2279,6 +2325,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     payload.song_order = songs.length + 1;
     payload.set_number = addSongTargetSet || null;
     payload.emotion_level = 'media';
+    payload.project_id = currentProjectId;
     await fetch(`${SUPABASE_URL}/rest/v1/songs`, { method:'POST', headers, body: JSON.stringify(payload) });
   }
   closeModal();
@@ -2288,7 +2335,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
 document.getElementById('btn-delete').addEventListener('click', async () => {
   const id = document.getElementById('song-id').value;
   if(!id) return;
-  if(!confirm('Delete this song from the setlist?')) return;
+  if(!(await confirmInApp('Delete this song from the setlist?'))) return;
   await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${id}`, { method:'DELETE', headers });
   closeModal();
   await reload();
@@ -2466,10 +2513,28 @@ document.addEventListener('click', (e) => {
     dd.style.display = 'none';
   }
 });
+const LINEUP_FILTERS_KEY = 'ambra_lineup_filters';
+function saveLineupFilters(){
+  try { localStorage.setItem(LINEUP_FILTERS_KEY, JSON.stringify(lineupVisibleCols)); } catch(e){}
+}
+function loadLineupFilters(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(LINEUP_FILTERS_KEY) || 'null');
+    if(saved) Object.assign(lineupVisibleCols, saved);
+  } catch(e){}
+  document.querySelectorAll('#lineup-filters-dropdown input[data-lineup-field]').forEach(chk => {
+    const val = !!lineupVisibleCols[chk.dataset.lineupField];
+    chk.checked = val;
+    chk.closest('.filter-chip').classList.toggle('active', val);
+  });
+}
+loadLineupFilters();
+
 document.querySelectorAll('#lineup-filters-dropdown input[data-lineup-field]').forEach(chk => {
   chk.addEventListener('change', () => {
     lineupVisibleCols[chk.dataset.lineupField] = chk.checked;
     chk.closest('.filter-chip').classList.toggle('active', chk.checked);
+    saveLineupFilters();
     renderInstrumentation();
   });
 });
@@ -2486,7 +2551,7 @@ function renderMusicSheetsBox(){
         if(musicSheets?.id){
           await fetch(`${SUPABASE_URL}/rest/v1/music_sheets?id=eq.${musicSheets.id}`, { method:'PATCH', headers, body: JSON.stringify({ link: newLink || null }) });
         } else if(newLink){
-          await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link: newLink }) });
+          await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link: newLink, project_id: currentProjectId }) });
         }
         await fetchMusicSheets();
         renderMusicSheetsBox();
@@ -2500,7 +2565,7 @@ function renderMusicSheetsBox(){
     document.getElementById('btn-music-sheets-save').addEventListener('click', async () => {
       const link = document.getElementById('music-sheets-input').value.trim();
       if(!link) return;
-      await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/music_sheets`, { method:'POST', headers, body: JSON.stringify({ link, project_id: currentProjectId }) });
       await fetchMusicSheets();
       renderMusicSheetsBox();
     });
@@ -3138,7 +3203,7 @@ function toggleCell(cell, select){
 
 let roleOptions = [];
 async function fetchRoleOptions(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/role_options?select=*&order=name.asc`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/role_options?select=*&project_id=eq.${currentProjectId}&order=name.asc`, { headers });
   roleOptions = res.ok ? await res.json() : [];
 }
 
@@ -3196,7 +3261,7 @@ function renderMemberList(){
       if(e.target.value === '__other__'){
         const name = prompt('New role name:');
         if(!name || !name.trim()){ e.target.value = currentRole; return; }
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/role_options`, { method:'POST', headers, body: JSON.stringify({ name: name.trim() }) });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/role_options`, { method:'POST', headers, body: JSON.stringify({ name: name.trim(), project_id: currentProjectId }) });
         if(!res.ok){ alert('Could not add that role (it may already exist).'); e.target.value = currentRole; return; }
         await fetchRoleOptions();
         await upsertMember(row, 'role', name.trim());
@@ -3426,7 +3491,7 @@ async function addNewBand(){
   if(!name) return;
   if(allBands.length >= 15){ alert('Maximum of 15 bands.'); return; }
   if(allBands.find(b => b.name.toLowerCase() === name.toLowerCase())){ alert('A band with that name already exists.'); return; }
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/bands`, { method:'POST', headers, body: JSON.stringify({ name, item_order: allBands.length + 1 }) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/bands`, { method:'POST', headers, body: JSON.stringify({ name, item_order: allBands.length + 1, project_id: currentProjectId }) });
   if(!res.ok){ alert('Could not create that band:\n' + await res.text()); return; }
   const created = await res.json();
   input.value = '';
@@ -4099,7 +4164,7 @@ document.getElementById('btn-add-rect').addEventListener('click', async () => {
   const unit = document.getElementById('stage-unit').value;
   const color = SET_COLOR_PALETTE[stageRectangles.length % SET_COLOR_PALETTE.length];
   await fetch(`${SUPABASE_URL}/rest/v1/stage_rectangles`, {
-    method:'POST', headers, body: JSON.stringify({ label, length, width, height, unit, color, pos_x: 50, pos_y: 50 })
+    method:'POST', headers, body: JSON.stringify({ label, length, width, height, unit, color, pos_x: 50, pos_y: 50, project_id: currentProjectId })
   });
   document.getElementById('rect-label').value = '';
   document.getElementById('rect-length').value = '';
@@ -4167,7 +4232,7 @@ document.getElementById('stage-plot-input').addEventListener('change', async (e)
     if(stageSettings?.id){
       await fetch(`${SUPABASE_URL}/rest/v1/stage_settings?id=eq.${stageSettings.id}`, { method:'PATCH', headers, body: JSON.stringify({ plot_image_base64: base64 }) });
     } else {
-      await fetch(`${SUPABASE_URL}/rest/v1/stage_settings`, { method:'POST', headers, body: JSON.stringify({ plot_image_base64: base64 }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/stage_settings`, { method:'POST', headers, body: JSON.stringify({ plot_image_base64: base64, project_id: currentProjectId }) });
     }
     await fetchStageSettings();
     renderStagePlot();
@@ -4422,7 +4487,7 @@ function renderLights(){
       const parentId = btn.dataset.parentId;
       const existingCount = lightCues.filter(c => c.parent_type === parentType && c.parent_id === parentId).length;
       const res = await fetch(`${SUPABASE_URL}/rest/v1/light_cues`, {
-        method:'POST', headers, body: JSON.stringify({ parent_type: parentType, parent_id: parentId, cue_order: existingCount + 1 })
+        method:'POST', headers, body: JSON.stringify({ parent_type: parentType, parent_id: parentId, cue_order: existingCount + 1, project_id: currentProjectId })
       });
       if(!res.ok){ alert('Could not add that cue: ' + await res.text()); return; }
       await fetchLightCues();
@@ -4823,14 +4888,17 @@ function renderEventInfoHeader(){
   if(eventInfo.show_time) document.getElementById('header-showtime').textContent = eventInfo.show_time;
 }
 
+function openEventInfoModal(){
+  document.getElementById('ei-client').value = eventInfo?.client || '';
+  document.getElementById('ei-event-name').value = eventInfo?.event_name || currentProjectName || '';
+  document.getElementById('ei-venue').value = eventInfo?.venue || '';
+  document.getElementById('ei-date').value = eventInfo?.event_date || '';
+  document.getElementById('ei-showtime').value = eventInfo?.show_time || '';
+  document.getElementById('overlay-event-info').classList.add('open');
+}
 document.getElementById('btn-edit-header').addEventListener('click', (e) => {
   e.stopPropagation();
-  document.getElementById('ei-client').value = eventInfo?.client || document.getElementById('header-client').textContent.trim();
-  document.getElementById('ei-event-name').value = eventInfo?.event_name || document.getElementById('header-event-name').textContent.trim();
-  document.getElementById('ei-venue').value = eventInfo?.venue || document.getElementById('header-venue').textContent.trim();
-  document.getElementById('ei-date').value = eventInfo?.event_date || document.getElementById('header-date').textContent.trim();
-  document.getElementById('ei-showtime').value = eventInfo?.show_time || document.getElementById('header-showtime').textContent.trim();
-  document.getElementById('overlay-event-info').classList.add('open');
+  openEventInfoModal();
 });
 document.getElementById('btn-cancel-event-info').addEventListener('click', () => {
   document.getElementById('overlay-event-info').classList.remove('open');
@@ -4843,10 +4911,16 @@ document.getElementById('btn-save-event-info').addEventListener('click', async (
     event_date: document.getElementById('ei-date').value.trim() || null,
     show_time: document.getElementById('ei-showtime').value.trim() || null
   };
+  let res;
   if(eventInfo?.id){
-    await fetch(`${SUPABASE_URL}/rest/v1/event_info?id=eq.${eventInfo.id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+    res = await fetch(`${SUPABASE_URL}/rest/v1/event_info?id=eq.${eventInfo.id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
   } else {
-    await fetch(`${SUPABASE_URL}/rest/v1/event_info`, { method:'POST', headers, body: JSON.stringify(payload) });
+    payload.project_id = currentProjectId;
+    res = await fetch(`${SUPABASE_URL}/rest/v1/event_info`, { method:'POST', headers, body: JSON.stringify(payload) });
+  }
+  if(!res.ok){
+    alert('Could not save that:\n' + await res.text());
+    return;
   }
   await fetchEventInfo();
   renderEventInfoHeader();
@@ -5190,6 +5264,10 @@ document.getElementById('btn-download-lights').addEventListener('click', () => {
   applyPermissionLocks();
   document.body.style.visibility = 'visible';
   await reload();
+  // Brand new project — nothing saved to event_info yet. Pop the header's
+  // edit modal open right away instead of leaving the previous project's
+  // leftover placeholder text on screen.
+  if(!eventInfo) openEventInfoModal();
   await loadAllNotes();
   renderAllNoteMarkers();
   updateNotesModeBarVisibility();

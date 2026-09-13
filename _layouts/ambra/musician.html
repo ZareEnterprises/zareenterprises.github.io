@@ -216,19 +216,7 @@ async function boot(){
     return;
   }
 
-  const [bands, members, catalog, eventInfoRows, transportRows, rehearsals, rdSongs, songs, sets, spotifyRows] = await Promise.all([
-    getJson(`bands?id=eq.${bandId}&select=*`),
-    getJson(`band?group_id=eq.${bandId}&select=*`),
-    getJson(`instrument_catalog?group_id=eq.${bandId}&select=*`),
-    getJson(`event_info?select=*&limit=1`),
-    getJson(`transportation_rows?group_id=eq.${bandId}&select=*&order=item_order.asc`),
-    getJson(`rehearsal_dates?group_id=eq.${bandId}&select=*&order=item_order.asc`),
-    getJson(`rehearsal_date_songs?select=*&order=item_order.asc`),
-    getJson(`songs?select=*&order=song_order.asc`),
-    getJson(`sets?select=*&order=set_order.asc`),
-    getJson(`spotify_embed?select=*&limit=1`)
-  ]);
-
+  const bands = await getJson(`bands?id=eq.${bandId}&select=*`);
   const bandInfo = bands[0];
   if(!bandInfo){
     statusEl.textContent = "This link isn't valid anymore — ask whoever runs your project for a new one.";
@@ -236,6 +224,19 @@ async function boot(){
     return;
   }
   window.__mvBandName = bandInfo.name;
+  const projectId = bandInfo.project_id;
+
+  const [members, catalog, eventInfoRows, transportRows, rehearsals, rdSongs, songs, sets, spotifyRows] = await Promise.all([
+    getJson(`band?group_id=eq.${bandId}&select=*`),
+    getJson(`instrument_catalog?group_id=eq.${bandId}&select=*`),
+    getJson(`event_info?select=*&project_id=eq.${projectId}&limit=1`),
+    getJson(`transportation_rows?group_id=eq.${bandId}&select=*&order=item_order.asc`),
+    getJson(`rehearsal_dates?group_id=eq.${bandId}&select=*&order=item_order.asc`),
+    getJson(`rehearsal_date_songs?select=*&order=item_order.asc`),
+    getJson(`songs?select=*&project_id=eq.${projectId}&order=song_order.asc`),
+    getJson(`sets?select=*&project_id=eq.${projectId}&order=set_order.asc`),
+    getJson(`spotify_embed?select=*&project_id=eq.${projectId}&limit=1`)
+  ]);
 
   const pill = document.getElementById('mv-band-pill');
   pill.textContent = bandInfo.name;

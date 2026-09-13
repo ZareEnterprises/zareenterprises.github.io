@@ -17,9 +17,9 @@
 
 <header class="top">
   <a href="/panel" title="Back to panel"><img class="top-logo" src="/assets/img/ambrawSubmark.png" alt="AMBRA Submark"></a>
-  <p class="eyebrow">AMBRA Live Productions · The Boston Foundation <button id="btn-copy-info" class="paste-icon" title="Copy event info">⧉</button></p>
-  <h1>PA'LANTE 2026</h1>
-  <p class="sub">Henri A. Termeer Square · Sept 10, 2026 · 6:30pm–10:30pm</p>
+  <p class="eyebrow" id="header-eyebrow">AMBRA Live Productions · <span id="header-client">The Boston Foundation</span> <button id="btn-edit-header" class="paste-icon" title="Edit event info">✎</button><button id="btn-copy-info" class="paste-icon" title="Copy event info">⧉</button></p>
+  <h1 id="header-event-name">PA'LANTE 2026</h1>
+  <p class="sub" id="header-sub"><span id="header-venue">Henri A. Termeer Square</span> · <span id="header-date">Sept 10, 2026</span> · <span id="header-showtime">6:30pm–10:30pm</span></p>
 </header>
 
 <nav class="tabs" id="tabs">
@@ -165,8 +165,8 @@
   </div>
 
   <div id="view-instrumentation" style="display:none">
-    <div class="toolbar" style="justify-content:flex-end; align-items:center;">
-      <div id="music-sheets-box" style="margin-right:26px"></div>
+    <div class="toolbar" style="align-items:center;">
+      <div id="music-sheets-box"></div>
       <div class="filters-anchor">
         <button class="filters-link" id="btn-lineup-filters-toggle">Filters ▾</button>
         <div class="filters-dropdown" id="lineup-filters-dropdown" style="display:none">
@@ -205,6 +205,7 @@
       <div class="band-subtabs">
         <button class="tech-subtab members active" data-band-sub="members">👥 Members</button>
         <button class="tech-subtab rehearsals" data-band-sub="rehearsals">📅 Rehearsals</button>
+        <button class="tech-subtab transportation" data-band-sub="transportation">🚌 Transportation</button>
       </div>
       <span class="mono-label" id="band-count">—</span>
     </div>
@@ -216,6 +217,7 @@
         <input type="text" id="band-name-input" placeholder="e.g. Barrio Latino">
         <button class="btn small" id="btn-add-band-entity">Add</button>
         <span id="band-name-saved-note" class="mono-label"></span>
+        <button class="btn ghost small" id="btn-copy-musician-link" type="button" title="Copy a read-only link with this band's rehearsals, setlist &amp; outfit — share it with the musicians" style="display:none">🔗 For Musicians</button>
       </div>
       <div class="band-layout">
         <div class="catalog-col-stack" id="catalog-col-stack"></div>
@@ -261,6 +263,36 @@
             <p class="mono-label" style="margin-bottom:8px">Setlist songs — drag onto a day</p>
             <div id="rehearsal-song-picker-list"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="band-panel-transportation" style="display:none">
+      <div class="rehearsal-settings">
+        <div class="field"><label>Time on venue</label><input type="text" id="transport-venue-time" placeholder="e.g. 5:00pm (arrival, not show time)"></div>
+        <div class="field"><label>Pick up time</label><input type="text" id="transport-pickup-time" placeholder="e.g. 4:00pm"></div>
+        <div class="field"><label>Address</label><input type="text" id="transport-pickup-address" placeholder="Pick up address"></div>
+      </div>
+
+      <div class="transport-layout">
+        <div class="set-block">
+          <div class="transport-box-title">To the Event</div>
+          <div class="transport-head">
+            <span>Transportation</span><span>Cap.</span><span>Departure Point</span><span>Passengers</span><span>Cost</span><span></span>
+          </div>
+          <div id="transport-rows-event"></div>
+          <button class="btn ghost small" id="btn-add-transport-row-event" style="margin:12px 20px">+ Add row</button>
+          <div class="transport-missing" id="transport-missing-event"></div>
+        </div>
+
+        <div class="set-block">
+          <div class="transport-box-title">Back to Home</div>
+          <div class="transport-head">
+            <span>Transportation</span><span>Cap.</span><span>Departure Point</span><span>Passengers</span><span>Cost</span><span></span>
+          </div>
+          <div id="transport-rows-home"></div>
+          <button class="btn ghost small" id="btn-add-transport-row-home" style="margin:12px 20px">+ Add row</button>
+          <div class="transport-missing" id="transport-missing-home"></div>
         </div>
       </div>
     </div>
@@ -448,6 +480,23 @@
   </div>
 </div>
 
+<!-- Edit event info (header) modal -->
+<div class="overlay" id="overlay-event-info">
+  <div class="modal">
+    <h2>Edit event info</h2>
+    <p class="hint">Shown across the top of this page — and on the musician link's Day &amp; Time tab.</p>
+    <div class="field"><label>Client</label><input type="text" id="ei-client" placeholder="e.g. The Boston Foundation"></div>
+    <div class="field"><label>Event name</label><input type="text" id="ei-event-name" placeholder="e.g. PA'LANTE 2026"></div>
+    <div class="field"><label>Venue</label><input type="text" id="ei-venue" placeholder="e.g. Henri A. Termeer Square"></div>
+    <div class="field"><label>Date</label><input type="text" id="ei-date" placeholder="e.g. Sept 10, 2026"></div>
+    <div class="field"><label>Show time</label><input type="text" id="ei-showtime" placeholder="e.g. 6:30pm–10:30pm"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btn-cancel-event-info">Cancel</button>
+      <button class="btn" id="btn-save-event-info">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Live Mode: full-screen run-of-show view (past/now/next), single-operator
      controlled with a big Next/Previous. Built for tablets in landscape but
      works on a computer too -- everything is just big touch targets. -->
@@ -584,7 +633,7 @@ function applyPermissionLocks(){
     ['setlist',    ['#setlist-table-view']],
     ['lineup',     ['#instr-container']],
     ['members',    ['#band-panel-members']],
-    ['rehearsals', ['#band-panel-rehearsals']],
+    ['rehearsals', ['#band-panel-rehearsals', '#band-panel-transportation']],
     ['sound',      ['#audio-panel-requirements', '#audio-panel-inputlist', '#audio-panel-speakers']],
     ['stage',      ['#tech-panel-stage']],
     ['lightning',  ['#tech-panel-lights']]
@@ -1186,7 +1235,11 @@ document.getElementById('btn-notes-mode').addEventListener('click', () => {
   if(pill) pill.addEventListener('click', () => { if(notesModeActive) exitNotesMode(); });
 });
 
-const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other'];
+const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other','Stage Crew'];
+// Catalog sections that are part of the Band roster but shouldn't show up as
+// selectable instruments in Lineup — 'Other' was already excluded there;
+// Stage Crew joins it since crew aren't musicians a song can be arranged for.
+const LINEUP_EXCLUDED_SECTIONS = ['Other', 'Stage Crew'];
 const SINGER_PALETTE = ['#E0985C','#7FA6A0','#C7738C','#9AA85C','#8C93C9','#D6B24A','#B77B6E','#6FAF9E'];
 const MULTI_SINGER_COLOR = '#6B7FB0';
 const SET_COLOR_PALETTE = ['#E14A3E','#D98A3D','#D6B24A','#4C9A6A','#4A7FB5','#8C6FB5','#3FA8A0','#C7738C'];
@@ -1197,11 +1250,13 @@ let band = [];
 let songInstruments = [];
 let interludeItems = [];
 let audioRequirements = [];
+let transportationRows = [];
 let inputListRows = [];
 let speakerTables = [];
 let speakerItems = [];
 let stageRectangles = [];
 let stageSettings = null;
+let eventInfo = null; // single row: client, event_name, venue, event_date, show_time — drives the page header
 let stageZoom = 1;
 let rehearsalSettings = null;
 let rehearsalAvailability = [];
@@ -1257,6 +1312,11 @@ async function fetchInputList(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/input_list?select=*&group_id=eq.${activeBandId}&order=channel_number.asc.nullslast`, { headers });
   inputListRows = res.ok ? await res.json() : [];
 }
+async function fetchTransportationRows(){
+  if(!activeBandId){ transportationRows = []; return; }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/transportation_rows?select=*&group_id=eq.${activeBandId}&order=item_order.asc.nullslast`, { headers });
+  transportationRows = res.ok ? await res.json() : [];
+}
 async function fetchSpeakerTables(){
   if(!activeBandId){ speakerTables = []; return; }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?select=*&group_id=eq.${activeBandId}&order=table_order.asc.nullslast`, { headers });
@@ -1274,6 +1334,11 @@ async function fetchStageSettings(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_settings?select=*&limit=1`, { headers });
   const arr = res.ok ? await res.json() : [];
   stageSettings = arr[0] || null;
+}
+async function fetchEventInfo(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/event_info?select=*&limit=1`, { headers });
+  const arr = res.ok ? await res.json() : [];
+  eventInfo = arr[0] || null;
 }
 async function fetchRehearsalSettings(){
   if(!activeBandId){ rehearsalSettings = null; return; }
@@ -2261,7 +2326,7 @@ function wireExpandables(){
 async function ensureDefaultInstruments(song){
   const already = songInstruments.some(si => si.song_id === song.id);
   if(already) return;
-  const defaults = instrumentCatalog.filter(i => i.section !== 'Other');
+  const defaults = instrumentCatalog.filter(i => !LINEUP_EXCLUDED_SECTIONS.includes(i.section));
   if(defaults.length === 0) return;
   await Promise.all(defaults.map(i =>
     fetch(`${SUPABASE_URL}/rest/v1/song_instruments`, { method:'POST', headers, body: JSON.stringify({ song_id: song.id, instrument: i.name }) })
@@ -2606,11 +2671,11 @@ function renderGuestChecklist(panel, song){
 function renderInstrumentChecklist(panel, song){
   const bySection = {};
   SECTIONS.forEach(s => bySection[s] = []);
-  instrumentCatalog.forEach(i => { if(i.section !== 'Other' && bySection[i.section]) bySection[i.section].push(i.name); });
+  instrumentCatalog.forEach(i => { if(!LINEUP_EXCLUDED_SECTIONS.includes(i.section) && bySection[i.section]) bySection[i.section].push(i.name); });
   const current = new Set(songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument));
 
   let html = '';
-  SECTIONS.filter(s => s !== 'Other').forEach(section => {
+  SECTIONS.filter(s => !LINEUP_EXCLUDED_SECTIONS.includes(s)).forEach(section => {
     if(bySection[section].length === 0) return;
     html += `<div class="panel-section-label">${section}</div>`;
     html += bySection[section].map(name => `
@@ -2756,6 +2821,142 @@ function renderRehearsals(){
   renderRehearsalGrid();
   renderRehearsalDatesBox();
 }
+
+/* ============ TRANSPORTATION (Band tab) ============ */
+const TRANSPORT_MODES = ['Uber','Private','Bus','Plane'];
+const TRANSPORT_DIRECTIONS = [
+  { key:'to_event',  containerId:'transport-rows-event', addBtnId:'btn-add-transport-row-event' },
+  { key:'back_home', containerId:'transport-rows-home',  addBtnId:'btn-add-transport-row-home' }
+];
+
+function transportPassengerIds(row){
+  return (row.passenger_ids || '').split(',').map(s => s.trim()).filter(Boolean);
+}
+function transportPassengerLabel(ids){
+  if(!ids.length) return 'Select passengers';
+  const names = ids.map(id => band.find(b => b.id === id)?.artist_name).filter(Boolean);
+  return names.length > 2 ? `${names.slice(0,2).join(', ')} +${names.length - 2}` : names.join(', ');
+}
+function transportMissingElId(direction){
+  return direction === 'to_event' ? 'transport-missing-event' : 'transport-missing-home';
+}
+function renderTransportMissing(direction){
+  const el = document.getElementById(transportMissingElId(direction));
+  if(!el) return;
+  const roster = band.filter(b => b.artist_name);
+  if(roster.length === 0){ el.innerHTML = ''; return; }
+  const assignedIds = new Set(transportationRows.filter(r => r.direction === direction).flatMap(transportPassengerIds));
+  const missing = roster.filter(b => !assignedIds.has(b.id));
+  el.innerHTML = missing.length
+    ? `Not assigned yet: <b>${missing.map(m => escapeHtml(m.artist_name)).join(', ')}</b>`
+    : '<span class="none">✓ Everyone is assigned to a ride.</span>';
+}
+
+function openTransportPassengerPanel(wrap, row){
+  const panel = document.createElement('div');
+  panel.className = 'checklist-panel transport-checklist-panel';
+  panel.dataset.rowId = row.id;
+  const options = band.filter(b => b.artist_name);
+  const current = new Set(transportPassengerIds(row));
+  panel.innerHTML = options.length ? options.map(m => `
+    <label><input type="checkbox" value="${m.id}" ${current.has(m.id) ? 'checked' : ''}>${escapeHtml(m.artist_name)}</label>
+  `).join('') : '<div class="none">No named band members yet — add them in Members.</div>';
+  panel.querySelectorAll('input').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      const checkedIds = Array.from(panel.querySelectorAll('input:checked')).map(i => i.value);
+      row.passenger_ids = checkedIds.join(',') || null;
+      wrap.querySelector('.transport-passengers-btn').textContent = transportPassengerLabel(checkedIds);
+      renderTransportMissing(row.direction);
+      await fetch(`${SUPABASE_URL}/rest/v1/transportation_rows?id=eq.${row.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ passenger_ids: row.passenger_ids })
+      });
+    });
+  });
+  wrap.appendChild(panel);
+  openPanel = panel;
+}
+
+function renderTransportationTable(direction, containerId){
+  const container = document.getElementById(containerId);
+  const rows = transportationRows.filter(r => r.direction === direction);
+  container.innerHTML = '';
+  if(rows.length === 0){
+    container.innerHTML = '<div class="empty-note" style="border:none;">No transportation set up yet — click "+ Add row" to start.</div>';
+  }
+  rows.forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'transport-row';
+    el.innerHTML = `
+      <select data-id="${row.id}" data-field="mode">
+        <option value="" ${!row.mode ? 'selected' : ''}>—</option>
+        ${TRANSPORT_MODES.map(m => `<option value="${m}" ${row.mode === m ? 'selected' : ''}>${m}</option>`).join('')}
+      </select>
+      <input type="text" data-id="${row.id}" data-field="max_capacity" value="${escapeAttr(row.max_capacity || '')}" placeholder="e.g. 4">
+      <input type="text" data-id="${row.id}" data-field="departure_point" value="${escapeAttr(row.departure_point || '')}" placeholder="e.g. Hotel lobby">
+      <div class="expandable" data-row-id="${row.id}">
+        <button type="button" class="condensed-btn transport-passengers-btn">${escapeHtml(transportPassengerLabel(transportPassengerIds(row)))}</button>
+      </div>
+      <div class="transport-cost-wrap"><input type="text" data-id="${row.id}" data-field="cost" value="${escapeAttr(row.cost || '')}" placeholder="0"></div>
+      <button class="req-remove-btn" title="Remove">✕</button>
+    `;
+    el.querySelector('.req-remove-btn').addEventListener('click', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/transportation_rows?id=eq.${row.id}`, { method:'DELETE', headers });
+      await fetchTransportationRows();
+      renderTransportation();
+    });
+    el.querySelector('.transport-passengers-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wrap = e.currentTarget.closest('.expandable');
+      if(openPanel && openPanel.dataset.rowId === row.id){ closeOpenPanel(); return; }
+      closeOpenPanel();
+      openTransportPassengerPanel(wrap, row);
+    });
+    el.querySelectorAll('select, input').forEach(field => {
+      field.addEventListener('change', async () => {
+        await fetch(`${SUPABASE_URL}/rest/v1/transportation_rows?id=eq.${row.id}`, {
+          method:'PATCH', headers, body: JSON.stringify({ [field.dataset.field]: field.value || null })
+        });
+        await fetchTransportationRows();
+      });
+    });
+    container.appendChild(el);
+  });
+  renderTransportMissing(direction);
+}
+
+function renderTransportation(){
+  const activeBand = allBands.find(b => b.id === activeBandId);
+  document.getElementById('transport-venue-time').value = activeBand?.venue_arrival_time || '';
+  document.getElementById('transport-pickup-time').value = activeBand?.pickup_time || '';
+  document.getElementById('transport-pickup-address').value = activeBand?.pickup_address || '';
+
+  TRANSPORT_DIRECTIONS.forEach(d => renderTransportationTable(d.key, d.containerId));
+  renderNoteMarkers();
+}
+
+TRANSPORT_DIRECTIONS.forEach(d => {
+  document.getElementById(d.addBtnId).addEventListener('click', async () => {
+    if(!activeBandId){ alert('Pick a band first.'); return; }
+    const count = transportationRows.filter(r => r.direction === d.key).length;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/transportation_rows`, {
+      method:'POST', headers, body: JSON.stringify({ item_order: count + 1, group_id: activeBandId, direction: d.key })
+    });
+    if(!res.ok){
+      alert('Could not add that row:\n' + await res.text());
+      return;
+    }
+    await fetchTransportationRows();
+    renderTransportation();
+  });
+});
+async function saveActiveBandField(field, value){
+  if(!activeBandId) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/bands?id=eq.${activeBandId}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: value }) });
+  await fetchBands();
+}
+document.getElementById('transport-venue-time').addEventListener('change', (e) => saveActiveBandField('venue_arrival_time', e.target.value.trim() || null));
+document.getElementById('transport-pickup-time').addEventListener('change', (e) => saveActiveBandField('pickup_time', e.target.value.trim() || null));
+document.getElementById('transport-pickup-address').addEventListener('change', (e) => saveActiveBandField('pickup_address', e.target.value.trim() || null));
 
 function renderMemberPicker(){
   const picker = document.getElementById('rehearsal-member-picker');
@@ -3125,6 +3326,7 @@ document.getElementById('btn-delete-band-confirm').addEventListener('click', asy
     fetch(`${SUPABASE_URL}/rest/v1/audio_requirements?group_id=eq.${id}`, { method:'DELETE', headers }),
     fetch(`${SUPABASE_URL}/rest/v1/input_list?group_id=eq.${id}`, { method:'DELETE', headers }),
     fetch(`${SUPABASE_URL}/rest/v1/speaker_tables?group_id=eq.${id}`, { method:'DELETE', headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/transportation_rows?group_id=eq.${id}`, { method:'DELETE', headers }),
   ]);
   await fetch(`${SUPABASE_URL}/rest/v1/songs?band_name=eq.${encodeURIComponent(name)}`, { method:'PATCH', headers, body: JSON.stringify({ band_name: null }) });
   await fetch(`${SUPABASE_URL}/rest/v1/bands?id=eq.${id}`, { method:'DELETE', headers });
@@ -3171,12 +3373,13 @@ function renderBandSwitcher(){
 }
 
 async function switchActiveBandData(){
-  await Promise.all([fetchBand(), fetchInstrumentCatalog(), fetchRehearsalSettings(), fetchRehearsalDates(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems()]);
+  await Promise.all([fetchBand(), fetchInstrumentCatalog(), fetchRehearsalSettings(), fetchRehearsalDates(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchTransportationRows()]);
   renderBandNameBar();
   if(document.getElementById('view-band').style.display !== 'none'){
     renderCatalogColumns();
     renderMemberList();
     if(document.getElementById('band-panel-rehearsals').style.display !== 'none') renderRehearsals();
+    if(document.getElementById('band-panel-transportation').style.display !== 'none') renderTransportation();
   }
   if(document.getElementById('view-technical').style.display !== 'none'){
     const activeSub = document.querySelector('.tech-subtabs .tech-subtab.active')?.dataset.sub;
@@ -3191,14 +3394,32 @@ async function switchActiveBandData(){
 
 function renderBandNameBar(){
   const note = document.getElementById('band-name-saved-note');
-  const active = allBands.find(b => b.id === activeBandId);
-  note.textContent = active ? `Editing: ${active.name}` : (allBands.length ? '' : 'Add a band to get started');
+  note.textContent = allBands.length ? '' : 'Add a band to get started';
   const hasBand = allBands.length > 0 && activeBandId;
-  document.querySelectorAll('.band-layout, #band-panel-rehearsals').forEach(el => {
+  document.querySelectorAll('.band-layout, #band-panel-rehearsals, #band-panel-transportation').forEach(el => {
     el.style.opacity = hasBand ? '1' : '.4';
     el.style.pointerEvents = hasBand ? 'auto' : 'none';
   });
+  document.getElementById('btn-copy-musician-link').style.display = hasBand ? 'inline-flex' : 'none';
 }
+
+// One link, shared by every musician in whichever band is active when you
+// click it — the band's id in the URL is what scopes /musico/ to that
+// band's own rehearsals/setlist/outfit, so the same link can't leak another
+// band's info.
+document.getElementById('btn-copy-musician-link').addEventListener('click', async () => {
+  if(!activeBandId) return;
+  const btn = document.getElementById('btn-copy-musician-link');
+  const url = `${location.origin}/musico/?b=${activeBandId}`;
+  const original = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(url);
+    btn.textContent = '✓ Copied!';
+  } catch(e){
+    window.prompt('Copy this link:', url);
+  }
+  setTimeout(() => { btn.textContent = original; }, 1500);
+});
 async function addNewBand(){
   const input = document.getElementById('band-name-input');
   const name = input.value.trim();
@@ -3224,7 +3445,9 @@ document.querySelectorAll('.band-subtabs .tech-subtab').forEach(pill => {
     pill.classList.add('active');
     document.getElementById('band-panel-members').style.display = pill.dataset.bandSub === 'members' ? 'block' : 'none';
     document.getElementById('band-panel-rehearsals').style.display = pill.dataset.bandSub === 'rehearsals' ? 'block' : 'none';
+    document.getElementById('band-panel-transportation').style.display = pill.dataset.bandSub === 'transportation' ? 'block' : 'none';
     if(pill.dataset.bandSub === 'rehearsals') renderRehearsals();
+    if(pill.dataset.bandSub === 'transportation') renderTransportation();
   });
 });
 
@@ -4560,9 +4783,10 @@ document.getElementById('btn-copy-info').addEventListener('click', async (e) => 
   const parts = subText.split('·').map(p => p.trim());
   const [lugar, fecha, duracion] = [parts[0] || '', parts[1] || '', parts[2] || ''];
   const eventName = document.querySelector('header.top h1').textContent.trim();
+  const client = document.getElementById('header-client').textContent.trim();
   const info = `Empresa gestora: AMBRA Live Productions
 Nombre del Evento: "${eventName}"
-Cliente: The Boston Foundation
+Cliente: ${client}
 Fecha: ${fecha}
 Lugar: ${lugar}
 Duración: ${duracion}`;
@@ -4579,12 +4803,55 @@ Duración: ${duracion}`;
 
 async function reload(){
   await fetchBands();
-  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchRehearsalDateSongs(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues()]);
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchEventInfo(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchRehearsalDateSongs(), fetchTransportationRows(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues()]);
+  renderEventInfoHeader();
   renderTable();
   renderSpotifyEmbedBox();
   renderBandSwitcher();
   renderBandSwitcherPanel();
 }
+
+// Fills the header from `eventInfo` when a row exists — otherwise the
+// hardcoded text already in the HTML stays as-is (first run, before anyone
+// has saved anything via the pencil-edit modal).
+function renderEventInfoHeader(){
+  if(!eventInfo) return;
+  if(eventInfo.client) document.getElementById('header-client').textContent = eventInfo.client;
+  if(eventInfo.event_name) document.getElementById('header-event-name').textContent = eventInfo.event_name;
+  if(eventInfo.venue) document.getElementById('header-venue').textContent = eventInfo.venue;
+  if(eventInfo.event_date) document.getElementById('header-date').textContent = eventInfo.event_date;
+  if(eventInfo.show_time) document.getElementById('header-showtime').textContent = eventInfo.show_time;
+}
+
+document.getElementById('btn-edit-header').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('ei-client').value = eventInfo?.client || document.getElementById('header-client').textContent.trim();
+  document.getElementById('ei-event-name').value = eventInfo?.event_name || document.getElementById('header-event-name').textContent.trim();
+  document.getElementById('ei-venue').value = eventInfo?.venue || document.getElementById('header-venue').textContent.trim();
+  document.getElementById('ei-date').value = eventInfo?.event_date || document.getElementById('header-date').textContent.trim();
+  document.getElementById('ei-showtime').value = eventInfo?.show_time || document.getElementById('header-showtime').textContent.trim();
+  document.getElementById('overlay-event-info').classList.add('open');
+});
+document.getElementById('btn-cancel-event-info').addEventListener('click', () => {
+  document.getElementById('overlay-event-info').classList.remove('open');
+});
+document.getElementById('btn-save-event-info').addEventListener('click', async () => {
+  const payload = {
+    client: document.getElementById('ei-client').value.trim() || null,
+    event_name: document.getElementById('ei-event-name').value.trim() || null,
+    venue: document.getElementById('ei-venue').value.trim() || null,
+    event_date: document.getElementById('ei-date').value.trim() || null,
+    show_time: document.getElementById('ei-showtime').value.trim() || null
+  };
+  if(eventInfo?.id){
+    await fetch(`${SUPABASE_URL}/rest/v1/event_info?id=eq.${eventInfo.id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
+  } else {
+    await fetch(`${SUPABASE_URL}/rest/v1/event_info`, { method:'POST', headers, body: JSON.stringify(payload) });
+  }
+  await fetchEventInfo();
+  renderEventInfoHeader();
+  document.getElementById('overlay-event-info').classList.remove('open');
+});
 
 function openMultiColorPanel(anchorEl, colorsCsv, maxColors, onChange){
   document.querySelectorAll('.multi-color-panel').forEach(p => p.remove());

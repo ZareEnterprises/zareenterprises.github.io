@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Musician View — AMBRA Live Productions</title>
+<link rel="icon" type="image/png" href="/assets/img/ambrawSubmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/ambra-app.css?v={{ site.time | date: '%s' }}">
+</head>
+<body class="theme-table">
+
+<header class="top">
+  <img class="top-logo" src="/assets/img/ambrawSubmark.png" alt="AMBRA Submark">
+  <p class="eyebrow">AMBRA Live Productions · The Boston Foundation</p>
+  <h1>PA'LANTE 2026</h1>
+  <span class="mv-band-pill" id="mv-band-pill" style="display:none"></span>
+</header>
+
+<nav class="tabs" id="mv-tabs">
+  <button class="tab-btn primary active" data-tab="daytime" type="button">Day &amp; Time</button>
+  <button class="tab-btn primary" data-tab="rehearsals" type="button">Rehearsals</button>
+  <button class="tab-btn primary" data-tab="setlist" type="button">Setlist</button>
+  <button class="tab-btn primary" data-tab="attire" type="button">Attire</button>
+  <button class="tab-btn primary" data-tab="transportation" type="button">Transportation</button>
+</nav>
+
+<main class="musician-view">
+  <div class="mv-status" id="mv-status" style="display:none"></div>
+
+  <div class="mv-tab-panel" data-tab="daytime">
+    <div class="mv-card">
+      <div class="mv-daytime-row"><span class="mv-daytime-label">Venue</span><span id="mv-venue">Henri A. Termeer Square</span></div>
+      <div class="mv-daytime-row"><span class="mv-daytime-label">Date</span><span id="mv-date">Sept 10, 2026</span></div>
+      <div class="mv-daytime-row"><span class="mv-daytime-label">Show time</span><span id="mv-showtime">6:30pm – 10:30pm</span></div>
+    </div>
+  </div>
+
+  <div class="mv-tab-panel" data-tab="rehearsals" style="display:none" id="mv-panel-rehearsals">
+    <div class="mv-card mv-empty">Loading…</div>
+  </div>
+
+  <div class="mv-tab-panel" data-tab="setlist" style="display:none" id="mv-panel-setlist">
+    <div class="mv-card mv-empty">Loading…</div>
+  </div>
+
+  <div class="mv-tab-panel" data-tab="attire" style="display:none" id="mv-panel-attire">
+    <div class="mv-card mv-empty">Loading…</div>
+  </div>
+
+  <div class="mv-tab-panel" data-tab="transportation" style="display:none" id="mv-panel-transportation">
+    <div class="mv-card mv-empty">Loading…</div>
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
+
+// Same section order as the Band tab in the main /palante panel, so Attire
+// lists musicians in the order everyone already knows from there.
+const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other','Stage Crew'];
+
+function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function formatSetTime(set){
+  if(!set.set_time) return null;
+  const [hh, mm] = set.set_time.split(':').map(Number);
+  const period = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${String(mm).padStart(2,'0')} ${period}`;
+}
+
+async function getJson(path){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers });
+  return res.ok ? res.json() : [];
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll('#mv-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#mv-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.mv-tab-panel').forEach(p => {
+      p.style.display = p.dataset.tab === btn.dataset.tab ? '' : 'none';
+    });
+  });
+});
+
+function renderRehearsals(rehearsals, rdSongs, songs){
+  if(!rehearsals.length){
+    return `<div class="mv-card mv-empty">No rehearsals scheduled yet — check back later.</div>`;
+  }
+  return rehearsals.map((r, i) => {
+    const assigned = rdSongs.filter(rs => rs.rehearsal_date_id === r.id).sort((a,b)=>(a.item_order||0)-(b.item_order||0));
+    const chips = assigned.map(rs => {
+      const song = songs.find(s => s.id === rs.song_id);
+      return `<span class="mv-song-chip">${escapeHtml(song?.song_name || 'Untitled')}</span>`;
+    }).join('');
+    return `
+    <div class="mv-card mv-rehearsal-card">
+      <div class="mv-rehearsal-top">
+        <span>Rehearsal ${i+1}${r.date_text ? ` · ${escapeHtml(r.date_text)}` : ''}</span>
+        ${r.time_text ? `<span class="mv-rehearsal-time">${escapeHtml(r.time_text)}</span>` : ''}
+      </div>
+      ${r.location_text ? `<div class="mv-rehearsal-location">${r.location_link ? `<a href="${escapeHtml(r.location_link)}" target="_blank" rel="noopener">${escapeHtml(r.location_text)}</a>` : escapeHtml(r.location_text)}</div>` : ''}
+      ${chips ? `<div class="mv-rehearsal-songs">${chips}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderSetlist(sets, songs, spotifyLink){
+  const spotifyButton = spotifyLink
+    ? `<a href="${escapeHtml(spotifyLink)}" target="_blank" rel="noopener" class="btn ghost small" style="display:inline-flex;margin-bottom:14px">🎧 Listen on Spotify</a>`
+    : '';
+  const taggedInUse = songs.some(s => s.band_name);
+  const mySongs = taggedInUse ? songs.filter(s => s.band_name === window.__mvBandName) : songs;
+  const orderedSets = [...sets].filter(s => s.set_type !== 'interlude').sort((a,b) => (a.set_order||0) - (b.set_order||0));
+
+  const cards = orderedSets.map(set => {
+    const setSongs = mySongs.filter(s => s.set_number === set.set_number).sort((a,b)=>(a.song_order||0)-(b.song_order||0));
+    if(!setSongs.length) return '';
+    const timeLabel = formatSetTime(set);
+    const rows = setSongs.map(s => `
+      <div class="mv-song-row">
+        <div>
+          <span class="mv-song-title">${escapeHtml(s.song_name || 'Untitled')}</span>
+          ${s.artist ? `<span class="mv-song-artist"> — ${escapeHtml(s.artist)}</span>` : ''}
+        </div>
+        ${s.duration ? `<span class="mv-song-duration">${escapeHtml(s.duration)}</span>` : ''}
+      </div>
+    `).join('');
+    return `
+    <div class="mv-card mv-set-card">
+      <div class="mv-set-top">
+        <span class="mv-set-name">${escapeHtml(set.set_number)}</span>
+        ${timeLabel ? `<span class="mv-set-time">${timeLabel}</span>` : ''}
+      </div>
+      ${rows}
+    </div>`;
+  }).filter(Boolean).join('');
+
+  return spotifyButton + (cards || `<div class="mv-card mv-empty">No setlist for your band yet.</div>`);
+}
+
+function orderMembersByInstrument(members, catalog){
+  const orderedCatalog = [...catalog].sort((a, b) => {
+    const sa = SECTIONS.indexOf(a.section), sb = SECTIONS.indexOf(b.section);
+    return (sa === -1 ? 99 : sa) - (sb === -1 ? 99 : sb) || a.name.localeCompare(b.name);
+  });
+  return orderedCatalog
+    .map(cat => members.find(m => (m.instrument || '').toLowerCase() === cat.name.toLowerCase()))
+    .filter(Boolean);
+}
+
+function renderAttire(members, catalog){
+  const withArtists = orderMembersByInstrument(members, catalog).filter(m => m.artist_name);
+  if(!withArtists.length){
+    return `<div class="mv-card mv-empty">No outfit info yet.</div>`;
+  }
+  const rows = withArtists.map(m => {
+    const colors = (m.outfit_color || '').split(',').map(c => c.trim()).filter(Boolean);
+    const swatches = colors.map(c => `<span class="mv-swatch" style="background:${escapeHtml(c)}"></span>`).join('');
+    return `
+    <div class="mv-member-row">
+      <span class="mv-member-instrument">${escapeHtml(m.instrument || '—')}</span>
+      <span class="mv-member-name">${escapeHtml(m.artist_name)}</span>
+      <span class="mv-member-swatches">${swatches}</span>
+      <span class="mv-member-size">${escapeHtml(m.outfit_size || '')}</span>
+    </div>`;
+  }).join('');
+  return `<div class="mv-card">${rows}</div>`;
+}
+
+function renderTransportGroup(rows, members, direction, title){
+  const filtered = rows.filter(r => r.direction === direction);
+  if(!filtered.length) return '';
+  const list = filtered.map(r => {
+    const passengerIds = (r.passenger_ids || '').split(',').map(s => s.trim()).filter(Boolean);
+    const names = passengerIds.map(id => members.find(m => m.id === id)?.artist_name).filter(Boolean);
+    return `
+    <div class="mv-card">
+      <div class="mv-rehearsal-top">
+        <span>${escapeHtml(r.mode || 'Transportation')}${r.max_capacity ? ` · Max ${escapeHtml(r.max_capacity)}` : ''}</span>
+        ${r.cost ? `<span class="mv-rehearsal-time">$${escapeHtml(r.cost)}</span>` : ''}
+      </div>
+      ${r.departure_point ? `<div class="mv-rehearsal-location">${escapeHtml(r.departure_point)}</div>` : ''}
+      ${names.length ? `<div class="mv-rehearsal-songs">${names.map(n => `<span class="mv-song-chip">${escapeHtml(n)}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+  return `<div class="mv-section-title">${title}</div>${list}`;
+}
+
+function renderTransportation(rows, members, bandInfo){
+  const infoLines = [
+    bandInfo.venue_arrival_time ? `<div class="mv-daytime-row"><span class="mv-daytime-label">On venue</span><span>${escapeHtml(bandInfo.venue_arrival_time)}</span></div>` : '',
+    bandInfo.pickup_time ? `<div class="mv-daytime-row"><span class="mv-daytime-label">Pick up time</span><span>${escapeHtml(bandInfo.pickup_time)}</span></div>` : '',
+    bandInfo.pickup_address ? `<div class="mv-daytime-row"><span class="mv-daytime-label">Address</span><span>${escapeHtml(bandInfo.pickup_address)}</span></div>` : ''
+  ].filter(Boolean).join('');
+  const infoCard = infoLines ? `<div class="mv-card">${infoLines}</div>` : '';
+
+  const groups = renderTransportGroup(rows, members, 'to_event', 'To the Event') + renderTransportGroup(rows, members, 'back_home', 'Back to Home');
+
+  if(!infoCard && !groups) return `<div class="mv-card mv-empty">No transportation set up yet.</div>`;
+  return infoCard + groups;
+}
+
+async function boot(){
+  const bandId = new URLSearchParams(location.search).get('b');
+  const statusEl = document.getElementById('mv-status');
+  if(!bandId){
+    statusEl.textContent = "This link is missing its band — ask whoever runs your project for the correct link.";
+    statusEl.style.display = 'block';
+    return;
+  }
+
+  const [bands, members, catalog, eventInfoRows, transportRows, rehearsals, rdSongs, songs, sets, spotifyRows] = await Promise.all([
+    getJson(`bands?id=eq.${bandId}&select=*`),
+    getJson(`band?group_id=eq.${bandId}&select=*`),
+    getJson(`instrument_catalog?group_id=eq.${bandId}&select=*`),
+    getJson(`event_info?select=*&limit=1`),
+    getJson(`transportation_rows?group_id=eq.${bandId}&select=*&order=item_order.asc`),
+    getJson(`rehearsal_dates?group_id=eq.${bandId}&select=*&order=item_order.asc`),
+    getJson(`rehearsal_date_songs?select=*&order=item_order.asc`),
+    getJson(`songs?select=*&order=song_order.asc`),
+    getJson(`sets?select=*&order=set_order.asc`),
+    getJson(`spotify_embed?select=*&limit=1`)
+  ]);
+
+  const bandInfo = bands[0];
+  if(!bandInfo){
+    statusEl.textContent = "This link isn't valid anymore — ask whoever runs your project for a new one.";
+    statusEl.style.display = 'block';
+    return;
+  }
+  window.__mvBandName = bandInfo.name;
+
+  const pill = document.getElementById('mv-band-pill');
+  pill.textContent = bandInfo.name;
+  pill.style.display = 'inline-block';
+
+  const eventInfo = eventInfoRows[0];
+  if(eventInfo?.venue) document.getElementById('mv-venue').textContent = eventInfo.venue;
+  if(eventInfo?.event_date) document.getElementById('mv-date').textContent = eventInfo.event_date;
+  if(eventInfo?.show_time) document.getElementById('mv-showtime').textContent = eventInfo.show_time;
+
+  document.getElementById('mv-panel-rehearsals').innerHTML = renderRehearsals(rehearsals, rdSongs, songs);
+  document.getElementById('mv-panel-setlist').innerHTML = renderSetlist(sets, songs, spotifyRows[0]?.link);
+  document.getElementById('mv-panel-attire').innerHTML = renderAttire(members, catalog);
+  document.getElementById('mv-panel-transportation').innerHTML = renderTransportation(transportRows, members, bandInfo);
+}
+
+boot();
+</script>
+
+</body>
+</html>

@@ -488,7 +488,7 @@
     <div class="field"><label>Client</label><input type="text" id="ei-client" placeholder="e.g. The Boston Foundation"></div>
     <div class="field"><label>Event name</label><input type="text" id="ei-event-name" placeholder="e.g. PA'LANTE 2026"></div>
     <div class="field"><label>Venue</label><input type="text" id="ei-venue" placeholder="e.g. Henri A. Termeer Square"></div>
-    <div class="field"><label>Date</label><input type="text" id="ei-date" placeholder="e.g. Sept 10, 2026"></div>
+    <div class="field"><label>Date</label><input type="date" id="ei-date-iso"></div>
     <div class="field"><label>Show time</label><input type="text" id="ei-showtime" placeholder="e.g. 6:30pm–10:30pm"></div>
     <div class="modal-actions">
       <button class="btn ghost" id="btn-cancel-event-info">Cancel</button>
@@ -1263,7 +1263,7 @@ let speakerTables = [];
 let speakerItems = [];
 let stageRectangles = [];
 let stageSettings = null;
-let eventInfo = null; // single row: client, event_name, venue, event_date, show_time — drives the page header
+let eventInfo = null; // single row: client, event_name, venue, event_date_iso, show_time — drives the page header
 let stageZoom = 1;
 let rehearsalSettings = null;
 let rehearsalAvailability = [];
@@ -3652,6 +3652,7 @@ function renderRehearsalDatesBox(){
         <button class="rd-remove-btn" data-id="${r.id}">✕</button>
       </div>
       <input type="text" class="rd-card-input rd-date-input" data-id="${r.id}" data-field="date_text" value="${escapeAttr(r.date_text || '')}" placeholder="Date">
+      <input type="date" class="rd-card-input rd-dateiso-input" data-id="${r.id}" data-field="date_iso" value="${escapeAttr(r.date_iso || '')}" title="Date shown on the panel's Calendar tab">
       <input type="text" class="rd-card-input rd-time-input" data-id="${r.id}" data-field="time_text" value="${escapeAttr(r.time_text || '')}" placeholder="Time">
       <input type="text" class="rd-card-input rd-location-input" data-id="${r.id}" data-field="location_text" value="${escapeAttr(r.location_text || '')}" placeholder="Location">
       <input type="text" class="rd-card-input rd-location-link-input" data-id="${r.id}" data-field="location_link" value="${escapeAttr(r.location_link || '')}" placeholder="Location link (optional)">
@@ -3667,6 +3668,7 @@ function renderRehearsalDatesBox(){
   list.querySelectorAll('.rd-card-input').forEach(inp => {
     inp.addEventListener('change', async () => {
       const field = inp.classList.contains('rd-date-input') ? 'date_text'
+        : inp.classList.contains('rd-dateiso-input') ? 'date_iso'
         : inp.classList.contains('rd-time-input') ? 'time_text'
         : inp.classList.contains('rd-location-input') ? 'location_text' : 'location_link';
       await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?id=eq.${inp.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: inp.value || null }) });
@@ -4808,7 +4810,7 @@ function renderChart(kind){
     if(charts.emotion) charts.emotion.destroy();
     charts.emotion = new Chart(ctx, {
       type:'doughnut',
-      data:{ labels:['Low','Medium','High'], datasets:[{ data:[counts.baja,counts.media,counts.alta], backgroundColor:['#6B2C2C','#B23F3A','#E14A3E'], borderWidth:0 }] },
+      data:{ labels:['Low','Medium','High'], datasets:[{ data:[counts.baja,counts.media,counts.alta], backgroundColor:['#4C9A6A','#D9A23D','#E14A3E'], borderWidth:0 }] },
       options:{ plugins:{ legend:{ position:'bottom', labels:{ color:'#EFE9DC', font:{family:'Inter'}, boxWidth:12 } } } }
     });
 
@@ -4823,7 +4825,7 @@ function renderChart(kind){
         datasets:[{
           data: order.map(s => emoVal[s.emotion_level || 'media']),
           borderColor:'#D98A3D', backgroundColor:'rgba(217,138,61,0.12)',
-          pointBackgroundColor: order.map(s => ({baja:'#6B2C2C',media:'#B23F3A',alta:'#E14A3E'}[s.emotion_level||'media'])),
+          pointBackgroundColor: order.map(s => ({baja:'#4C9A6A',media:'#D9A23D',alta:'#E14A3E'}[s.emotion_level||'media'])),
           pointRadius:5, tension:.35, fill:true,
         }]
       },
@@ -4876,6 +4878,15 @@ async function reload(){
   renderBandSwitcherPanel();
 }
 
+// "Sept 10, 2026" from a 'YYYY-MM-DD' string — built from the parts instead
+// of `new Date(iso)` so it reads as the calendar date typed in, not shifted
+// a day by UTC parsing in timezones behind it.
+function formatDateNice(iso){
+  if(!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
 // Fills the header from `eventInfo` when a row exists — otherwise the
 // hardcoded text already in the HTML stays as-is (first run, before anyone
 // has saved anything via the pencil-edit modal).
@@ -4884,7 +4895,7 @@ function renderEventInfoHeader(){
   if(eventInfo.client) document.getElementById('header-client').textContent = eventInfo.client;
   if(eventInfo.event_name) document.getElementById('header-event-name').textContent = eventInfo.event_name;
   if(eventInfo.venue) document.getElementById('header-venue').textContent = eventInfo.venue;
-  if(eventInfo.event_date) document.getElementById('header-date').textContent = eventInfo.event_date;
+  if(eventInfo.event_date_iso) document.getElementById('header-date').textContent = formatDateNice(eventInfo.event_date_iso);
   if(eventInfo.show_time) document.getElementById('header-showtime').textContent = eventInfo.show_time;
 }
 
@@ -4892,7 +4903,7 @@ function openEventInfoModal(){
   document.getElementById('ei-client').value = eventInfo?.client || '';
   document.getElementById('ei-event-name').value = eventInfo?.event_name || currentProjectName || '';
   document.getElementById('ei-venue').value = eventInfo?.venue || '';
-  document.getElementById('ei-date').value = eventInfo?.event_date || '';
+  document.getElementById('ei-date-iso').value = eventInfo?.event_date_iso || '';
   document.getElementById('ei-showtime').value = eventInfo?.show_time || '';
   document.getElementById('overlay-event-info').classList.add('open');
 }
@@ -4908,7 +4919,7 @@ document.getElementById('btn-save-event-info').addEventListener('click', async (
     client: document.getElementById('ei-client').value.trim() || null,
     event_name: document.getElementById('ei-event-name').value.trim() || null,
     venue: document.getElementById('ei-venue').value.trim() || null,
-    event_date: document.getElementById('ei-date').value.trim() || null,
+    event_date_iso: document.getElementById('ei-date-iso').value || null,
     show_time: document.getElementById('ei-showtime').value.trim() || null
   };
   let res;

@@ -14,6 +14,9 @@
   --emo-alta:#E14A3E;
   --green:#4C9A6A;
   --green-bright:#5DB57D;
+  --therm-baja:#4C9A6A;
+  --therm-media:#D9A23D;
+  --therm-alta:#E14A3E;
   --guest:#C7738C;
   --radius:16px;
 }
@@ -282,17 +285,17 @@ main{ position:relative; }
 
 .dimmer{ border-radius:3px; background:var(--line); position:relative; overflow:visible; cursor:pointer; }
 .dimmer i{ position:absolute; left:0; right:0; bottom:0; display:block; border-radius:3px; overflow:hidden; }
-.dimmer.baja i{ height:33%; background:var(--emo-baja); }
-.dimmer.media i{ height:66%; background:var(--emo-media); }
-.dimmer.alta i{ height:100%; background:var(--emo-alta); box-shadow:0 0 10px rgba(225,74,62,0.5); }
+.dimmer.baja i{ height:33%; background:var(--therm-baja); }
+.dimmer.media i{ height:66%; background:var(--therm-media); }
+.dimmer.alta i{ height:100%; background:var(--therm-alta); box-shadow:0 0 10px rgba(225,74,62,0.5); }
 .fader-dot{
   position:absolute; left:50%; transform:translate(-50%, 50%); width:14px; height:14px;
-  border-radius:50%; background:var(--emo-alta); border:2px solid var(--bg);
+  border-radius:50%; background:var(--therm-alta); border:2px solid var(--bg);
   box-shadow:0 0 6px rgba(225,74,62,0.6); cursor:grab; z-index:2;
 }
-.fader-dot.baja{ bottom:33%; }
-.fader-dot.media{ bottom:66%; }
-.fader-dot.alta{ bottom:100%; }
+.fader-dot.baja{ bottom:33%; background:var(--therm-baja); box-shadow:0 0 6px rgba(76,154,106,0.6); }
+.fader-dot.media{ bottom:66%; background:var(--therm-media); box-shadow:0 0 6px rgba(217,162,61,0.6); }
+.fader-dot.alta{ bottom:100%; background:var(--therm-alta); box-shadow:0 0 6px rgba(225,74,62,0.6); }
 .fader-dot:active{ cursor:grabbing; }
 
 .song-cell .title-edit{ font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:0; width:100%; }

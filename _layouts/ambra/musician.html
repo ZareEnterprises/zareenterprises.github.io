@@ -65,6 +65,12 @@ const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Othe
 
 function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
+function formatDateNice(iso){
+  if(!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
 function formatSetTime(set){
   if(!set.set_time) return null;
   const [hh, mm] = set.set_time.split(':').map(Number);
@@ -244,7 +250,7 @@ async function boot(){
 
   const eventInfo = eventInfoRows[0];
   if(eventInfo?.venue) document.getElementById('mv-venue').textContent = eventInfo.venue;
-  if(eventInfo?.event_date) document.getElementById('mv-date').textContent = eventInfo.event_date;
+  if(eventInfo?.event_date_iso) document.getElementById('mv-date').textContent = formatDateNice(eventInfo.event_date_iso);
   if(eventInfo?.show_time) document.getElementById('mv-showtime').textContent = eventInfo.show_time;
 
   document.getElementById('mv-panel-rehearsals').innerHTML = renderRehearsals(rehearsals, rdSongs, songs);

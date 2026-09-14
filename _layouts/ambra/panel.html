@@ -17,7 +17,7 @@
   <!-- Topbar -->
   <header class="topbar">
     <div class="app-brand">
-      <span class="app-brand-name">TEMPLA</span>
+      <span class="app-brand-name">AMBRA</span>
       <span class="app-brand-tagline">Powered by AMBRA Live Productions</span>
     </div>
 
@@ -29,8 +29,9 @@
 
     <nav class="tabs-seg" id="main-tabs">
       <button class="seg-btn active" data-view="projects" type="button">Projects</button>
-      <button class="seg-btn" data-view="users" type="button">Users</button>
+      <button class="seg-btn" data-view="calendar" type="button">Calendar</button>
       <button class="seg-btn" data-view="finance" type="button">Finance</button>
+      <button class="seg-btn" data-view="users" type="button">Users</button>
     </nav>
 
     <div class="topbar-actions">
@@ -126,11 +127,69 @@
     </div>
   </section>
 
-  <!-- Finance view (placeholder) -->
+  <!-- Finance view -->
   <section id="view-finance" style="display:none">
-    <div class="section-head"><div class="section-head-left"><h2>Finance</h2></div></div>
-    <div class="pcard-new" style="pointer-events:none;min-height:120px">
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint)">Nothing here yet</span>
+    <div class="section-head">
+      <div class="section-head-left">
+        <h2>Finance</h2>
+        <span class="count-label" id="finance-count">—</span>
+      </div>
+      <select id="finance-project-select" class="select-project"><option value="">Select a project…</option></select>
+    </div>
+
+    <div class="pcard-new" id="finance-empty" style="pointer-events:none;min-height:120px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint)">Pick a project above to see its budget</span>
+    </div>
+
+    <div id="finance-sheet" style="display:none">
+      <div class="fin-type-tabs">
+        <button class="fin-type-btn active" data-fin-type="expense" type="button">Expenses</button>
+        <button class="fin-type-btn" data-fin-type="revenue" type="button">Revenue</button>
+      </div>
+      <div class="fin-table" id="fin-table"></div>
+      <div class="fin-summary" id="fin-summary"></div>
+    </div>
+  </section>
+
+  <!-- Calendar view -->
+  <section id="view-calendar" style="display:none">
+    <div class="section-head">
+      <div class="section-head-left">
+        <h2>Calendar</h2>
+        <span class="count-label" id="calendar-count">—</span>
+      </div>
+      <button class="btn-primary" id="btn-add-calendar-event" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add
+      </button>
+    </div>
+
+    <div class="cal-layout">
+      <div class="cal-main">
+        <div class="cal-nav">
+          <button class="icon-btn cal-nav-btn" id="cal-prev-month" type="button">‹</button>
+          <span class="cal-month-title" id="cal-month-title">—</span>
+          <button class="icon-btn cal-nav-btn" id="cal-next-month" type="button">›</button>
+          <button class="btn-ghost small" id="cal-today-btn" type="button" style="margin-left:auto">Today</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend">
+          <span class="cal-legend-item"><span class="cal-dot cal-dot-event"></span>Event</span>
+          <span class="cal-legend-item"><span class="cal-dot cal-dot-rehearsal"></span>Rehearsal</span>
+          <span class="cal-legend-item"><span class="cal-dot cal-dot-custom"></span>Other</span>
+          <span class="cal-legend-item"><span class="cal-dot cal-dot-reminder"></span>Reminder</span>
+        </div>
+      </div>
+
+      <div class="cal-side">
+        <div class="cal-side-head">
+          <h3>Reminders</h3>
+        </div>
+        <div id="reminders-list"></div>
+      </div>
     </div>
   </section>
 
@@ -173,6 +232,53 @@
 
     <div class="modal-actions">
       <button class="btn-ghost" id="btn-cancel-new-project" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit calendar event modal -->
+<div class="overlay" id="overlay-calendar-event">
+  <div class="modal" style="max-width:420px">
+    <h2 id="calendar-event-modal-title">Add</h2>
+    <div class="field"><label>Title</label><input type="text" id="ce-title" placeholder="e.g. Load-in, Meeting with venue…"></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="ce-date"></div>
+      <div class="field"><label>Time (optional)</label><input type="text" id="ce-time" placeholder="e.g. 5:00pm"></div>
+    </div>
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label style="margin-bottom:0">Reminder</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;cursor:pointer;margin-bottom:0" title="Unchecked: shows only as an event on the calendar">
+          <input type="checkbox" id="ce-is-reminder" style="width:auto">
+          Activate
+        </label>
+      </div>
+      <select id="ce-category"></select>
+    </div>
+    <div class="field"><label>Chosen project</label><select id="ce-project"><option value="">— None —</option></select></div>
+    <div class="field">
+      <label>Share with</label>
+      <div class="chip-select" id="ce-users"></div>
+    </div>
+    <div class="field"><label>Notes (optional)</label><textarea id="ce-notes" rows="2" style="width:100%;resize:vertical;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 11px;color:var(--ink);font-family:inherit;font-size:13.5px"></textarea></div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn-ghost" id="btn-delete-calendar-event" type="button" style="display:none;color:var(--danger, #C0392B)">Delete</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn-ghost" id="btn-cancel-calendar-event" type="button">Cancel</button>
+        <button class="btn-primary" id="btn-save-calendar-event" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Day detail modal -->
+<div class="overlay" id="overlay-day-detail">
+  <div class="modal" style="max-width:420px">
+    <h2 id="day-detail-title">—</h2>
+    <div id="day-detail-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn-ghost" id="btn-day-detail-add" type="button">+ Add event this day</button>
+      <button class="btn-ghost" id="btn-close-day-detail" type="button">Close</button>
     </div>
   </div>
 </div>
@@ -369,12 +475,18 @@
   }
 
   async function boot(){
-    await Promise.all([loadProjects(), loadPanelBands(), loadUsers()]);
+    await Promise.all([loadProjects(), loadPanelBands(), loadUsers(), loadCalendarData()]);
     renderProjects('');
     renderFilterPills();
     renderUsers();
     applyMeIdentity();
+    renderCalendar();
+    renderReminders();
+    populateFinanceProjectSelect();
   }
+
+  function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function escapeAttr(str){ return escapeHtml(str); }
 
   // Fills the avatar circle and the "Me" dropdown's Name field with the
   // signed-in user's own data instead of the placeholder "ME" / "Dany".
@@ -544,6 +656,15 @@
         permissions: Object.fromEntries(PERM_COUNT_KEYS.map(k => [k, 'edit']))
       });
     }
+
+    // Without these, Band > Members' role dropdown opens empty (only "Other…")
+    // since role_options is per-project now — MainBand/Guest are the two role
+    // names /palante's own code relies on by name (default role, guest list).
+    await supabaseClient.from('role_options').insert([
+      { name: 'MainBand', project_id: project.id },
+      { name: 'Guest', project_id: project.id }
+    ]);
+
     return project;
   }
 
@@ -944,9 +1065,13 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('#main-tabs .seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      ['projects','users','finance'].forEach(v => {
+      ['projects','calendar','users','finance'].forEach(v => {
         document.getElementById('view-' + v).style.display = (v === btn.dataset.view) ? '' : 'none';
       });
+      // The calendar tab starts hidden (display:none), so any height
+      // measured while it was still hidden reports 0 — resync for real now
+      // that it's actually visible and .cal-main has a real rendered height.
+      if(btn.dataset.view === 'calendar') syncCalSideHeight();
     });
   });
 
@@ -970,7 +1095,7 @@
       document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
     }
   });
-  [ 'overlay-new-project', 'overlay-user', 'overlay-timezone' ].forEach(id => {
+  [ 'overlay-new-project', 'overlay-user', 'overlay-timezone', 'overlay-calendar-event', 'overlay-day-detail' ].forEach(id => {
     document.getElementById(id).addEventListener('click', (e) => { if(e.target.id === id) closeModal(id); });
   });
 
@@ -988,6 +1113,627 @@
   document.getElementById('btn-save-timezone').addEventListener('click', () => {
     localStorage.setItem(TZ_STORAGE_KEY, document.getElementById('tz-select').value);
     closeModal('overlay-timezone');
+  });
+
+  // ---------- Calendar ----------
+  // Pulls together three independent sources into one grid: each project's
+  // event date (event_info.event_date_iso), every band's rehearsal dates
+  // (rehearsal_dates.date_iso, matched back to a project through bands.
+  // project_id since rehearsal_dates only stores the band id), and free-form
+  // entries the user adds directly on the calendar (calendar_events).
+  let ALL_BANDS = [];
+  let EVENT_INFO_ROWS = [];
+  let REHEARSAL_ROWS = [];
+  let CALENDAR_EVENTS = [];
+  let CALENDAR_EVENT_USERS = [];
+  let TEMPLATE_ITEMS = [];
+  let REMINDER_STATUS = [];
+  const today = new Date();
+  let calViewYear = today.getFullYear();
+  let calViewMonth = today.getMonth();
+  let calSelectedDateStr = null;
+  let editingCalendarEventId = null;
+
+  function toDateStr(d){
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function dateFromStr(s){
+    const [y,m,d] = s.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+  function addDays(dateStr, n){
+    const d = dateFromStr(dateStr);
+    d.setDate(d.getDate() + n);
+    return toDateStr(d);
+  }
+  function formatDateShort(dateStr){ return dateFromStr(dateStr).toLocaleDateString('en-US', { month:'short', day:'numeric' }); }
+  function formatDateLong(dateStr){ return dateFromStr(dateStr).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }); }
+
+  async function loadCalendarData(){
+    const [bandsRes, eventInfoRes, rehearsalRes, calEventsRes, calEventUsersRes, templateRes, statusRes] = await Promise.all([
+      supabaseClient.from('bands').select('id,name,project_id'),
+      supabaseClient.from('event_info').select('project_id,event_name,venue,event_date_iso'),
+      supabaseClient.from('rehearsal_dates').select('date_iso,date_text,time_text,location_text,group_id'),
+      supabaseClient.from('calendar_events').select('*'),
+      supabaseClient.from('calendar_event_users').select('*'),
+      supabaseClient.from('reminder_template_items').select('*').order('item_order'),
+      supabaseClient.from('event_reminder_status').select('*')
+    ]);
+    ALL_BANDS = bandsRes.data || [];
+    EVENT_INFO_ROWS = (eventInfoRes.data || []).filter(e => e.event_date_iso);
+    REHEARSAL_ROWS = (rehearsalRes.data || []).filter(r => r.date_iso).map(r => {
+      const band = ALL_BANDS.find(b => b.id === r.group_id);
+      return { ...r, bandName: band?.name || 'Band', project_id: band?.project_id || null };
+    });
+    CALENDAR_EVENTS = calEventsRes.data || [];
+    CALENDAR_EVENT_USERS = calEventUsersRes.data || [];
+    TEMPLATE_ITEMS = templateRes.data || [];
+    REMINDER_STATUS = statusRes.data || [];
+  }
+
+  // A custom event with nobody explicitly linked is a team-wide entry —
+  // everyone sees it. Once you link specific people, only they (and whoever
+  // created it) see it on their calendar.
+  function isCalendarEventVisibleToMe(eventId){
+    const linked = CALENDAR_EVENT_USERS.filter(u => u.event_id === eventId).map(u => u.user_id);
+    if(linked.length === 0) return true;
+    return currentSession && linked.includes(currentSession.user.id);
+  }
+
+  function itemsForDate(dateStr){
+    const items = [];
+    EVENT_INFO_ROWS.forEach(e => {
+      if(e.event_date_iso !== dateStr) return;
+      const proj = PROJECTS.find(p => p.id === e.project_id);
+      items.push({ type:'event', title: proj?.name || e.event_name || 'Event', sub: e.venue || '', project_id: e.project_id });
+    });
+    REHEARSAL_ROWS.forEach(r => {
+      if(r.date_iso !== dateStr) return;
+      items.push({ type:'rehearsal', title: `Rehearsal — ${r.bandName}`, sub: r.location_text || r.time_text || '', project_id: r.project_id });
+    });
+    CALENDAR_EVENTS.forEach(c => {
+      if(c.event_date !== dateStr || !isCalendarEventVisibleToMe(c.id)) return;
+      if(c.is_reminder && c.done) return; // checked off — same as a template reminder, it drops off the calendar
+      const sub = [c.category, c.event_time].filter(Boolean).join(' · ');
+      items.push({ type: c.is_reminder ? 'reminder' : 'custom', title: c.title, sub, project_id: c.project_id, customId: c.id });
+    });
+    EVENT_INFO_ROWS.forEach(e => {
+      const proj = PROJECTS.find(p => p.id === e.project_id);
+      TEMPLATE_ITEMS.forEach(item => {
+        const dueDate = addDays(e.event_date_iso, -(item.days_before || 0));
+        if(dueDate !== dateStr) return;
+        const status = REMINDER_STATUS.find(s => s.project_id === e.project_id && s.template_item_id === item.id);
+        if(status?.done) return;
+        items.push({ type:'reminder', title: `${item.title} (${proj?.name || 'event'})`, sub:'Reminder due', project_id: e.project_id });
+      });
+    });
+    return items;
+  }
+
+  function renderCalendar(){
+    const grid = document.getElementById('cal-grid');
+    const first = new Date(calViewYear, calViewMonth, 1);
+    const startDow = first.getDay();
+    const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
+    const daysInPrevMonth = new Date(calViewYear, calViewMonth, 0).getDate();
+    const todayStr = toDateStr(today);
+
+    document.getElementById('cal-month-title').textContent = first.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+    const cells = [];
+    for(let i = startDow - 1; i >= 0; i--) cells.push({ day: daysInPrevMonth - i, outside:true });
+    for(let d = 1; d <= daysInMonth; d++) cells.push({ day:d, outside:false, dateStr: toDateStr(new Date(calViewYear, calViewMonth, d)) });
+    let trailing = 1;
+    while(cells.length % 7 !== 0) cells.push({ day: trailing++, outside:true });
+
+    grid.innerHTML = cells.map(c => {
+      if(c.outside) return `<div class="cal-day cal-day-outside"><span class="cal-day-num">${c.day}</span></div>`;
+      const items = itemsForDate(c.dateStr);
+      const isToday = c.dateStr === todayStr;
+      const shown = items.slice(0,2).map(it => `<div class="cal-marker cal-marker-${it.type}"><span class="cal-dot cal-dot-${it.type}"></span><span class="cal-marker-text">${escapeHtml(it.title)}</span></div>`).join('');
+      const more = items.length > 2 ? `<div class="cal-marker" style="color:var(--faint)">+${items.length-2} more</div>` : '';
+      return `
+        <div class="cal-day ${isToday ? 'cal-day-today' : ''}" data-date="${c.dateStr}">
+          <span class="cal-day-num">${c.day}</span>
+          <div class="cal-day-markers">${shown}${more}</div>
+        </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.cal-day[data-date]').forEach(el => {
+      el.addEventListener('click', () => openDayDetail(el.dataset.date));
+    });
+    syncCalSideHeight();
+  }
+
+  // CSS Grid's align-items:stretch only equalizes the two columns to
+  // whichever is naturally taller — if Reminders has more content than the
+  // calendar, the WHOLE row (calendar included) grows to match it instead
+  // of Reminders scrolling within the calendar's own height. Measuring and
+  // capping it here is what actually keeps Reminders' bottom edge lined up
+  // with the calendar's, with its own scrollbar for the rest.
+  function syncCalSideHeight(){
+    const main = document.querySelector('.cal-main');
+    const side = document.querySelector('.cal-side');
+    if(!main || !side) return;
+    side.style.maxHeight = main.offsetHeight + 'px';
+  }
+  window.addEventListener('resize', syncCalSideHeight);
+
+  function openDayDetail(dateStr){
+    calSelectedDateStr = dateStr;
+    const items = itemsForDate(dateStr);
+    document.getElementById('day-detail-title').textContent = formatDateLong(dateStr);
+    const list = document.getElementById('day-detail-list');
+    list.innerHTML = items.length ? items.map(it => `
+      <div class="day-detail-item" ${it.type === 'custom' ? `data-custom-id="${it.customId}" style="cursor:pointer"` : ''}>
+        <div class="day-detail-item-title">${escapeHtml(it.title)}</div>
+        ${it.sub ? `<div class="day-detail-item-sub">${escapeHtml(it.sub)}</div>` : ''}
+      </div>
+    `).join('') : '<p class="hint">Nothing on this day yet.</p>';
+    list.querySelectorAll('[data-custom-id]').forEach(el => {
+      el.addEventListener('click', () => {
+        const ev = CALENDAR_EVENTS.find(c => c.id === el.dataset.customId);
+        closeModal('overlay-day-detail');
+        openCalendarEventModal(ev, null);
+      });
+    });
+    openModal('overlay-day-detail');
+  }
+  document.getElementById('btn-close-day-detail').addEventListener('click', () => closeModal('overlay-day-detail'));
+  document.getElementById('btn-day-detail-add').addEventListener('click', () => {
+    closeModal('overlay-day-detail');
+    openCalendarEventModal(null, calSelectedDateStr);
+  });
+
+  // Nobody shows until a project is chosen — there's no membership to scope
+  // by otherwise, and showing everyone by default invited picking people
+  // outside the chosen project's team.
+  function renderCeUserChips(projectId, linkedUserIds){
+    const usersWrap = document.getElementById('ce-users');
+    if(!projectId){
+      usersWrap.innerHTML = '<span class="hint">Choose a project first.</span>';
+      return;
+    }
+    const options = USERS.filter(u => u.projects.includes(projectId));
+    usersWrap.innerHTML = options.length ? options.map(u => `
+      <button type="button" class="chip ${linkedUserIds.includes(u.id) ? 'selected' : ''}" data-user="${u.id}">${escapeHtml(u.name)}</button>
+    `).join('') : '<span class="hint">No one on that project yet.</span>';
+    usersWrap.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => chip.classList.toggle('selected'));
+    });
+  }
+
+  function openCalendarEventModal(event, prefillDate){
+    editingCalendarEventId = event?.id || null;
+    document.getElementById('calendar-event-modal-title').textContent = event ? 'Edit' : 'Add';
+    document.getElementById('ce-title').value = event?.title || '';
+    document.getElementById('ce-date').value = event?.event_date || prefillDate || toDateStr(today);
+    document.getElementById('ce-time').value = event?.event_time || '';
+    document.getElementById('ce-notes').value = event?.notes || '';
+    document.getElementById('ce-category').innerHTML = REMINDER_CATEGORIES.map(c =>
+      `<option value="${c}" ${(event?.category || 'Other') === c ? 'selected' : ''}>${c}</option>`).join('');
+    document.getElementById('ce-is-reminder').checked = !!event?.is_reminder;
+    document.getElementById('ce-category').disabled = !event?.is_reminder;
+    document.getElementById('ce-project').innerHTML = '<option value="">— None —</option>' +
+      PROJECTS.map(p => `<option value="${p.id}" ${event?.project_id === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
+
+    const linkedUserIds = event ? CALENDAR_EVENT_USERS.filter(u => u.event_id === event.id).map(u => u.user_id) : [];
+    renderCeUserChips(event?.project_id || '', linkedUserIds);
+
+    document.getElementById('btn-delete-calendar-event').style.display = event ? 'inline-block' : 'none';
+    openModal('overlay-calendar-event');
+  }
+  document.getElementById('ce-is-reminder').addEventListener('change', (e) => {
+    document.getElementById('ce-category').disabled = !e.target.checked;
+  });
+  document.getElementById('ce-project').addEventListener('change', (e) => {
+    const stillSelected = Array.from(document.querySelectorAll('#ce-users .chip.selected')).map(c => c.dataset.user);
+    renderCeUserChips(e.target.value, stillSelected);
+  });
+  document.getElementById('btn-add-calendar-event').addEventListener('click', () => openCalendarEventModal(null, toDateStr(today)));
+  document.getElementById('btn-cancel-calendar-event').addEventListener('click', () => closeModal('overlay-calendar-event'));
+  document.getElementById('btn-save-calendar-event').addEventListener('click', async () => {
+    const title = document.getElementById('ce-title').value.trim();
+    const date = document.getElementById('ce-date').value;
+    if(!title || !date){ alert('Title and date are required.'); return; }
+    const payload = {
+      title, event_date: date,
+      event_time: document.getElementById('ce-time').value.trim() || null,
+      category: document.getElementById('ce-category').value || 'Other',
+      is_reminder: document.getElementById('ce-is-reminder').checked,
+      project_id: document.getElementById('ce-project').value || null,
+      notes: document.getElementById('ce-notes').value.trim() || null
+    };
+    const res = editingCalendarEventId
+      ? await supabaseClient.from('calendar_events').update(payload).eq('id', editingCalendarEventId).select()
+      : await supabaseClient.from('calendar_events').insert(payload).select();
+    if(res.error){ alert('Could not save that event:\n' + res.error.message); return; }
+    const eventId = res.data[0].id;
+
+    let linkedUserIds = Array.from(document.querySelectorAll('#ce-users .chip.selected')).map(c => c.dataset.user);
+    // Linking specific people but leaving yourself off would hide your own
+    // event from your own calendar — keep the creator in the loop.
+    if(linkedUserIds.length && currentSession && !linkedUserIds.includes(currentSession.user.id)){
+      linkedUserIds.push(currentSession.user.id);
+    }
+    await supabaseClient.from('calendar_event_users').delete().eq('event_id', eventId);
+    if(linkedUserIds.length){
+      await supabaseClient.from('calendar_event_users').insert(linkedUserIds.map(user_id => ({ event_id: eventId, user_id })));
+    }
+
+    closeModal('overlay-calendar-event');
+    await loadCalendarData();
+    renderCalendar();
+    renderReminders();
+  });
+  document.getElementById('btn-delete-calendar-event').addEventListener('click', async () => {
+    if(!editingCalendarEventId || !confirm('Delete this event?')) return;
+    await supabaseClient.from('calendar_events').delete().eq('id', editingCalendarEventId);
+    closeModal('overlay-calendar-event');
+    await loadCalendarData();
+    renderCalendar();
+    renderReminders();
+  });
+
+  document.getElementById('cal-prev-month').addEventListener('click', () => {
+    calViewMonth--; if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
+    renderCalendar();
+  });
+  document.getElementById('cal-next-month').addEventListener('click', () => {
+    calViewMonth++; if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
+    renderCalendar();
+  });
+  document.getElementById('cal-today-btn').addEventListener('click', () => {
+    calViewYear = today.getFullYear(); calViewMonth = today.getMonth();
+    renderCalendar();
+  });
+
+  // ---------- Reminders (from the shared template) ----------
+  const REMINDER_CATEGORIES = ['Music','Rehearsals','Meetings','Rentals','Payments','Other'];
+
+  function renderReminderItem(e, item){
+    const status = REMINDER_STATUS.find(s => s.project_id === e.project_id && s.template_item_id === item.id);
+    const done = !!status?.done;
+    const dueDate = addDays(e.event_date_iso, -(item.days_before || 0));
+    const todayStr = toDateStr(today);
+    let dueClass = '';
+    if(!done){
+      if(dueDate < todayStr) dueClass = 'overdue';
+      else if(dueDate <= addDays(todayStr, 3)) dueClass = 'soon';
+    }
+    return `
+      <div class="reminder-item ${done ? 'done' : ''}">
+        <label>
+          <input type="checkbox" data-project="${e.project_id}" data-item="${item.id}" ${done ? 'checked' : ''}>
+          <span>
+            <span class="reminder-item-text">${escapeHtml(item.title)}</span>
+            <span class="reminder-item-due ${dueClass}">Due ${formatDateShort(dueDate)}</span>
+          </span>
+        </label>
+        <button class="reminder-item-x" data-remove-template="${item.id}" title="Remove from the template">✕</button>
+      </div>`;
+  }
+
+  // One box per category, only shown when it actually has items.
+  function renderReminderRows(e){
+    return REMINDER_CATEGORIES.map(cat => {
+      const items = TEMPLATE_ITEMS.filter(i => (i.category || 'Other') === cat);
+      if(!items.length) return '';
+      return `
+        <div class="reminder-box">
+          <div class="reminder-box-title">${cat}</div>
+          ${items.map(item => renderReminderItem(e, item)).join('')}
+        </div>`;
+    }).join('');
+  }
+
+  function renderCustomReminderItem(c){
+    return `
+      <div class="reminder-item ${c.done ? 'done' : ''}">
+        <label>
+          <input type="checkbox" data-custom-reminder="${c.id}" ${c.done ? 'checked' : ''}>
+          <span>
+            <span class="reminder-item-text">${escapeHtml(c.title)}</span>
+            <span class="reminder-item-due">${formatDateShort(c.event_date)}</span>
+          </span>
+        </label>
+        <button class="reminder-item-x" data-remove-custom="${c.id}" title="Delete">✕</button>
+      </div>`;
+  }
+
+  function renderCustomReminders(){
+    const mine = CALENDAR_EVENTS.filter(c => c.is_reminder && isCalendarEventVisibleToMe(c.id));
+    if(!mine.length) return '';
+    const boxes = REMINDER_CATEGORIES.map(cat => {
+      const items = mine.filter(c => (c.category || 'Other') === cat);
+      if(!items.length) return '';
+      return `
+        <div class="reminder-box">
+          <div class="reminder-box-title">${cat}</div>
+          ${items.map(renderCustomReminderItem).join('')}
+        </div>`;
+    }).join('');
+    return `<div class="reminder-group"><div class="reminder-group-title">Your reminders</div>${boxes}</div>`;
+  }
+
+  function renderReminders(){
+    const container = document.getElementById('reminders-list');
+    const todayStr = toDateStr(today);
+    const withProject = EVENT_INFO_ROWS
+      .map(e => ({ ...e, project: PROJECTS.find(p => p.id === e.project_id) }))
+      .filter(e => e.project);
+    const upcoming = withProject.filter(e => e.event_date_iso >= todayStr).sort((a,b) => a.event_date_iso.localeCompare(b.event_date_iso));
+    const past = withProject.filter(e => e.event_date_iso < todayStr).sort((a,b) => b.event_date_iso.localeCompare(a.event_date_iso));
+
+    document.getElementById('calendar-count').textContent = `${upcoming.length} upcoming event${upcoming.length === 1 ? '' : 's'}`;
+
+    const customHtml = renderCustomReminders();
+    const upcomingHtml = upcoming.map(e => `
+      <div class="reminder-group">
+        <div class="reminder-group-title">${escapeHtml(e.project.name)} — ${formatDateShort(e.event_date_iso)}</div>
+        ${renderReminderRows(e)}
+      </div>`).join('');
+    const pastHtml = past.length ? `
+      <p class="hint" style="margin:18px 0 4px">Past events</p>
+      ${past.map(e => `
+        <div class="reminder-group">
+          <div class="reminder-group-title">${escapeHtml(e.project.name)} — ${formatDateShort(e.event_date_iso)}</div>
+          ${renderReminderRows(e)}
+        </div>`).join('')}
+    ` : '';
+
+    if(!customHtml && !upcoming.length && !past.length){
+      container.innerHTML = '<p class="hint">No events with a calendar date yet — set one from a project\'s header (the ✎ next to the project name).</p>';
+      return;
+    }
+
+    container.innerHTML = customHtml + (upcomingHtml || '<p class="hint">No upcoming events.</p>') + pastHtml;
+
+    container.querySelectorAll('input[data-project]').forEach(chk => {
+      chk.addEventListener('change', async () => {
+        const projectId = chk.dataset.project, itemId = chk.dataset.item;
+        const existing = REMINDER_STATUS.find(s => s.project_id === projectId && s.template_item_id === itemId);
+        const done = chk.checked;
+        if(existing){
+          await supabaseClient.from('event_reminder_status').update({ done, done_at: done ? new Date().toISOString() : null }).eq('id', existing.id);
+          existing.done = done;
+        } else {
+          const { data } = await supabaseClient.from('event_reminder_status')
+            .insert({ project_id: projectId, template_item_id: itemId, done, done_at: done ? new Date().toISOString() : null })
+            .select();
+          if(data && data[0]) REMINDER_STATUS.push(data[0]);
+        }
+        renderReminders();
+        renderCalendar();
+      });
+    });
+    container.querySelectorAll('input[data-custom-reminder]').forEach(chk => {
+      chk.addEventListener('change', async () => {
+        const id = chk.dataset.customReminder;
+        await supabaseClient.from('calendar_events').update({ done: chk.checked }).eq('id', id);
+        const c = CALENDAR_EVENTS.find(x => x.id === id);
+        if(c) c.done = chk.checked;
+        renderReminders();
+        renderCalendar();
+      });
+    });
+    container.querySelectorAll('[data-remove-template]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('Remove this from the reminders template? It disappears for every project.')) return;
+        const id = btn.dataset.removeTemplate;
+        await supabaseClient.from('reminder_template_items').delete().eq('id', id);
+        TEMPLATE_ITEMS = TEMPLATE_ITEMS.filter(i => i.id !== id);
+        renderReminders();
+        renderCalendar();
+      });
+    });
+    container.querySelectorAll('[data-remove-custom]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('Delete this reminder?')) return;
+        const id = btn.dataset.removeCustom;
+        await supabaseClient.from('calendar_events').delete().eq('id', id);
+        CALENDAR_EVENTS = CALENDAR_EVENTS.filter(c => c.id !== id);
+        renderReminders();
+        renderCalendar();
+      });
+    });
+  }
+
+  // ---------- Finance ----------
+  // A spreadsheet per project, split into two types — Expenses and Revenue —
+  // switched with the tabs above the sheet. Categories and their starter
+  // rows are the shared "template" (same idea as Pa'Lante-as-template and
+  // the reminders checklist), but every project's actual amounts are its
+  // own data. Profit (Revenue − Expenses) totals across BOTH types
+  // regardless of which tab is showing.
+  const FINANCE_TYPES = {
+    expense: { label:'Expenses', categories:['Personnel','Venue & Permits','Transportation','Audiovisual','Purchases'] },
+    revenue: { label:'Revenue', categories:['Tickets','Merch','Sponsors','Fixed / Other'] }
+  };
+  // "Musician"/"Stage crew member" aren't generic placeholders — they're
+  // replaced at seed time by the project's actual Band/Members roster
+  // (every named member, guests included), one row per person.
+  const FINANCE_TEMPLATE_REST = [
+    { category:'Personnel', item:'Transcriber' },
+    { category:'Personnel', item:'Arranger' },
+    { category:'Venue & Permits', item:'Venue' },
+    { category:'Venue & Permits', item:'Licenses' },
+    { category:'Venue & Permits', item:'Permits' },
+    { category:'Transportation', item:'Transportation' },
+    { category:'Audiovisual', item:'Videographer' },
+    { category:'Audiovisual', item:'Editor' },
+    { category:'Purchases', item:'Props' },
+    { category:'Purchases', item:'Outfits' }
+  ];
+
+  let FINANCE_ITEMS = [];
+  let currentFinanceProjectId = '';
+  let currentFinanceType = 'expense';
+
+  function populateFinanceProjectSelect(){
+    const sel = document.getElementById('finance-project-select');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select a project…</option>' +
+      PROJECTS.map(p => `<option value="${p.id}" ${p.id === current ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
+  }
+
+  function fmtMoney(n){
+    const v = Number(n) || 0;
+    return '$' + v.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  // First time a project's Finance is opened there are no rows yet — seed
+  // the starter Expenses template right away so there's a real sheet to
+  // edit instead of a blank page. Personnel starts with one row per named
+  // Band/Members roster entry for this project's bands (musicians, stage
+  // crew and guests alike — Band doesn't distinguish them at the table
+  // level), so nobody has to be retyped by hand. Revenue starts empty —
+  // there's no universal default for ticket/merch/sponsor amounts.
+  async function loadFinanceItems(projectId){
+    const { data } = await supabaseClient.from('finance_items').select('*').eq('project_id', projectId).order('item_order');
+    FINANCE_ITEMS = data || [];
+    if(FINANCE_ITEMS.length) return;
+
+    const bandIds = ALL_BANDS.filter(b => b.project_id === projectId).map(b => b.id);
+    let rosterNames = [];
+    if(bandIds.length){
+      const { data: memberRows } = await supabaseClient.from('band').select('artist_name,instrument').in('group_id', bandIds);
+      rosterNames = (memberRows || [])
+        .filter(m => m.artist_name && m.artist_name.trim())
+        .map(m => m.instrument ? `${m.artist_name.trim()} (${m.instrument})` : m.artist_name.trim());
+    }
+
+    let order = 1;
+    const rows = rosterNames
+      .map(item => ({ project_id: projectId, type:'expense', category:'Personnel', item, amount:null, paid:false, notes:null, item_order: order++ }))
+      .concat(FINANCE_TEMPLATE_REST.map(t => ({ project_id: projectId, type:'expense', category: t.category, item: t.item, amount:null, paid:false, notes:null, item_order: order++ })));
+
+    const { data: seeded, error } = await supabaseClient.from('finance_items').insert(rows).select();
+    if(!error) FINANCE_ITEMS = seeded || [];
+  }
+
+  function financeTotal(type){
+    return FINANCE_ITEMS.filter(i => (i.type || 'expense') === type).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  }
+
+  function renderFinanceSummary(){
+    const expenseTotal = financeTotal('expense');
+    const revenueTotal = financeTotal('revenue');
+    const profit = revenueTotal - expenseTotal;
+    document.getElementById('fin-summary').innerHTML = `
+      <div class="fin-summary-item"><span>Expenses</span><span>${fmtMoney(expenseTotal)}</span></div>
+      <div class="fin-summary-item"><span>Revenue</span><span>${fmtMoney(revenueTotal)}</span></div>
+      <div class="fin-summary-item fin-profit ${profit >= 0 ? 'positive' : 'negative'}"><span>Profit</span><span>${fmtMoney(profit)}</span></div>
+    `;
+  }
+
+  function renderFinanceSheet(){
+    const wrap = document.getElementById('fin-table');
+    const typeDef = FINANCE_TYPES[currentFinanceType];
+    const isRevenue = currentFinanceType === 'revenue';
+    const paidLabel = isRevenue ? 'Received' : 'Paid';
+    const typeItems = FINANCE_ITEMS.filter(i => (i.type || 'expense') === currentFinanceType);
+    // Trailing empty cells for Subtotal/Grand Total rows: Paid-or-Received,
+    // Date, Notes, ✕ — always 4, regardless of type. Revenue's extra
+    // Quantity column is inserted separately, right after the label.
+    const emptySpans = '<span></span><span></span><span></span><span></span>';
+    let grandTotal = 0;
+    const body = typeDef.categories.map(cat => {
+      const items = typeItems.filter(i => i.category === cat).sort((a,b) => (a.item_order||0)-(b.item_order||0));
+      let subtotal = 0;
+      const rowsHtml = items.map(i => {
+        subtotal += Number(i.amount) || 0;
+        return `
+          <div class="fin-row" data-id="${i.id}">
+            <input class="fin-item" value="${escapeAttr(i.item || '')}" placeholder="Item">
+            ${isRevenue ? `<input class="fin-quantity" type="number" step="1" value="${i.quantity ?? ''}" placeholder="Qty">` : ''}
+            <input class="fin-amount" type="number" step="0.01" value="${i.amount ?? ''}" placeholder="0.00">
+            <input class="fin-paid" type="checkbox" ${i.paid ? 'checked' : ''} title="${paidLabel}">
+            <input class="fin-date" type="date" value="${i.date || ''}">
+            <input class="fin-notes" value="${escapeAttr(i.notes || '')}" placeholder="Notes">
+            <button class="fin-remove" title="Remove">✕</button>
+          </div>`;
+      }).join('');
+      grandTotal += subtotal;
+      return `
+        <div class="fin-cat-head">${cat}</div>
+        ${rowsHtml || '<div class="fin-empty">No rows yet.</div>'}
+        <button class="fin-add-row" data-add-category="${cat}">+ Add row</button>
+        <div class="fin-subtotal-row"><span>Subtotal</span>${isRevenue ? '<span></span>' : ''}<span>${fmtMoney(subtotal)}</span>${emptySpans}</div>`;
+    }).join('');
+
+    wrap.className = 'fin-table' + (isRevenue ? ' fin-revenue' : '');
+    wrap.innerHTML = `
+      <div class="fin-header-row"><span>Item</span>${isRevenue ? '<span>Quantity</span>' : ''}<span>Amount</span><span>${paidLabel}</span><span>Date</span><span>Notes</span><span></span></div>
+      ${body}
+      <div class="fin-grand-total-row"><span>${typeDef.label} Total</span>${isRevenue ? '<span></span>' : ''}<span>${fmtMoney(grandTotal)}</span>${emptySpans}</div>
+    `;
+
+    wrap.querySelectorAll('.fin-row').forEach(row => {
+      const id = row.dataset.id;
+      row.querySelector('.fin-item').addEventListener('change', (e) => saveFinanceField(id, 'item', e.target.value.trim() || null));
+      if(isRevenue){
+        row.querySelector('.fin-quantity').addEventListener('change', (e) => saveFinanceField(id, 'quantity', e.target.value === '' ? null : parseFloat(e.target.value), false));
+      }
+      row.querySelector('.fin-amount').addEventListener('change', (e) => saveFinanceField(id, 'amount', e.target.value === '' ? null : parseFloat(e.target.value)));
+      row.querySelector('.fin-paid').addEventListener('change', (e) => saveFinanceField(id, 'paid', e.target.checked, false));
+      row.querySelector('.fin-date').addEventListener('change', (e) => saveFinanceField(id, 'date', e.target.value || null, false));
+      row.querySelector('.fin-notes').addEventListener('change', (e) => saveFinanceField(id, 'notes', e.target.value.trim() || null, false));
+      row.querySelector('.fin-remove').addEventListener('click', async () => {
+        await supabaseClient.from('finance_items').delete().eq('id', id);
+        FINANCE_ITEMS = FINANCE_ITEMS.filter(i => i.id !== id);
+        renderFinanceSheet();
+      });
+    });
+    wrap.querySelectorAll('[data-add-category]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const category = btn.dataset.addCategory;
+        const { data, error } = await supabaseClient.from('finance_items')
+          .insert({ project_id: currentFinanceProjectId, type: currentFinanceType, category, item:'', amount:null, paid:false, item_order: FINANCE_ITEMS.length + 1 })
+          .select();
+        if(error){ alert('Could not add that row:\n' + error.message); return; }
+        FINANCE_ITEMS.push(data[0]);
+        renderFinanceSheet();
+      });
+    });
+
+    document.getElementById('finance-count').textContent = `${FINANCE_ITEMS.length} line item${FINANCE_ITEMS.length === 1 ? '' : 's'}`;
+    renderFinanceSummary();
+  }
+
+  // `rerenderTotals` skips a full re-render for text fields (change already
+  // reflects on screen) but stays on for amount, since the subtotal/grand
+  // total/profit need to recompute.
+  async function saveFinanceField(id, field, value, rerenderTotals = true){
+    await supabaseClient.from('finance_items').update({ [field]: value }).eq('id', id);
+    const item = FINANCE_ITEMS.find(i => i.id === id);
+    if(item) item[field] = value;
+    if(rerenderTotals) renderFinanceSheet();
+  }
+
+  document.querySelectorAll('.fin-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.fin-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFinanceType = btn.dataset.finType;
+      renderFinanceSheet();
+    });
+  });
+
+  document.getElementById('finance-project-select').addEventListener('change', async (e) => {
+    currentFinanceProjectId = e.target.value;
+    currentFinanceType = 'expense';
+    document.querySelectorAll('.fin-type-btn').forEach(b => b.classList.toggle('active', b.dataset.finType === 'expense'));
+    if(!currentFinanceProjectId){
+      document.getElementById('finance-empty').style.display = 'block';
+      document.getElementById('finance-sheet').style.display = 'none';
+      document.getElementById('finance-count').textContent = '—';
+      return;
+    }
+    document.getElementById('finance-empty').style.display = 'none';
+    document.getElementById('finance-sheet').style.display = 'block';
+    await loadFinanceItems(currentFinanceProjectId);
+    renderFinanceSheet();
   });
 
   // Rendering happens once boot() resolves (see the auth guard above) — it

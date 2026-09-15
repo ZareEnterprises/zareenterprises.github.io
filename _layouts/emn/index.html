@@ -7,6 +7,8 @@
 <meta name="description" content="EMN: Escuela de Música y Negocios — herramientas gratuitas para prepararte con beca a Berklee.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/emn-auth.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -169,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+emnInit();
 </script>
 </body>
 </html>

@@ -8,8 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
 <link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/assets/js/emn-auth.js?v={{ site.time | date: '%s' }}"></script>
 </head>
 <body>
 
@@ -1781,13 +1779,6 @@ document.getElementById('btnPlay').onclick = (e) => {
 };
 
 window.addEventListener('load', generate);
-</script>
-
-<!-- Optional sign-in: silently logs practice time if a session already
-     exists (from signing in via the Practice Lab nav) — doesn't change
-     anything about how the tool works either way. -->
-<script>
-  emnInit().then(() => { if(emnSession) emnStartHeartbeat('sight-melody'); });
 </script>
 </body>
 </html>

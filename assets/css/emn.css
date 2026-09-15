@@ -228,6 +228,17 @@
   color: var(--red);
 }
 
+.emn-landing .emn-nav__link--user {
+  background: var(--red);
+  color: #fff;
+  border-radius: 999px;
+}
+
+.emn-landing .emn-nav__link--user:hover {
+  background: var(--red-dark);
+  color: #fff;
+}
+
 .emn-landing .emn-nav__link.is-active::after {
   content: '';
   position: absolute;

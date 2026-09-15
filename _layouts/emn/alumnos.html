@@ -6,13 +6,184 @@
 <title>EMN — Usuarios</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/emn-auth.js?v={{ site.time | date: '%s' }}"></script>
+<style>
+  body{ background:var(--gray-100); font-family:var(--font-body); color:var(--ink); margin:0; }
+  .usuarios-wrap{ max-width:900px; margin:0 auto; padding:32px 24px 60px; }
+  .usuarios-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .usuarios-head h1{ font-family:var(--font-display); font-size:26px; margin:0; }
+  .usuarios-head a.back{ font-size:13px; color:var(--gray-700); text-decoration:none; }
+  .card{ background:var(--paper); border:1px solid var(--gray-300); border-radius:var(--radius); padding:20px 22px; margin-bottom:20px; }
+  .card h2{ font-family:var(--font-display); font-size:16px; margin:0 0 14px; }
+  #gate-msg{ text-align:center; padding:80px 20px; color:var(--gray-700); }
+  #gate-msg a{ color:var(--red); }
+
+  .invite-row{ display:grid; grid-template-columns:1.4fr 1.2fr 140px auto; gap:10px; align-items:end; }
+  .invite-row .field label{ display:block; font-size:11px; font-weight:600; color:var(--gray-700); margin-bottom:5px; }
+  .invite-row input, .invite-row select{ width:100%; padding:9px 10px; border:1px solid var(--gray-300); border-radius:7px; font-size:13px; font-family:inherit; }
+  .invite-row button{ padding:10px 16px; border:none; border-radius:7px; background:var(--red); color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
+  .invite-row button:hover{ background:var(--red-dark); }
+  .invite-msg{ font-size:12px; margin-top:8px; display:none; }
+  .invite-msg.show{ display:block; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--gray-500); padding:8px 10px; border-bottom:1px solid var(--gray-300); }
+  td{ padding:9px 10px; border-bottom:1px solid var(--gray-100); }
+  .role-pill{ font-size:11px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--gray-100); color:var(--gray-700); }
+  .role-pill.admin{ background:var(--red-tint); color:var(--red); }
+  select.role-select{ font-size:12.5px; padding:5px 7px; border:1px solid var(--gray-300); border-radius:6px; font-family:inherit; }
+  .status-pill{ font-size:11px; color:var(--gray-500); }
+  .status-pill.active{ color:#1E8E5A; }
+</style>
 </head>
 <body>
 
-<div style="max-width:800px;margin:0 auto;padding:60px 24px;text-align:center;font-family:var(--font-body);color:var(--ink)">
-  <h1 style="font-family:var(--font-display)">Usuarios</h1>
-  <p style="color:var(--gray-700)">Próximamente.</p>
+<div class="usuarios-wrap">
+  <div class="usuarios-head">
+    <h1>Usuarios</h1>
+    <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
+  </div>
+
+  <div id="gate-msg" style="display:none"></div>
+
+  <div id="usuarios-body" style="display:none">
+
+    <div class="card" id="invite-card" style="display:none">
+      <h2>Agregar usuario</h2>
+      <div class="invite-row">
+        <div class="field"><label>Nombre</label><input type="text" id="inv-name" placeholder="Nombre completo"></div>
+        <div class="field"><label>Correo</label><input type="email" id="inv-email" placeholder="correo@ejemplo.com"></div>
+        <div class="field"><label>Rol</label>
+          <select id="inv-role">
+            <option value="student">Estudiante</option>
+            <option value="professor">Profesor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button type="button" id="btn-invite">Agregar</button>
+      </div>
+      <p class="invite-msg" id="invite-msg"></p>
+    </div>
+
+    <div class="card">
+      <h2>Personas</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th></tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
 </div>
+
+<script>
+const ROLE_LABELS = { admin: 'Admin', professor: 'Profesor', student: 'Estudiante' };
+let ALL_USERS = [];
+
+async function loadUsers(){
+  const { data } = await emnSupabase.from('students').select('*').order('created_at', { ascending: true });
+  ALL_USERS = data || [];
+}
+
+function renderUsersTable(){
+  const isAdmin = emnStudentProfile.role === 'admin';
+  document.getElementById('users-tbody').innerHTML = ALL_USERS.map(u => `
+    <tr data-id="${u.id}">
+      <td>${u.full_name || '—'}</td>
+      <td>${u.email}</td>
+      <td>${isAdmin
+        ? `<select class="role-select" data-role-for="${u.id}">
+             <option value="student" ${u.role==='student'?'selected':''}>Estudiante</option>
+             <option value="professor" ${u.role==='professor'?'selected':''}>Profesor</option>
+             <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+           </select>`
+        : `<span class="role-pill ${u.role}">${ROLE_LABELS[u.role] || u.role}</span>`}</td>
+      <td><span class="status-pill ${u.status}">${u.status === 'active' ? 'Activo' : 'Pendiente'}</span></td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" style="color:var(--gray-500)">Nadie agregado todavía.</td></tr>';
+
+  if(isAdmin){
+    document.querySelectorAll('[data-role-for]').forEach(sel => {
+      sel.addEventListener('change', async (e) => {
+        const id = sel.dataset.roleFor;
+        await emnSupabase.from('students').update({ role: e.target.value }).eq('id', id);
+        const u = ALL_USERS.find(x => x.id === id);
+        if(u) u.role = e.target.value;
+      });
+    });
+  }
+}
+
+document.getElementById('btn-invite').addEventListener('click', async () => {
+  const full_name = document.getElementById('inv-name').value.trim();
+  const email = document.getElementById('inv-email').value.trim();
+  const role = document.getElementById('inv-role').value;
+  const msg = document.getElementById('invite-msg');
+  msg.classList.remove('show');
+
+  if(!email){ msg.textContent = 'El correo es obligatorio.'; msg.style.color = 'var(--red)'; msg.classList.add('show'); return; }
+
+  const btn = document.getElementById('btn-invite');
+  btn.disabled = true; btn.textContent = 'Agregando…';
+
+  try {
+    const res = await fetch(`${EMN_SUPABASE_URL}/functions/v1/invite-student`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${emnSession.access_token}`,
+        'apikey': EMN_SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ email, full_name: full_name || null, role })
+    });
+    const result = await res.json().catch(() => ({}));
+    if(!res.ok) throw new Error(result.error || 'No se pudo agregar.');
+
+    msg.textContent = 'Listo — le llegará un correo de invitación.';
+    msg.style.color = '#1E8E5A';
+    msg.classList.add('show');
+    document.getElementById('inv-name').value = '';
+    document.getElementById('inv-email').value = '';
+    await loadUsers();
+    renderUsersTable();
+  } catch(err){
+    msg.textContent = err.message;
+    msg.style.color = 'var(--red)';
+    msg.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Agregar';
+  }
+});
+
+async function boot(){
+  await emnInit();
+  const gate = document.getElementById('gate-msg');
+
+  if(!emnSession){
+    gate.innerHTML = 'Esta página es solo para el equipo de EMN. <a href="/emn-login">Inicia sesión</a> para continuar.';
+    gate.style.display = 'block';
+    return;
+  }
+  if(!emnStudentProfile){
+    gate.innerHTML = 'No tienes acceso a esta página.';
+    gate.style.display = 'block';
+    return;
+  }
+  if(emnStudentProfile.role !== 'admin' && emnStudentProfile.role !== 'professor'){
+    gate.innerHTML = 'No disponible.';
+    gate.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('usuarios-body').style.display = 'block';
+  if(emnStudentProfile.role === 'admin') document.getElementById('invite-card').style.display = 'block';
+
+  await loadUsers();
+  renderUsersTable();
+}
+boot();
+</script>
 
 </body>
 </html>

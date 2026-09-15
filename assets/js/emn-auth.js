@@ -37,10 +37,12 @@ emnSupabase.auth.onAuthStateChange((_event, session) => {
   if(!session) emnStudentProfile = null;
 });
 
-// Drops a "Log in"/name link (and, for admins & professors, an "Alumnos"
-// link) into the shared `.emn-nav` header — only present on the marketing
-// pages (Home, Practice Lab, Feedback), not the `.emn-tool` pages, which
-// have a different topbar and don't need this.
+// Drops a "Log in"/name link into the shared `.emn-nav` header — only
+// present on the marketing pages (Home, Practice Lab, Feedback), not the
+// `.emn-tool` pages, which have a different topbar and don't need this.
+// The "Estudiantes" link itself is a plain static link in each page's own
+// HTML now, not injected here — it's meant to be visible to everyone,
+// logged in or not, so there's nothing conditional about it.
 function emnInjectNavLinks(){
   const nav = document.querySelector('.emn-nav');
   if(!nav) return;
@@ -59,16 +61,6 @@ function emnInjectNavLinks(){
     authLink.textContent = 'Log in';
   }
   nav.appendChild(authLink);
-
-  // Visible to everyone signed in, regardless of role -- students just see
-  // a "No disponible" message once they get there (see alumnos.html).
-  if(emnStudentProfile){
-    const alumnosLink = document.createElement('a');
-    alumnosLink.className = 'emn-nav__link';
-    alumnosLink.href = '/alumnos';
-    alumnosLink.textContent = 'Estudiantes';
-    nav.appendChild(alumnosLink);
-  }
 }
 
 async function emnInit(){

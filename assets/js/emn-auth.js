@@ -60,7 +60,46 @@ function emnInjectAuthLink(){
   nav.appendChild(authLink);
 }
 
+// "Administrar" dropdown (Usuarios / Actividad) — only for people who are
+// signed in, any role. Built by hand (not the shared caret-toggle script
+// those other dropdowns use) because it's injected after that script has
+// already wired up whatever `.emn-nav__item`s existed at page load.
+function emnInjectAdminMenu(){
+  if(!emnSession) return;
+  const nav = document.querySelector('.emn-nav');
+  if(!nav) return;
+
+  const item = document.createElement('div');
+  item.className = 'emn-nav__item';
+  item.innerHTML = `
+    <a href="#" class="emn-nav__link">Administrar</a>
+    <button class="emn-nav__caret" aria-label="Abrir submenú de Administrar" aria-expanded="false">&#9662;</button>
+    <div class="emn-nav__dropdown">
+      <a href="https://zareenterprises.github.io/alumnos" class="emn-nav__dropdown-item">Usuarios</a>
+      <a href="https://zareenterprises.github.io/actividad" class="emn-nav__dropdown-item">Actividad</a>
+    </div>
+  `;
+  nav.appendChild(item);
+
+  const caret = item.querySelector('.emn-nav__caret');
+  const label = item.querySelector('.emn-nav__link');
+  const toggle = (e) => {
+    e.preventDefault();
+    const isOpen = item.classList.contains('is-open');
+    document.querySelectorAll('.emn-nav__item').forEach((i) => i.classList.remove('is-open'));
+    item.classList.toggle('is-open', !isOpen);
+    caret.setAttribute('aria-expanded', String(!isOpen));
+  };
+  caret.addEventListener('click', toggle);
+  label.addEventListener('click', toggle);
+
+  document.addEventListener('click', (e) => {
+    if(!item.contains(e.target)) item.classList.remove('is-open');
+  });
+}
+
 async function emnInit(){
   await emnLoadSession();
+  emnInjectAdminMenu();
   emnInjectAuthLink();
 }

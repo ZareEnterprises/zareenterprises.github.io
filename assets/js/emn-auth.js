@@ -76,7 +76,7 @@ function emnInjectAdminMenu(){
     <a href="#" class="emn-nav__link">Administrar</a>
     <button class="emn-nav__caret" aria-label="Abrir submenú de Administrar" aria-expanded="false">&#9662;</button>
     <div class="emn-nav__dropdown">
-      <a href="https://zareenterprises.github.io/alumnos" class="emn-nav__dropdown-item">Usuarios</a>
+      <a href="https://zareenterprises.github.io/usuarios" class="emn-nav__dropdown-item">Usuarios</a>
       <a href="https://zareenterprises.github.io/actividad" class="emn-nav__dropdown-item">Actividad</a>
     </div>
   `;

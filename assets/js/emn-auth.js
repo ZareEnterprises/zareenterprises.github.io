@@ -60,7 +60,9 @@ function emnInjectNavLinks(){
   }
   nav.appendChild(authLink);
 
-  if(emnStudentProfile && (emnStudentProfile.role === 'admin' || emnStudentProfile.role === 'professor')){
+  // Visible to everyone signed in, regardless of role -- students just see
+  // a "No disponible" message once they get there (see alumnos.html).
+  if(emnStudentProfile){
     const alumnosLink = document.createElement('a');
     alumnosLink.className = 'emn-nav__link';
     alumnosLink.href = '/alumnos';

@@ -236,8 +236,13 @@ async function boot(){
     gate.style.display = 'block';
     return;
   }
-  if(!emnStudentProfile || (emnStudentProfile.role !== 'admin' && emnStudentProfile.role !== 'professor')){
+  if(!emnStudentProfile){
     gate.innerHTML = 'No tienes acceso a esta página.';
+    gate.style.display = 'block';
+    return;
+  }
+  if(emnStudentProfile.role !== 'admin' && emnStudentProfile.role !== 'professor'){
+    gate.innerHTML = 'No disponible.';
     gate.style.display = 'block';
     return;
   }

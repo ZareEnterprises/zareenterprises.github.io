@@ -47,6 +47,7 @@ function emnInjectAuthLink(){
   const authLink = document.createElement('a');
   authLink.className = 'emn-nav__link';
   if(emnSession){
+    authLink.classList.add('emn-nav__link--user');
     authLink.href = '#';
     authLink.textContent = emnStudentProfile?.full_name || emnSession.user.email;
     authLink.onclick = async (e) => {

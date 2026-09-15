@@ -179,6 +179,8 @@ document.getElementById('btn-next-week').addEventListener('click', () => {
 async function boot(){
   await emnInit();
   const gate = document.getElementById('gate-msg');
+  console.log('emnSession:', emnSession);
+  console.log('emnStudentProfile:', emnStudentProfile);
 
   if(!emnSession){
     gate.innerHTML = 'Esta página es solo para el equipo de EMN. <a href="/emn-login">Inicia sesión</a> para continuar.';

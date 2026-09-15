@@ -55,7 +55,7 @@
   <div class="usuarios-head">
     <h1>Usuarios</h1>
     <div style="display:flex;align-items:center;gap:14px">
-      <button type="button" class="btn-primary" id="btn-open-add-user">Agregar Usuario</button>
+      <button type="button" class="btn-primary" id="btn-open-add-user" style="display:none">Agregar Usuario</button>
       <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
     </div>
   </div>
@@ -195,11 +195,12 @@ document.getElementById('btn-invite').addEventListener('click', async () => {
 async function boot(){
   await emnInit();
 
-  // Free access: anyone can open this page, see the roster, and click
-  // "Agregar Usuario" — the invite-student function itself still checks
-  // for Admin server-side and rejects anyone else with a clear error, so
-  // this button being visible to everyone isn't a security gap.
+  // Free access: anyone can open this page and see the roster, logged in
+  // or not. "Agregar Usuario" is Admin-only — the invite-student function
+  // also checks this server-side, so this is belt-and-suspenders, not the
+  // only thing stopping a non-Admin from inviting someone.
   document.getElementById('usuarios-body').style.display = 'block';
+  if(emnStudentProfile?.role === 'admin') document.getElementById('btn-open-add-user').style.display = 'inline-block';
 
   await loadUsers();
   renderUsersTable();

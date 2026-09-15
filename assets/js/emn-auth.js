@@ -61,12 +61,13 @@ function emnInjectAuthLink(){
   nav.appendChild(authLink);
 }
 
-// "Administrar" dropdown (Usuarios / Actividad) — only for people who are
-// signed in, any role. Built by hand (not the shared caret-toggle script
-// those other dropdowns use) because it's injected after that script has
-// already wired up whatever `.emn-nav__item`s existed at page load.
+// "Administrar" dropdown (Usuarios / Actividad) — Admin and Professor only.
+// Students never see this tab at all. Built by hand (not the shared
+// caret-toggle script those other dropdowns use) because it's injected
+// after that script has already wired up whatever `.emn-nav__item`s
+// existed at page load.
 function emnInjectAdminMenu(){
-  if(!emnSession) return;
+  if(!emnStudentProfile || (emnStudentProfile.role !== 'admin' && emnStudentProfile.role !== 'professor')) return;
   const nav = document.querySelector('.emn-nav');
   if(!nav) return;
 

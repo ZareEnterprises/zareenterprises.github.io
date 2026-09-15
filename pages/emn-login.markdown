@@ -1,4 +1,4 @@
 ---
 layout: emn/login
-permalink: /emn-login/
+permalink: /emn-login
 ---

@@ -93,7 +93,7 @@
       // Sign-in is optional across EMN — but if there's already a session,
       // no reason to show the form again.
       supabaseClient.auth.getSession().then(({ data }) => {
-        if(data.session) window.location.href = '/practice-lab/';
+        if(data.session) window.location.href = '/practice-lab';
       });
     }
 
@@ -133,7 +133,7 @@
       }
 
       await supabaseClient.from('students').update({ status: 'active' }).eq('id', session.user.id);
-      window.location.href = '/practice-lab/';
+      window.location.href = '/practice-lab';
     });
 
     form.addEventListener('submit', async (e) => {
@@ -156,7 +156,7 @@
         return;
       }
 
-      window.location.href = '/practice-lab/';
+      window.location.href = '/practice-lab';
     });
   </script>
 

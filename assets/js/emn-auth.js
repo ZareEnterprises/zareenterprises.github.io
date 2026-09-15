@@ -55,7 +55,7 @@ function emnInjectNavLinks(){
       if(confirm('Log out?')){ await emnSupabase.auth.signOut(); location.reload(); }
     };
   } else {
-    authLink.href = '/emn-login/';
+    authLink.href = '/emn-login';
     authLink.textContent = 'Log in';
   }
   nav.appendChild(authLink);
@@ -63,7 +63,7 @@ function emnInjectNavLinks(){
   if(emnStudentProfile && (emnStudentProfile.role === 'admin' || emnStudentProfile.role === 'professor')){
     const alumnosLink = document.createElement('a');
     alumnosLink.className = 'emn-nav__link';
-    alumnosLink.href = '/alumnos/';
+    alumnosLink.href = '/alumnos';
     alumnosLink.textContent = 'Alumnos';
     nav.appendChild(alumnosLink);
   }

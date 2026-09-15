@@ -48,7 +48,7 @@
 <div class="alumnos-wrap">
   <div class="alumnos-head">
     <h1>Alumnos</h1>
-    <a class="back" href="/practice-lab/">&larr; Volver a Practice Lab</a>
+    <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
   </div>
 
   <div id="gate-msg" style="display:none"></div>
@@ -232,7 +232,7 @@ async function boot(){
   const gate = document.getElementById('gate-msg');
 
   if(!emnSession){
-    gate.innerHTML = 'Esta página es solo para el equipo de EMN. <a href="/emn-login/">Inicia sesión</a> para continuar.';
+    gate.innerHTML = 'Esta página es solo para el equipo de EMN. <a href="/emn-login">Inicia sesión</a> para continuar.';
     gate.style.display = 'block';
     return;
   }

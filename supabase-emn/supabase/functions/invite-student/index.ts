@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     // back to the project's Site URL instead.
     const { data: invited, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: { full_name: full_name || null },
-      redirectTo: 'https://zareenterprises.github.io/emn-login/',
+      redirectTo: 'https://zareenterprises.github.io/emn-login',
     });
     if (inviteErr) return json({ error: `Invite failed: ${inviteErr.message}` }, 400);
     userId = invited.user.id;

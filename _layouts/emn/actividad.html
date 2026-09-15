@@ -6,13 +6,200 @@
 <title>EMN — Actividad</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/emn-auth.js?v={{ site.time | date: '%s' }}"></script>
+<style>
+  body{ background:var(--gray-100); font-family:var(--font-body); color:var(--ink); margin:0; }
+  .act-wrap{ max-width:1000px; margin:0 auto; padding:32px 24px 60px; }
+  .act-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .act-head h1{ font-family:var(--font-display); font-size:26px; margin:0; }
+  .act-head a.back{ font-size:13px; color:var(--gray-700); text-decoration:none; }
+  #gate-msg{ text-align:center; padding:80px 20px; color:var(--gray-700); }
+  #gate-msg a{ color:var(--red); }
+
+  .act-layout{ display:grid; grid-template-columns:220px 1fr; gap:20px; align-items:start; }
+  .card{ background:var(--paper); border:1px solid var(--gray-300); border-radius:var(--radius); padding:18px 20px; }
+  .card h2{ font-family:var(--font-display); font-size:15px; margin:0 0 12px; }
+
+  .student-item{ display:block; width:100%; text-align:left; background:none; border:none; padding:9px 8px; border-radius:7px; font-size:13.5px; color:var(--ink); cursor:pointer; }
+  .student-item:hover{ background:var(--gray-100); }
+  .student-item.selected{ background:var(--red-tint); color:var(--red); font-weight:600; }
+  .no-students{ color:var(--gray-500); font-size:13px; font-style:italic; }
+
+  .week-nav{ display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:18px; }
+  .week-nav button{ width:32px; height:32px; border-radius:50%; border:1px solid var(--gray-300); background:var(--paper); font-size:16px; cursor:pointer; }
+  .week-nav button:hover{ border-color:var(--red); color:var(--red); }
+  .week-label{ font-family:var(--font-mono, monospace); font-size:13px; color:var(--gray-700); min-width:180px; text-align:center; }
+
+  .week-grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; }
+  .day-cell{ border:1px solid var(--gray-300); border-radius:8px; padding:10px 8px; min-height:90px; }
+  .day-cell.is-today{ border-color:var(--red); }
+  .day-name{ font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--gray-500); }
+  .day-num{ font-family:var(--font-display); font-size:16px; margin-bottom:8px; }
+  .day-tool-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--gray-700); margin-top:3px; }
+  .day-tool-row .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:4px; }
+  .dot-melody{ background:#C8102E; }
+  .dot-interview{ background:#2E5FA3; }
+  .day-empty{ color:var(--gray-300); font-size:11px; }
+  .week-total{ margin-top:14px; font-size:12.5px; color:var(--gray-700); text-align:right; }
+</style>
 </head>
 <body>
 
-<div style="max-width:800px;margin:0 auto;padding:60px 24px;text-align:center;font-family:var(--font-body);color:var(--ink)">
-  <h1 style="font-family:var(--font-display)">Actividad</h1>
-  <p style="color:var(--gray-700)">Próximamente.</p>
+<div class="act-wrap">
+  <div class="act-head">
+    <h1>Actividad</h1>
+    <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
+  </div>
+
+  <div id="gate-msg" style="display:none"></div>
+
+  <div id="act-body" style="display:none">
+    <div class="act-layout">
+      <div class="card">
+        <h2>Estudiantes</h2>
+        <div id="students-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="week-nav">
+          <button type="button" id="btn-prev-week">‹</button>
+          <span class="week-label" id="week-label">—</span>
+          <button type="button" id="btn-next-week">›</button>
+        </div>
+        <div class="week-grid" id="week-grid"></div>
+        <div class="week-total" id="week-total"></div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+const TOOLS = [
+  { key: 'sight-melody', label: 'Sight Melody', dot: 'dot-melody' },
+  { key: 'interview-prep', label: 'Interview Prep', dot: 'dot-interview' }
+];
+const DAY_NAMES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+let STUDENTS = [];
+let selectedStudentId = null;
+let weekStart = startOfWeek(new Date());
+
+function startOfWeek(d){
+  const date = new Date(d);
+  date.setHours(0,0,0,0);
+  date.setDate(date.getDate() - date.getDay()); // back up to Sunday
+  return date;
+}
+function toDateStr(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtHours(seconds){
+  const h = seconds / 3600;
+  return (Math.round(h * 10) / 10) + 'h';
+}
+
+async function loadStudents(){
+  const { data } = await emnSupabase.from('students').select('*').eq('role', 'student').order('full_name', { ascending: true });
+  STUDENTS = data || [];
+}
+
+function renderStudentsList(){
+  const wrap = document.getElementById('students-list');
+  if(!STUDENTS.length){
+    wrap.innerHTML = '<p class="no-students">Todavía no hay nadie con rol Estudiante.</p>';
+    return;
+  }
+  wrap.innerHTML = STUDENTS.map(s => `
+    <button type="button" class="student-item ${s.id === selectedStudentId ? 'selected' : ''}" data-id="${s.id}">${s.full_name || s.email}</button>
+  `).join('');
+  wrap.querySelectorAll('.student-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedStudentId = btn.dataset.id;
+      renderStudentsList();
+      renderWeek();
+    });
+  });
+}
+
+async function renderWeek(){
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+  const todayStr = toDateStr(new Date());
+
+  const startLabel = days[0].toLocaleDateString('es', { day:'numeric', month:'short' });
+  const endLabel = days[6].toLocaleDateString('es', { day:'numeric', month:'short' });
+  document.getElementById('week-label').textContent = `${startLabel} – ${endLabel}`;
+
+  if(!selectedStudentId){
+    document.getElementById('week-grid').innerHTML = '<p class="no-students" style="grid-column:1/-1">Elige un estudiante de la izquierda.</p>';
+    document.getElementById('week-total').textContent = '';
+    return;
+  }
+
+  const { data: rows } = await emnSupabase
+    .from('practice_activity')
+    .select('*')
+    .eq('student_id', selectedStudentId)
+    .gte('activity_date', toDateStr(days[0]))
+    .lte('activity_date', toDateStr(days[6]));
+
+  let weekTotalSeconds = 0;
+  document.getElementById('week-grid').innerHTML = days.map(d => {
+    const dateStr = toDateStr(d);
+    const dayRows = TOOLS.map(t => {
+      const row = (rows || []).find(r => r.tool === t.key && r.activity_date === dateStr);
+      if(!row || !row.seconds) return '';
+      weekTotalSeconds += row.seconds;
+      return `<div class="day-tool-row"><span><span class="dot ${t.dot}"></span>${t.label}</span><span>${fmtHours(row.seconds)}</span></div>`;
+    }).join('');
+    return `
+      <div class="day-cell ${dateStr === todayStr ? 'is-today' : ''}">
+        <div class="day-name">${DAY_NAMES[d.getDay()]}</div>
+        <div class="day-num">${d.getDate()}</div>
+        ${dayRows || '<div class="day-empty">Sin actividad</div>'}
+      </div>`;
+  }).join('');
+
+  document.getElementById('week-total').textContent = `Total de la semana: ${fmtHours(weekTotalSeconds)}`;
+}
+
+document.getElementById('btn-prev-week').addEventListener('click', () => {
+  weekStart.setDate(weekStart.getDate() - 7);
+  renderWeek();
+});
+document.getElementById('btn-next-week').addEventListener('click', () => {
+  weekStart.setDate(weekStart.getDate() + 7);
+  renderWeek();
+});
+
+async function boot(){
+  await emnInit();
+  const gate = document.getElementById('gate-msg');
+
+  if(!emnSession){
+    gate.innerHTML = 'Esta página es solo para el equipo de EMN. <a href="/emn-login">Inicia sesión</a> para continuar.';
+    gate.style.display = 'block';
+    return;
+  }
+  if(!emnStudentProfile || (emnStudentProfile.role !== 'admin' && emnStudentProfile.role !== 'professor')){
+    gate.innerHTML = 'No disponible.';
+    gate.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('act-body').style.display = 'block';
+  await loadStudents();
+  renderStudentsList();
+  if(STUDENTS.length) selectedStudentId = STUDENTS[0].id;
+  renderStudentsList();
+  renderWeek();
+}
+boot();
+</script>
 
 </body>
 </html>

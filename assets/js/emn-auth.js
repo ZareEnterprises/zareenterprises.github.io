@@ -103,3 +103,54 @@ async function emnInit(){
   emnInjectAdminMenu();
   emnInjectAuthLink();
 }
+
+/* ============================= PRACTICE TIME HEARTBEAT =============================
+   Used by sight-melody.html and interview-prep.html only. Call
+   emnStartHeartbeat('sight-melody' | 'interview-prep') once, after emnInit()
+   resolves and only if emnSession exists — it no-ops silently for signed-out
+   visitors, which is what makes sign-in optional there too: the tool works
+   the same either way, it just doesn't log time when nobody's signed in.
+
+   "Active" = the tab is visible AND the student has interacted (click, key,
+   pointer move, touch) within the last INACTIVITY_LIMIT — so time isn't
+   still counting while they've tabbed away or stepped away from the
+   keyboard. Ticks every HEARTBEAT_SECONDS and adds that many seconds to
+   today's row for this student+tool, creating it on the first tick of the
+   day (upsert with an additive read-then-write, not a raw insert). */
+const HEARTBEAT_SECONDS = 30;
+const INACTIVITY_LIMIT_MS = 60000;
+
+function emnStartHeartbeat(tool){
+  if(!emnSession) return;
+  let lastInteraction = Date.now();
+  ['click','keydown','pointermove','touchstart'].forEach(evt => {
+    document.addEventListener(evt, () => { lastInteraction = Date.now(); }, { passive: true });
+  });
+
+  setInterval(async () => {
+    if(document.visibilityState !== 'visible') return;
+    if(Date.now() - lastInteraction > INACTIVITY_LIMIT_MS) return;
+
+    const today = new Date();
+    const activityDate = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+    const { data: existing } = await emnSupabase
+      .from('practice_activity')
+      .select('id, seconds')
+      .eq('student_id', emnSession.user.id)
+      .eq('tool', tool)
+      .eq('activity_date', activityDate)
+      .maybeSingle();
+
+    if(existing){
+      await emnSupabase.from('practice_activity').update({
+        seconds: existing.seconds + HEARTBEAT_SECONDS,
+        updated_at: new Date().toISOString()
+      }).eq('id', existing.id);
+    } else {
+      await emnSupabase.from('practice_activity').insert({
+        student_id: emnSession.user.id, tool, activity_date: activityDate, seconds: HEARTBEAT_SECONDS
+      });
+    }
+  }, HEARTBEAT_SECONDS * 1000);
+}

@@ -19,12 +19,20 @@
   #gate-msg{ text-align:center; padding:80px 20px; color:var(--gray-700); }
   #gate-msg a{ color:var(--red); }
 
-  .invite-row{ display:grid; grid-template-columns:1.4fr 1.2fr 140px auto; gap:10px; align-items:end; }
-  .invite-row .field label{ display:block; font-size:11px; font-weight:600; color:var(--gray-700); margin-bottom:5px; }
-  .invite-row input, .invite-row select{ width:100%; padding:9px 10px; border:1px solid var(--gray-300); border-radius:7px; font-size:13px; font-family:inherit; }
-  .invite-row button{ padding:10px 16px; border:none; border-radius:7px; background:var(--red); color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
-  .invite-row button:hover{ background:var(--red-dark); }
-  .invite-msg{ font-size:12px; margin-top:8px; display:none; }
+  .btn-primary{ padding:10px 18px; border:none; border-radius:7px; background:var(--red); color:#fff; font-weight:600; font-size:13.5px; cursor:pointer; font-family:inherit; }
+  .btn-primary:hover{ background:var(--red-dark); }
+  .btn-ghost{ padding:10px 18px; border:1px solid var(--gray-300); border-radius:7px; background:none; color:var(--gray-700); font-weight:600; font-size:13.5px; cursor:pointer; font-family:inherit; }
+  .btn-ghost:hover{ border-color:var(--red); color:var(--red); }
+
+  .overlay{ position:fixed; inset:0; background:rgba(20,18,16,0.45); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .overlay.open{ display:flex; }
+  .modal{ background:var(--paper); border-radius:var(--radius); padding:26px 26px 22px; width:100%; max-width:420px; box-shadow:0 24px 60px rgba(0,0,0,.25); }
+  .modal h2{ font-family:var(--font-display); font-size:18px; margin:0 0 18px; }
+  .modal .field{ margin-bottom:14px; }
+  .modal .field label{ display:block; font-size:11px; font-weight:600; color:var(--gray-700); margin-bottom:5px; }
+  .modal .field input, .modal .field select{ width:100%; padding:10px 11px; border:1px solid var(--gray-300); border-radius:7px; font-size:13.5px; font-family:inherit; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+  .invite-msg{ font-size:12px; margin-top:4px; display:none; }
   .invite-msg.show{ display:block; }
 
   table{ width:100%; border-collapse:collapse; font-size:13.5px; }
@@ -42,30 +50,15 @@
 <div class="usuarios-wrap">
   <div class="usuarios-head">
     <h1>Usuarios</h1>
-    <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
+    <div style="display:flex;align-items:center;gap:14px">
+      <button type="button" class="btn-primary" id="btn-open-add-user" style="display:none">+ Agregar usuario</button>
+      <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
+    </div>
   </div>
 
   <div id="gate-msg" style="display:none"></div>
 
   <div id="usuarios-body" style="display:none">
-
-    <div class="card" id="invite-card" style="display:none">
-      <h2>Agregar usuario</h2>
-      <div class="invite-row">
-        <div class="field"><label>Nombre</label><input type="text" id="inv-name" placeholder="Nombre completo"></div>
-        <div class="field"><label>Correo</label><input type="email" id="inv-email" placeholder="correo@ejemplo.com"></div>
-        <div class="field"><label>Rol</label>
-          <select id="inv-role">
-            <option value="student">Estudiante</option>
-            <option value="professor">Profesor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <button type="button" id="btn-invite">Agregar</button>
-      </div>
-      <p class="invite-msg" id="invite-msg"></p>
-    </div>
-
     <div class="card">
       <h2>Personas</h2>
       <table>
@@ -73,7 +66,27 @@
         <tbody id="users-tbody"></tbody>
       </table>
     </div>
+  </div>
+</div>
 
+<!-- Add user modal -->
+<div class="overlay" id="overlay-add-user">
+  <div class="modal">
+    <h2>Agregar usuario</h2>
+    <div class="field"><label>Nombre</label><input type="text" id="inv-name" placeholder="Nombre completo"></div>
+    <div class="field"><label>Correo</label><input type="email" id="inv-email" placeholder="correo@ejemplo.com"></div>
+    <div class="field"><label>Rol</label>
+      <select id="inv-role">
+        <option value="student">Estudiante</option>
+        <option value="professor">Profesor</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <p class="invite-msg" id="invite-msg"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="btn-cancel-add-user">Cancelar</button>
+      <button type="button" class="btn-primary" id="btn-invite">Agregar</button>
+    </div>
   </div>
 </div>
 
@@ -115,6 +128,20 @@ function renderUsersTable(){
   }
 }
 
+document.getElementById('btn-open-add-user').addEventListener('click', () => {
+  document.getElementById('inv-name').value = '';
+  document.getElementById('inv-email').value = '';
+  document.getElementById('inv-role').value = 'student';
+  document.getElementById('invite-msg').classList.remove('show');
+  document.getElementById('overlay-add-user').classList.add('open');
+});
+document.getElementById('btn-cancel-add-user').addEventListener('click', () => {
+  document.getElementById('overlay-add-user').classList.remove('open');
+});
+document.getElementById('overlay-add-user').addEventListener('click', (e) => {
+  if(e.target.id === 'overlay-add-user') document.getElementById('overlay-add-user').classList.remove('open');
+});
+
 document.getElementById('btn-invite').addEventListener('click', async () => {
   const full_name = document.getElementById('inv-name').value.trim();
   const email = document.getElementById('inv-email').value.trim();
@@ -140,13 +167,9 @@ document.getElementById('btn-invite').addEventListener('click', async () => {
     const result = await res.json().catch(() => ({}));
     if(!res.ok) throw new Error(result.error || 'No se pudo agregar.');
 
-    msg.textContent = 'Listo — le llegará un correo de invitación.';
-    msg.style.color = '#1E8E5A';
-    msg.classList.add('show');
-    document.getElementById('inv-name').value = '';
-    document.getElementById('inv-email').value = '';
     await loadUsers();
     renderUsersTable();
+    document.getElementById('overlay-add-user').classList.remove('open');
   } catch(err){
     msg.textContent = err.message;
     msg.style.color = 'var(--red)';
@@ -160,9 +183,10 @@ async function boot(){
   await emnInit();
 
   // Free access: anyone can open this page and see the roster, logged in
-  // or not. Only the invite form and the role dropdown stay admin-only.
+  // or not. Only the "Agregar usuario" button and the role dropdown stay
+  // admin-only.
   document.getElementById('usuarios-body').style.display = 'block';
-  if(emnStudentProfile?.role === 'admin') document.getElementById('invite-card').style.display = 'block';
+  if(emnStudentProfile?.role === 'admin') document.getElementById('btn-open-add-user').style.display = 'inline-block';
 
   await loadUsers();
   renderUsersTable();

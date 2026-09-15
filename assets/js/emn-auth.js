@@ -136,23 +136,26 @@ function emnStartHeartbeat(tool){
     const today = new Date();
     const activityDate = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
 
-    const { data: existing } = await emnSupabase
+    const { data: existing, error: selectErr } = await emnSupabase
       .from('practice_activity')
       .select('id, seconds')
       .eq('student_id', emnSession.user.id)
       .eq('tool', tool)
       .eq('activity_date', activityDate)
       .maybeSingle();
+    if(selectErr){ console.error('emnStartHeartbeat: could not read practice_activity', selectErr); return; }
 
     if(existing){
-      await emnSupabase.from('practice_activity').update({
+      const { error: updateErr } = await emnSupabase.from('practice_activity').update({
         seconds: existing.seconds + HEARTBEAT_SECONDS,
         updated_at: new Date().toISOString()
       }).eq('id', existing.id);
+      if(updateErr) console.error('emnStartHeartbeat: could not update practice_activity', updateErr);
     } else {
-      await emnSupabase.from('practice_activity').insert({
+      const { error: insertErr } = await emnSupabase.from('practice_activity').insert({
         student_id: emnSession.user.id, tool, activity_date: activityDate, seconds: HEARTBEAT_SECONDS
       });
+      if(insertErr) console.error('emnStartHeartbeat: could not insert practice_activity', insertErr);
     }
   }, HEARTBEAT_SECONDS * 1000);
 }

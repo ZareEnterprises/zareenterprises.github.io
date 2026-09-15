@@ -118,8 +118,11 @@ function toDateStr(d){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function fmtHours(seconds){
-  const h = seconds / 3600;
-  return (Math.round(h * 10) / 10) + 'h';
+  const mins = Math.round(seconds / 60);
+  if(mins < 60) return mins + 'm';
+  const h = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return remMins ? `${h}h ${remMins}m` : `${h}h`;
 }
 
 async function loadStudents(){

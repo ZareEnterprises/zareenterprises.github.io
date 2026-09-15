@@ -32,6 +32,10 @@
   .modal .field label{ display:block; font-size:11px; font-weight:600; color:var(--gray-700); margin-bottom:5px; }
   .modal .field input, .modal .field select{ width:100%; padding:10px 11px; border:1px solid var(--gray-300); border-radius:7px; font-size:13.5px; font-family:inherit; }
   .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+  .role-btns{ display:flex; gap:8px; }
+  .role-btn{ flex:1; padding:9px 10px; border:1px solid var(--gray-300); border-radius:7px; background:none; color:var(--gray-700); font-weight:600; font-size:12.5px; cursor:pointer; font-family:inherit; transition:.15s; }
+  .role-btn:hover{ border-color:var(--red); color:var(--red); }
+  .role-btn.selected{ background:var(--red); border-color:var(--red); color:#fff; }
   .invite-msg{ font-size:12px; margin-top:4px; display:none; }
   .invite-msg.show{ display:block; }
 
@@ -51,7 +55,7 @@
   <div class="usuarios-head">
     <h1>Usuarios</h1>
     <div style="display:flex;align-items:center;gap:14px">
-      <button type="button" class="btn-primary" id="btn-open-add-user" style="display:none">+ Agregar usuario</button>
+      <button type="button" class="btn-primary" id="btn-open-add-user">Agregar Usuario</button>
       <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
     </div>
   </div>
@@ -75,12 +79,13 @@
     <h2>Agregar usuario</h2>
     <div class="field"><label>Nombre</label><input type="text" id="inv-name" placeholder="Nombre completo"></div>
     <div class="field"><label>Correo</label><input type="email" id="inv-email" placeholder="correo@ejemplo.com"></div>
-    <div class="field"><label>Rol</label>
-      <select id="inv-role">
-        <option value="student">Estudiante</option>
-        <option value="professor">Profesor</option>
-        <option value="admin">Admin</option>
-      </select>
+    <div class="field">
+      <label>Rol</label>
+      <div class="role-btns" id="inv-role-btns">
+        <button type="button" class="role-btn selected" data-role="student">Estudiante</button>
+        <button type="button" class="role-btn" data-role="professor">Profesor</button>
+        <button type="button" class="role-btn" data-role="admin">Admin</button>
+      </div>
     </div>
     <p class="invite-msg" id="invite-msg"></p>
     <div class="modal-actions">
@@ -128,10 +133,17 @@ function renderUsersTable(){
   }
 }
 
+document.querySelectorAll('#inv-role-btns .role-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#inv-role-btns .role-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
 document.getElementById('btn-open-add-user').addEventListener('click', () => {
   document.getElementById('inv-name').value = '';
   document.getElementById('inv-email').value = '';
-  document.getElementById('inv-role').value = 'student';
+  document.querySelectorAll('#inv-role-btns .role-btn').forEach(b => b.classList.toggle('selected', b.dataset.role === 'student'));
   document.getElementById('invite-msg').classList.remove('show');
   document.getElementById('overlay-add-user').classList.add('open');
 });
@@ -145,11 +157,12 @@ document.getElementById('overlay-add-user').addEventListener('click', (e) => {
 document.getElementById('btn-invite').addEventListener('click', async () => {
   const full_name = document.getElementById('inv-name').value.trim();
   const email = document.getElementById('inv-email').value.trim();
-  const role = document.getElementById('inv-role').value;
+  const role = document.querySelector('#inv-role-btns .role-btn.selected')?.dataset.role || 'student';
   const msg = document.getElementById('invite-msg');
   msg.classList.remove('show');
 
   if(!email){ msg.textContent = 'El correo es obligatorio.'; msg.style.color = 'var(--red)'; msg.classList.add('show'); return; }
+  if(!emnSession){ msg.textContent = 'Inicia sesión primero para poder agregar usuarios.'; msg.style.color = 'var(--red)'; msg.classList.add('show'); return; }
 
   const btn = document.getElementById('btn-invite');
   btn.disabled = true; btn.textContent = 'Agregando…';
@@ -182,11 +195,11 @@ document.getElementById('btn-invite').addEventListener('click', async () => {
 async function boot(){
   await emnInit();
 
-  // Free access: anyone can open this page and see the roster, logged in
-  // or not. Only the "Agregar usuario" button and the role dropdown stay
-  // admin-only.
+  // Free access: anyone can open this page, see the roster, and click
+  // "Agregar Usuario" — the invite-student function itself still checks
+  // for Admin server-side and rejects anyone else with a clear error, so
+  // this button being visible to everyone isn't a security gap.
   document.getElementById('usuarios-body').style.display = 'block';
-  if(emnStudentProfile?.role === 'admin') document.getElementById('btn-open-add-user').style.display = 'inline-block';
 
   await loadUsers();
   renderUsersTable();

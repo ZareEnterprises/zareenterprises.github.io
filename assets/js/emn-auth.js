@@ -66,7 +66,7 @@ function emnInjectNavLinks(){
     const alumnosLink = document.createElement('a');
     alumnosLink.className = 'emn-nav__link';
     alumnosLink.href = '/alumnos';
-    alumnosLink.textContent = 'Alumnos';
+    alumnosLink.textContent = 'Estudiantes';
     nav.appendChild(alumnosLink);
   }
 }

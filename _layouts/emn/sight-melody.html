@@ -96,6 +96,14 @@
   </div>
   <div class="panel-body">
 
+    <div class="section clef-section">
+      <h3>Clef <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Melody only)</span></h3>
+      <div class="row2">
+        <div class="chip active" data-clef="treble">Sol (Treble)</div>
+        <div class="chip" data-clef="bass">Fa (Bass)</div>
+      </div>
+    </div>
+
     <div class="section pitch-section">
       <h3>1 · Key</h3>
       <div class="row2" style="margin-bottom:10px;">
@@ -108,6 +116,14 @@
     <div class="section pitch-section">
       <h3>Scale quality <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></h3>
       <div class="chip-row" id="qualityRow"></div>
+    </div>
+
+    <div class="section harmony-section" style="display:none">
+      <h3>Harmony</h3>
+      <p class="hint">Adds a diatonic 9th, 11th or 13th -- or a sus2/sus4 -- on top of each chord's base 7th.</p>
+      <div class="chip-row">
+        <div class="chip" id="addTensionsChip">Add Tensions</div>
+      </div>
     </div>
 
     <div class="section melody-pool-section">
@@ -816,7 +832,9 @@ const state = {
   diff: 'easy',
   population: 'average',
   mode: 'melody', // 'melody' | 'rhythm' | 'harmony'
-  bpm: 92
+  bpm: 92,
+  clef: 'treble', // 'treble' | 'bass' -- Melody mode only (Rhythm/Harmony keep their own fixed clef)
+  addTensions: false // Harmony mode only -- diatonic 9/11/13 or sus2/sus4 on top of the base 7th chord
 };
 
 const rangeList = buildNaturalRangeList();
@@ -969,9 +987,30 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.pitch-section').forEach(s => s.classList.toggle('locked', state.mode === 'rhythm'));
     document.querySelectorAll('.melody-pool-section').forEach(s => s.classList.toggle('locked', state.mode !== 'melody'));
+    document.querySelectorAll('.clef-section').forEach(s => s.classList.toggle('locked', state.mode !== 'melody'));
+    document.querySelectorAll('.harmony-section').forEach(s => s.style.display = state.mode === 'harmony' ? '' : 'none');
     generate();
   });
 });
+
+// Clef -- Melody mode only (Rhythm keeps its percussion-staff clef, Harmony
+// always renders in treble regardless of this setting).
+document.querySelectorAll('[data-clef]').forEach(c => {
+  c.onclick = () => {
+    document.querySelectorAll('[data-clef]').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    state.clef = c.dataset.clef;
+    generate();
+  };
+});
+
+// Add Tensions -- Harmony mode only. Single on/off chip, not a pair.
+const addTensionsChip = document.getElementById('addTensionsChip');
+addTensionsChip.onclick = () => {
+  state.addTensions = !state.addTensions;
+  addTensionsChip.classList.toggle('active', state.addTensions);
+  generate();
+};
 
 // Dictation mode -- latching push button: hides the score so the exercise
 // can only be heard (via Play melody), not read. Doesn't affect generation.
@@ -1082,6 +1121,19 @@ document.getElementById('mainStage').onclick = ()=>{
   generate();
 };
 
+// Safety net: if the panel is open, Escape or a click ANYWHERE outside it
+// closes it -- not just the overlay's own exact pixels or the specific
+// buttons above. Catches the panel any other click handler in the page
+// might otherwise leave stranded open.
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && panel.classList.contains('open')) closePanel();
+});
+document.addEventListener('click', (e) => {
+  if(panel.classList.contains('open') && !panel.contains(e.target) && e.target !== gearBtn){
+    closePanel();
+  }
+}, true);
+
 /* ============================= NOTE POOL RESOLUTION ============================= */
 function resolvePool(){
   const isMinorTonic = state.qualityMode==='minor';
@@ -1183,8 +1235,23 @@ function buildDiatonicChords(tonicKey, modeId, isMinorTonic){
       suffix = triadSuffix + '7';
     }
     const accidental = root.totalAlt === 0 ? '' : (root.totalAlt > 0 ? '#'.repeat(root.totalAlt) : 'b'.repeat(-root.totalAlt));
-    return { degree: i + 1, label: `${root.letter}${accidental}${suffix}` };
+    const rootName = `${root.letter}${accidental}`;
+    return { degree: i + 1, rootName, label: `${rootName}${suffix}` };
   });
+}
+
+// "Add Tensions" (Harmony mode only): on top of the base 7th chord already
+// built above, either stack a diatonic 9th/11th/13th on the existing label
+// (e.g. "Dm7" -> "Dm7(9)") or swap in a sus2/sus4, which replaces the 3rd
+// entirely so it's built from the bare root instead ("Dm7" -> "Dsus4").
+// Diatonic here just means "no extra accidental" -- these are text labels
+// on a single reference notehead, not real stacked pitches, so no interval
+// math is needed beyond what buildDiatonicChords already spelled out.
+const TENSION_OPTIONS = ['9', '11', '13', 'sus2', 'sus4'];
+function applyTension(chord){
+  const tension = TENSION_OPTIONS[Math.floor(Math.random() * TENSION_OPTIONS.length)];
+  if(tension === 'sus2' || tension === 'sus4') return `${chord.rootName}${tension}`;
+  return `${chord.label}(${tension})`;
 }
 
 // Chord durations ("obligados") are restricted to whole/half/quarter notes
@@ -1230,9 +1297,29 @@ function renderHarmonyMeasure(ctx, stave, measureTicks, chords){
   voice.draw(ctx, stave);
 
   const y = stave.getYForLine(0) - 24; // clears note stems, which stick up above the top staff line
-  ctx.setFont('Fraunces', 14, 'bold');
-  vfNotes.forEach(note => {
-    const label = chords[Math.floor(Math.random() * chords.length)].label;
+  const labels = vfNotes.map(() => {
+    const chord = chords[Math.floor(Math.random() * chords.length)];
+    return state.addTensions ? applyTension(chord) : chord.label;
+  });
+
+  // Tension labels ("Dm7(9)", "Gmaj7#5(13)") run noticeably wider than a
+  // plain triad/7th, and quarter notes pack close together -- a fixed font
+  // size overlaps into the next label whenever both happen at once (worst
+  // case: two wide tension chords back-to-back on quarters). Instead, size
+  // each label to the actual horizontal room it has before the next
+  // notehead (or the measure's end for the last one), shrinking only as
+  // far as it needs to.
+  const BASE_FONT = 11, MIN_FONT = 7;
+  vfNotes.forEach((note, i) => {
+    const label = labels[i];
+    const nextX = i < vfNotes.length - 1 ? vfNotes[i + 1].getAbsoluteX() : stave.getNoteEndX();
+    const available = nextX - note.getAbsoluteX() - 4; // small gap so labels never touch
+    let fontSize = BASE_FONT;
+    ctx.setFont('Fraunces', fontSize, 'bold');
+    while(fontSize > MIN_FONT && ctx.measureText(label).width > available){
+      fontSize -= 1;
+      ctx.setFont('Fraunces', fontSize, 'bold');
+    }
     ctx.fillText(label, note.getAbsoluteX(), y);
   });
   ctx.setFont('Inter', 10);
@@ -1363,7 +1450,9 @@ function generate(){
       if(state.mode === 'rhythm'){
         stave.addClef('percussion'); // renders as the double-bar rhythm-staff symbol, not a pitched clef
       } else {
-        stave.addClef('treble');
+        // Only Melody honors the clef picker -- Harmony's chord symbols sit
+        // above a fixed treble reference notehead regardless of clef choice.
+        stave.addClef(state.mode === 'melody' ? state.clef : 'treble');
         stave.addKeySignature(vfKeySig); // Harmony still needs this -- chords are built from this same key
       }
       if(isFirst) stave.addTimeSignature(state.meter);

@@ -1076,9 +1076,10 @@
 /* Rhythm mode: pitch-related settings (Key, Scale quality, Degrees, Absolute
    pitch limits, Register) don't apply, so they're covered with a gray layer
    and can't be clicked -- rather than just disabling inputs one by one. */
-.emn-tool .section.pitch-section, .emn-tool .section.melody-pool-section { position: relative; }
+.emn-tool .section.pitch-section, .emn-tool .section.melody-pool-section, .emn-tool .section.clef-section { position: relative; }
 .emn-tool .section.pitch-section.locked::after,
-.emn-tool .section.melody-pool-section.locked::after {
+.emn-tool .section.melody-pool-section.locked::after,
+.emn-tool .section.clef-section.locked::after {
   content: ''; position: absolute; inset: -6px;
   background: rgba(120,120,120,.55); border-radius: 10px; z-index: 5;
 }

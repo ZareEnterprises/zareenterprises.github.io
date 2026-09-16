@@ -939,7 +939,31 @@ body.app{ zoom:1.2; min-height:calc(100vh / 1.2); }
 .fin-revenue .fin-header-row, .fin-revenue .fin-row, .fin-revenue .fin-subtotal-row, .fin-revenue .fin-grand-total-row{
   grid-template-columns:2fr 70px 110px 50px 130px 2fr 24px;
 }
+.fin-expense .fin-header-row, .fin-expense .fin-row, .fin-expense .fin-subtotal-row, .fin-expense .fin-grand-total-row{
+  grid-template-columns:2fr 110px 50px 100px 130px 2fr 24px;
+}
 .fin-quantity{ text-align:right; font-family:var(--font-mono); }
+.fin-method{
+  background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:6px 8px;
+  font-size:12.5px; color:var(--ink); font-family:var(--font-body); width:100%;
+}
+.fin-row-readonly{ color:var(--faint); }
+.fin-item-readonly{ font-size:12.5px; font-style:italic; }
+.fin-amount-readonly{ text-align:right; font-family:var(--font-mono); font-size:12.5px; }
+.fin-imported-tag{
+  font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.04em;
+  background:var(--surface); border-radius:4px; padding:1px 5px; margin-left:4px;
+}
+.fin-method-summary{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius-md);
+  padding:14px 16px; margin-top:14px;
+}
+.fin-method-summary-title{
+  font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--faint); font-weight:700; margin-bottom:8px;
+}
+.fin-method-total-row{ display:flex; justify-content:space-between; padding:5px 0; font-size:13px; color:var(--ink); }
+.fin-method-total-row span:last-child{ font-family:var(--font-mono); font-weight:700; }
 .fin-header-row{
   border-top:none; background:var(--surface); font-family:var(--font-mono); font-size:10px;
   text-transform:uppercase; letter-spacing:.06em; color:var(--faint); font-weight:700;
@@ -980,5 +1004,8 @@ body.app{ zoom:1.2; min-height:calc(100vh / 1.2); }
   .fin-header-row, .fin-row, .fin-subtotal-row, .fin-grand-total-row{ grid-template-columns:1.3fr 80px 36px 100px 1.3fr 20px; gap:6px; padding:8px; }
   .fin-revenue .fin-header-row, .fin-revenue .fin-row, .fin-revenue .fin-subtotal-row, .fin-revenue .fin-grand-total-row{
     grid-template-columns:1.2fr 50px 80px 36px 100px 1.2fr 20px;
+  }
+  .fin-expense .fin-header-row, .fin-expense .fin-row, .fin-expense .fin-subtotal-row, .fin-expense .fin-grand-total-row{
+    grid-template-columns:1.2fr 80px 36px 70px 100px 1.2fr 20px;
   }
 }

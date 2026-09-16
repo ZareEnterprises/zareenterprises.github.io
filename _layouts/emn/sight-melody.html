@@ -1033,6 +1033,10 @@ const RECORD_LIMIT = 60;
 let recRecorder = null, recStream = null, recChunks = [], recTicker = null, recElapsed = 0;
 const btnRecord = document.getElementById('btnRecord');
 const recordStatus = document.getElementById('recordStatus');
+// #mainStage regenerates the exercise on any click that reaches it -- catch
+// clicks anywhere in this row (not just on the audio/delete controls
+// specifically) before they can bubble up and wipe out a recording.
+recordStatus.addEventListener('click', (e) => e.stopPropagation());
 
 async function startRecording(){
   recordStatus.innerHTML = '';
@@ -1073,12 +1077,30 @@ function publishRecording(){
   const blob = new Blob(recChunks, { type: recRecorder.mimeType || 'audio/webm' });
   const url = URL.createObjectURL(blob);
   recordStatus.innerHTML = '';
+
   const player = document.createElement('audio');
   player.controls = true;
   player.setAttribute('controlsList', 'nodownload'); // native players offer a Download entry in their own menu otherwise
   player.oncontextmenu = (e) => e.preventDefault();
+  // #mainStage treats any click on it as "generate a new exercise" -- without
+  // this, clicking play/seek on the player bubbles up and regenerates the
+  // score out from under the recording you were just about to listen to.
+  player.addEventListener('click', (e) => e.stopPropagation());
   player.src = url;
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.type = 'button';
+  deleteBtn.className = 'record-delete-btn';
+  deleteBtn.title = 'Delete recording';
+  deleteBtn.textContent = '✕';
+  deleteBtn.onclick = (e) => {
+    e.stopPropagation();
+    URL.revokeObjectURL(url);
+    recordStatus.innerHTML = '';
+  };
+
   recordStatus.appendChild(player);
+  recordStatus.appendChild(deleteBtn);
 }
 
 btnRecord.onclick = (e) => {

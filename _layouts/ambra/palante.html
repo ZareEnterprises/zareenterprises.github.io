@@ -489,7 +489,14 @@
     <div class="field"><label>Event name</label><input type="text" id="ei-event-name" placeholder="e.g. PA'LANTE 2026"></div>
     <div class="field"><label>Venue</label><input type="text" id="ei-venue" placeholder="e.g. Henri A. Termeer Square"></div>
     <div class="field"><label>Date</label><input type="date" id="ei-date-iso"></div>
-    <div class="field"><label>Show time</label><input type="text" id="ei-showtime" placeholder="e.g. 6:30pm–10:30pm"></div>
+    <div class="field">
+      <label>Show time</label>
+      <div class="time-range-row">
+        <input type="time" id="ei-showtime-start">
+        <span class="time-range-sep">–</span>
+        <input type="time" id="ei-showtime-end">
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn ghost" id="btn-cancel-event-info">Cancel</button>
       <button class="btn" id="btn-save-event-info">Save</button>
@@ -4899,12 +4906,39 @@ function renderEventInfoHeader(){
   if(eventInfo.show_time) document.getElementById('header-showtime').textContent = eventInfo.show_time;
 }
 
+// Best-effort parse of a free-text "6:30pm–10:30pm" style label (the format
+// this field used to store) back into 24h HH:MM for the native time inputs.
+function parseClockTo24(s){
+  const m = (s || '').trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)?$/i);
+  if(!m) return null;
+  let h = parseInt(m[1], 10);
+  const ap = (m[3] || '').toLowerCase();
+  if(ap === 'pm' && h !== 12) h += 12;
+  if(ap === 'am' && h === 12) h = 0;
+  return String(h).padStart(2, '0') + ':' + m[2];
+}
+function splitShowTime(str){
+  if(!str) return [null, null];
+  const parts = str.split(/[–—-]/).map(s => s.trim());
+  if(parts.length !== 2) return [null, null];
+  return [parseClockTo24(parts[0]), parseClockTo24(parts[1])];
+}
+function to12hrLabel(t24){
+  const [hStr, min] = t24.split(':');
+  let h = parseInt(hStr, 10);
+  const ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12; if(h === 0) h = 12;
+  return `${h}:${min}${ap}`;
+}
+
 function openEventInfoModal(){
   document.getElementById('ei-client').value = eventInfo?.client || '';
   document.getElementById('ei-event-name').value = eventInfo?.event_name || currentProjectName || '';
   document.getElementById('ei-venue').value = eventInfo?.venue || '';
   document.getElementById('ei-date-iso').value = eventInfo?.event_date_iso || '';
-  document.getElementById('ei-showtime').value = eventInfo?.show_time || '';
+  const [startT, endT] = splitShowTime(eventInfo?.show_time);
+  document.getElementById('ei-showtime-start').value = startT || '';
+  document.getElementById('ei-showtime-end').value = endT || '';
   document.getElementById('overlay-event-info').classList.add('open');
 }
 document.getElementById('btn-edit-header').addEventListener('click', (e) => {
@@ -4920,7 +4954,14 @@ document.getElementById('btn-save-event-info').addEventListener('click', async (
     event_name: document.getElementById('ei-event-name').value.trim() || null,
     venue: document.getElementById('ei-venue').value.trim() || null,
     event_date_iso: document.getElementById('ei-date-iso').value || null,
-    show_time: document.getElementById('ei-showtime').value.trim() || null
+    show_time: (() => {
+      const startVal = document.getElementById('ei-showtime-start').value;
+      const endVal = document.getElementById('ei-showtime-end').value;
+      if(startVal && endVal) return `${to12hrLabel(startVal)}–${to12hrLabel(endVal)}`;
+      if(startVal) return to12hrLabel(startVal);
+      if(endVal) return to12hrLabel(endVal);
+      return null;
+    })()
   };
   let res;
   if(eventInfo?.id){

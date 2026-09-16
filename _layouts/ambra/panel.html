@@ -132,7 +132,6 @@
     <div class="section-head">
       <div class="section-head-left">
         <h2>Finance</h2>
-        <span class="count-label" id="finance-count">—</span>
       </div>
       <select id="finance-project-select" class="select-project"><option value="">Select a project…</option></select>
     </div>
@@ -147,6 +146,7 @@
         <button class="fin-type-btn" data-fin-type="revenue" type="button">Revenue</button>
       </div>
       <div class="fin-table" id="fin-table"></div>
+      <div class="fin-method-summary" id="fin-method-summary" style="display:none"></div>
       <div class="fin-summary" id="fin-summary"></div>
     </div>
   </section>
@@ -1567,8 +1567,16 @@
   ];
 
   let FINANCE_ITEMS = [];
+  let TRANSPORT_ROWS_FOR_FINANCE = []; // read-only, pulled from Band > Transportation for this project's bands
   let currentFinanceProjectId = '';
   let currentFinanceType = 'expense';
+  const PAYMENT_METHODS = ['cash', 'check', 'transfer'];
+  const PAYMENT_METHOD_LABELS = { cash: 'Cash', check: 'Check', transfer: 'Transfer' };
+
+  function transportRowLabel(r){
+    const dir = r.direction === 'back_home' ? 'Back to Home' : 'To the Event';
+    return `${r.mode || 'Transportation'} — ${r.departure_point || '—'} (${dir})`;
+  }
 
   function populateFinanceProjectSelect(){
     const sel = document.getElementById('finance-project-select');
@@ -1592,9 +1600,17 @@
   async function loadFinanceItems(projectId){
     const { data } = await supabaseClient.from('finance_items').select('*').eq('project_id', projectId).order('item_order');
     FINANCE_ITEMS = data || [];
-    if(FINANCE_ITEMS.length) return;
 
     const bandIds = ALL_BANDS.filter(b => b.project_id === projectId).map(b => b.id);
+    if(bandIds.length){
+      const { data: transportRows } = await supabaseClient.from('transportation_rows').select('*').in('group_id', bandIds);
+      TRANSPORT_ROWS_FOR_FINANCE = transportRows || [];
+    } else {
+      TRANSPORT_ROWS_FOR_FINANCE = [];
+    }
+
+    if(FINANCE_ITEMS.length) return;
+
     let rosterNames = [];
     if(bandIds.length){
       const { data: memberRows } = await supabaseClient.from('band').select('artist_name,instrument').in('group_id', bandIds);
@@ -1631,12 +1647,15 @@
     const wrap = document.getElementById('fin-table');
     const typeDef = FINANCE_TYPES[currentFinanceType];
     const isRevenue = currentFinanceType === 'revenue';
+    const isExpense = !isRevenue;
     const paidLabel = isRevenue ? 'Received' : 'Paid';
     const typeItems = FINANCE_ITEMS.filter(i => (i.type || 'expense') === currentFinanceType);
-    // Trailing empty cells for Subtotal/Grand Total rows: Paid-or-Received,
-    // Date, Notes, ✕ — always 4, regardless of type. Revenue's extra
-    // Quantity column is inserted separately, right after the label.
-    const emptySpans = '<span></span><span></span><span></span><span></span>';
+    // Trailing empty cells for Subtotal/Grand Total rows, after the Amount
+    // value: Revenue has 4 (Received, Date, Notes, ✕); Expense has 5 (Paid,
+    // Method, Date, Notes, ✕) since Method is an extra expense-only column.
+    // Revenue's own extra column (Quantity) sits BEFORE Amount instead, so
+    // it's inserted separately, right after the label.
+    const emptySpans = '<span></span>'.repeat(isExpense ? 5 : 4);
     let grandTotal = 0;
     const body = typeDef.categories.map(cat => {
       const items = typeItems.filter(i => i.category === cat).sort((a,b) => (a.item_order||0)-(b.item_order||0));
@@ -1649,27 +1668,49 @@
             ${isRevenue ? `<input class="fin-quantity" type="number" step="1" value="${i.quantity ?? ''}" placeholder="Qty">` : ''}
             <input class="fin-amount" type="number" step="0.01" value="${i.amount ?? ''}" placeholder="0.00">
             <input class="fin-paid" type="checkbox" ${i.paid ? 'checked' : ''} title="${paidLabel}">
+            ${isExpense ? `<select class="fin-method">
+              <option value="">—</option>
+              ${PAYMENT_METHODS.map(m => `<option value="${m}" ${i.payment_method === m ? 'selected' : ''}>${PAYMENT_METHOD_LABELS[m]}</option>`).join('')}
+            </select>` : ''}
             <input class="fin-date" type="date" value="${i.date || ''}">
             <input class="fin-notes" value="${escapeAttr(i.notes || '')}" placeholder="Notes">
             <button class="fin-remove" title="Remove">✕</button>
           </div>`;
       }).join('');
+
+      // Transportation costs entered in Band > Transportation show up here
+      // automatically, read-only — the real editing happens on that tab,
+      // this is just so nobody has to retype them into Finance by hand.
+      let importedHtml = '';
+      if(isExpense && cat === 'Transportation' && TRANSPORT_ROWS_FOR_FINANCE.length){
+        importedHtml = TRANSPORT_ROWS_FOR_FINANCE.map(r => {
+          const cost = Number(r.cost) || 0;
+          subtotal += cost;
+          return `
+            <div class="fin-row fin-row-readonly">
+              <span class="fin-item-readonly">${escapeHtml(transportRowLabel(r))} <span class="fin-imported-tag">from Band</span></span>
+              <span class="fin-amount-readonly">${fmtMoney(cost)}</span>
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>`;
+        }).join('');
+      }
+
       grandTotal += subtotal;
       return `
         <div class="fin-cat-head">${cat}</div>
-        ${rowsHtml || '<div class="fin-empty">No rows yet.</div>'}
+        ${rowsHtml || importedHtml ? rowsHtml + importedHtml : '<div class="fin-empty">No rows yet.</div>'}
         <button class="fin-add-row" data-add-category="${cat}">+ Add row</button>
         <div class="fin-subtotal-row"><span>Subtotal</span>${isRevenue ? '<span></span>' : ''}<span>${fmtMoney(subtotal)}</span>${emptySpans}</div>`;
     }).join('');
 
-    wrap.className = 'fin-table' + (isRevenue ? ' fin-revenue' : '');
+    wrap.className = 'fin-table' + (isRevenue ? ' fin-revenue' : ' fin-expense');
     wrap.innerHTML = `
-      <div class="fin-header-row"><span>Item</span>${isRevenue ? '<span>Quantity</span>' : ''}<span>Amount</span><span>${paidLabel}</span><span>Date</span><span>Notes</span><span></span></div>
+      <div class="fin-header-row"><span>Item</span>${isRevenue ? '<span>Quantity</span>' : ''}<span>Amount</span><span>${paidLabel}</span>${isExpense ? '<span>Method</span>' : ''}<span>Date</span><span>Notes</span><span></span></div>
       ${body}
       <div class="fin-grand-total-row"><span>${typeDef.label} Total</span>${isRevenue ? '<span></span>' : ''}<span>${fmtMoney(grandTotal)}</span>${emptySpans}</div>
     `;
 
-    wrap.querySelectorAll('.fin-row').forEach(row => {
+    wrap.querySelectorAll('.fin-row:not(.fin-row-readonly)').forEach(row => {
       const id = row.dataset.id;
       row.querySelector('.fin-item').addEventListener('change', (e) => saveFinanceField(id, 'item', e.target.value.trim() || null));
       if(isRevenue){
@@ -1677,6 +1718,9 @@
       }
       row.querySelector('.fin-amount').addEventListener('change', (e) => saveFinanceField(id, 'amount', e.target.value === '' ? null : parseFloat(e.target.value)));
       row.querySelector('.fin-paid').addEventListener('change', (e) => saveFinanceField(id, 'paid', e.target.checked, false));
+      if(isExpense){
+        row.querySelector('.fin-method').addEventListener('change', (e) => saveFinanceField(id, 'payment_method', e.target.value || null, false));
+      }
       row.querySelector('.fin-date').addEventListener('change', (e) => saveFinanceField(id, 'date', e.target.value || null, false));
       row.querySelector('.fin-notes').addEventListener('change', (e) => saveFinanceField(id, 'notes', e.target.value.trim() || null, false));
       row.querySelector('.fin-remove').addEventListener('click', async () => {
@@ -1697,7 +1741,20 @@
       });
     });
 
-    document.getElementById('finance-count').textContent = `${FINANCE_ITEMS.length} line item${FINANCE_ITEMS.length === 1 ? '' : 's'}`;
+    // "How much you still owe, by method" — unpaid expense amounts only,
+    // grouped by how they'll be sent. Only makes sense for Expenses.
+    const methodSummaryEl = document.getElementById('fin-method-summary');
+    if(isExpense){
+      const rows = PAYMENT_METHODS.map(m => {
+        const sum = typeItems.filter(i => i.payment_method === m && !i.paid).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+        return `<div class="fin-method-total-row"><span>${PAYMENT_METHOD_LABELS[m]}</span><span>${fmtMoney(sum)}</span></div>`;
+      }).join('');
+      methodSummaryEl.innerHTML = `<div class="fin-method-summary-title">Still to send, by method</div>${rows}`;
+      methodSummaryEl.style.display = 'block';
+    } else {
+      methodSummaryEl.style.display = 'none';
+    }
+
     renderFinanceSummary();
   }
 
@@ -1727,7 +1784,6 @@
     if(!currentFinanceProjectId){
       document.getElementById('finance-empty').style.display = 'block';
       document.getElementById('finance-sheet').style.display = 'none';
-      document.getElementById('finance-count').textContent = '—';
       return;
     }
     document.getElementById('finance-empty').style.display = 'none';

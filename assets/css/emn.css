@@ -1031,6 +1031,12 @@
 @keyframes recordPulse { 0%,100%{ opacity:1; } 50%{ opacity:.6; } }
 .emn-tool .record-status { display: flex; align-items: center; gap: 8px; }
 .emn-tool .record-status audio { height: 32px; max-width: 260px; }
+.emn-tool .record-delete-btn {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  font-size: 11px; line-height: 1; cursor: pointer; transition: all .12s ease;
+}
+.emn-tool .record-delete-btn:hover { border-color: var(--red); color: var(--red); }
 .emn-tool .record-note {
   font-family: 'Inter', sans-serif; font-size: 11.5px; color: var(--muted);
 }

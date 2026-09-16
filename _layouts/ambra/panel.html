@@ -1629,7 +1629,10 @@
   }
 
   function financeTotal(type){
-    return FINANCE_ITEMS.filter(i => (i.type || 'expense') === type).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    return FINANCE_ITEMS.filter(i => (i.type || 'expense') === type).reduce((sum, i) => {
+      const qty = type === 'revenue' ? (i.quantity === null || i.quantity === undefined || i.quantity === '' ? 1 : Number(i.quantity)) : 1;
+      return sum + qty * (Number(i.amount) || 0);
+    }, 0);
   }
 
   function renderFinanceSummary(){
@@ -1661,7 +1664,11 @@
       const items = typeItems.filter(i => i.category === cat).sort((a,b) => (a.item_order||0)-(b.item_order||0));
       let subtotal = 0;
       const rowsHtml = items.map(i => {
-        subtotal += Number(i.amount) || 0;
+        // Revenue rows: Amount is the per-unit price, Quantity multiplies it
+        // into the line's contribution to Subtotal/Grand Total. A blank
+        // Quantity is treated as 1 (a plain one-off amount), not 0.
+        const qty = isRevenue ? (i.quantity === null || i.quantity === undefined || i.quantity === '' ? 1 : Number(i.quantity)) : 1;
+        subtotal += qty * (Number(i.amount) || 0);
         return `
           <div class="fin-row" data-id="${i.id}">
             <input class="fin-item" value="${escapeAttr(i.item || '')}" placeholder="Item">

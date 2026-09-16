@@ -1515,7 +1515,7 @@
     REHEARSAL_ROWS.forEach(r => {
       if(r.date_iso !== dateStr) return;
       if(calProjectFilter !== 'all' && r.project_id !== calProjectFilter) return;
-      items.push({ type:'rehearsal', title: `Rehearsal — ${r.bandName}`, sub: r.location_text || r.time_text || '', project_id: r.project_id });
+      items.push({ type:'rehearsal', title: `Rehearsal — ${r.bandName}`, sub: [r.time_text, r.location_text].filter(Boolean).join(' · '), project_id: r.project_id });
     });
     CALENDAR_EVENTS.forEach(c => {
       if(c.event_date !== dateStr || !isCalendarEventVisibleToMe(c.id)) return;
@@ -1559,7 +1559,10 @@
       const items = itemsForDate(c.dateStr);
       const isToday = c.dateStr === todayStr;
       const isConcertDay = items.some(it => it.type === 'event');
-      const shown = items.slice(0,2).map(it => `<div class="cal-marker cal-marker-${it.type}"><span class="cal-dot cal-dot-${it.type}"></span><span class="cal-marker-text">${escapeHtml(it.title)}</span></div>`).join('');
+      const shown = items.slice(0,2).map(it => {
+        const label = it.type === 'rehearsal' && it.sub ? `${it.title} · ${it.sub}` : it.title;
+        return `<div class="cal-marker cal-marker-${it.type}"><span class="cal-dot cal-dot-${it.type}"></span><span class="cal-marker-text">${escapeHtml(label)}</span></div>`;
+      }).join('');
       const more = items.length > 2 ? `<div class="cal-marker" style="color:var(--faint)">+${items.length-2} more</div>` : '';
       return `
         <div class="cal-day ${isToday ? 'cal-day-today' : ''} ${isConcertDay ? 'cal-day-concert' : ''}" data-date="${c.dateStr}">

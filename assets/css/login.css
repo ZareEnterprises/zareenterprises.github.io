@@ -227,7 +227,7 @@ body{
 .icon-btn svg{ width:17px; height:17px; }
 
 .cal-nav-btn{
-  background:var(--surface); border:1px solid var(--line); color:var(--ink);
+  background:var(--surface); border:1px solid var(--accent); color:var(--accent);
   font-size:20px; font-weight:700; line-height:1;
 }
 .cal-nav-btn:hover{ background:var(--accent); border-color:var(--accent); color:#fff; }

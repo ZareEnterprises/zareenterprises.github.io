@@ -1354,6 +1354,24 @@ async function fetchEventInfo(){
   const arr = res.ok ? await res.json() : [];
   eventInfo = arr[0] || null;
 }
+
+// Marks that the one-time "Edit event info" intro has been shown for this
+// project, so `boot()` never auto-opens it again — whether or not the user
+// actually filled anything in. Patches the row if one already exists
+// (created by a prior Save, or by this same function), otherwise creates a
+// bare stub row just to hold the flag.
+async function markEventInfoIntroShown(){
+  if(eventInfo?.id){
+    await fetch(`${SUPABASE_URL}/rest/v1/event_info?id=eq.${eventInfo.id}`, { method:'PATCH', headers, body: JSON.stringify({ intro_shown: true }) });
+    eventInfo.intro_shown = true;
+  } else {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/event_info`, { method:'POST', headers, body: JSON.stringify({ project_id: currentProjectId, intro_shown: true }) });
+    if(res.ok){
+      const created = await res.json();
+      eventInfo = created[0];
+    }
+  }
+}
 async function fetchRehearsalSettings(){
   if(!activeBandId){ rehearsalSettings = null; return; }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_settings?select=*&group_id=eq.${activeBandId}&limit=1`, { headers });
@@ -1921,7 +1939,11 @@ function wireEmotionFaders(){
       if(!dragging) return;
       dragging = false;
       const tier = dimmer.dataset.pendingTier;
-      if(tier){
+      if(!tier) return;
+      if(dimmer.dataset.interludeId){
+        await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${dimmer.dataset.interludeId}`, { method:'PATCH', headers, body: JSON.stringify({ emotion_level: tier }) });
+        await fetchInterludeItems();
+      } else {
         await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${dimmer.dataset.songId}`, { method:'PATCH', headers, body: JSON.stringify({ emotion_level: tier }) });
         await fetchSongs();
       }
@@ -2255,7 +2277,7 @@ document.getElementById('btn-set-confirm').addEventListener('click', async () =>
     ));
   }
   if(selectedSetType === 'interlude'){
-    await fetch(`${SUPABASE_URL}/rest/v1/interlude_items`, { method:'POST', headers, body: JSON.stringify({ set_id: newSet.id, item_order: 1 }) });
+    await fetch(`${SUPABASE_URL}/rest/v1/interlude_items`, { method:'POST', headers, body: JSON.stringify({ set_id: newSet.id, item_order: 1, emotion_level: 'media' }) });
   }
   overlaySet.classList.remove('open');
   await reload();
@@ -2391,7 +2413,7 @@ async function ensureDefaultInstruments(song){
 function renderInterludeRows(container, setInfo){
   container.innerHTML = `
     <div class="interlude-head">
-      <span></span><span>Description</span><span>Mics needed</span><span>To whom</span><span>Comments</span><span></span>
+      <span></span><span></span><span>Description</span><span>Mics needed</span><span>To whom</span><span>Comments</span><span></span>
     </div>
     <div class="interlude-rows" data-set-id="${setInfo.id}"></div>
     <button class="btn ghost small btn-add-interlude-row" data-set-id="${setInfo.id}" style="margin:12px 20px">+ Add</button>
@@ -2408,8 +2430,10 @@ function renderInterludeRows(container, setInfo){
     row.className = 'interlude-row';
     row.draggable = false;
     row.dataset.itemId = item.id;
+    const emo = item.emotion_level || 'media';
     row.innerHTML = `
       <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <div class="dimmer ${emo}" data-interlude-id="${item.id}"><i></i><span class="fader-dot ${emo}"></span></div>
       <input type="text" data-id="${item.id}" data-field="description" value="${escapeAttr(item.description || '')}" placeholder="Description">
       <input type="text" data-id="${item.id}" data-field="mics_needed" value="${escapeAttr(item.mics_needed || '')}" placeholder="Mics needed">
       <input type="text" data-id="${item.id}" data-field="to_whom" value="${escapeAttr(item.to_whom || '')}" placeholder="To whom">
@@ -2433,6 +2457,7 @@ function renderInterludeRows(container, setInfo){
       await fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${row.dataset.itemId}`, { method:'DELETE', headers });
       await fetchInterludeItems();
       renderInterludeRows(container, setInfo);
+      wireEmotionFaders();
     });
   });
 
@@ -2442,10 +2467,11 @@ function renderInterludeRows(container, setInfo){
   addBtn.addEventListener('click', async () => {
     const currentItems = interludeItems.filter(it => it.set_id === setInfo.id);
     await fetch(`${SUPABASE_URL}/rest/v1/interlude_items`, {
-      method:'POST', headers, body: JSON.stringify({ set_id: setInfo.id, item_order: currentItems.length + 1 })
+      method:'POST', headers, body: JSON.stringify({ set_id: setInfo.id, item_order: currentItems.length + 1, emotion_level: 'media' })
     });
     await fetchInterludeItems();
     renderInterludeRows(container, setInfo);
+    wireEmotionFaders();
   });
 }
 
@@ -2480,6 +2506,7 @@ function wireInterludeDragAndDrop(rowsDiv, setInfo, container){
       interludeDragState = null;
       await fetchInterludeItems();
       renderInterludeRows(container, setInfo);
+      wireEmotionFaders();
     });
   });
 }
@@ -3659,7 +3686,8 @@ function renderRehearsalDatesBox(){
         <button class="rd-remove-btn" data-id="${r.id}">✕</button>
       </div>
       <input type="text" class="rd-card-input rd-date-input" data-id="${r.id}" data-field="date_text" value="${escapeAttr(r.date_text || '')}" placeholder="Date">
-      <input type="date" class="rd-card-input rd-dateiso-input" data-id="${r.id}" data-field="date_iso" value="${escapeAttr(r.date_iso || '')}" title="Date shown on the panel's Calendar tab">
+      <span class="rd-card-hint">📅 Set this to show on the Calendar tab</span>
+      <input type="date" class="rd-card-input rd-dateiso-input" data-id="${r.id}" data-field="date_iso" value="${escapeAttr(r.date_iso || '')}">
       <input type="text" class="rd-card-input rd-time-input" data-id="${r.id}" data-field="time_text" value="${escapeAttr(r.time_text || '')}" placeholder="Time">
       <input type="text" class="rd-card-input rd-location-input" data-id="${r.id}" data-field="location_text" value="${escapeAttr(r.location_text || '')}" placeholder="Location">
       <input type="text" class="rd-card-input rd-location-link-input" data-id="${r.id}" data-field="location_link" value="${escapeAttr(r.location_link || '')}" placeholder="Location link (optional)">
@@ -3678,7 +3706,21 @@ function renderRehearsalDatesBox(){
         : inp.classList.contains('rd-dateiso-input') ? 'date_iso'
         : inp.classList.contains('rd-time-input') ? 'time_text'
         : inp.classList.contains('rd-location-input') ? 'location_text' : 'location_link';
-      await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?id=eq.${inp.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: inp.value || null }) });
+      const payload = { [field]: inp.value || null };
+      // Picking the calendar date also fills in a human-readable label when
+      // one hasn't been typed yet, so a rehearsal shows up on the panel's
+      // Calendar tab (blue) the moment a date is set — no second field to
+      // remember to fill in separately.
+      if(field === 'date_iso' && inp.value){
+        const card = inp.closest('.rehearsal-date-card');
+        const textInput = card?.querySelector('.rd-date-input');
+        if(textInput && !textInput.value.trim()){
+          const nice = formatDateNice(inp.value);
+          textInput.value = nice;
+          payload.date_text = nice;
+        }
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_dates?id=eq.${inp.dataset.id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
       await fetchRehearsalDates();
     });
   });
@@ -5316,10 +5358,13 @@ document.getElementById('btn-download-lights').addEventListener('click', () => {
   applyPermissionLocks();
   document.body.style.visibility = 'visible';
   await reload();
-  // Brand new project — nothing saved to event_info yet. Pop the header's
-  // edit modal open right away instead of leaving the previous project's
-  // leftover placeholder text on screen.
-  if(!eventInfo) openEventInfoModal();
+  // Only ever auto-opens once per project, right when it's first opened —
+  // `intro_shown` gets set the moment it's shown, regardless of whether the
+  // user actually saves anything, so it never nags again after that.
+  if(!eventInfo || !eventInfo.intro_shown){
+    openEventInfoModal();
+    await markEventInfoIntroShown();
+  }
   await loadAllNotes();
   renderAllNoteMarkers();
   updateNotesModeBarVisibility();

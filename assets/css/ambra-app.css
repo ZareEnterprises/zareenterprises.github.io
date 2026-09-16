@@ -476,21 +476,22 @@ main{ position:relative; }
 
 /* Interlude rows */
 .interlude-head{
-  display:grid; grid-template-columns:24px 1fr 1fr 1fr 1fr 24px; gap:12px;
+  display:grid; grid-template-columns:24px 10px 1fr 1fr 1fr 1fr 24px; gap:12px;
   padding:10px 20px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:500;
   text-transform:uppercase; letter-spacing:.06em; color:var(--gold-bright);
   background:var(--surface-2); border-bottom:1px solid var(--line);
 }
 .interlude-row{
-  display:grid; grid-template-columns:24px 1fr 1fr 1fr 1fr 24px; gap:12px; align-items:center;
+  display:grid; grid-template-columns:24px 10px 1fr 1fr 1fr 1fr 24px; gap:12px; align-items:stretch;
   padding:10px 20px; border-bottom:1px solid var(--line);
 }
+.interlude-row input{ align-self:center; }
 .interlude-row:last-child{ border-bottom:none; }
 .interlude-row input{
   background:var(--bg); border:1px solid var(--line); color:var(--text);
   padding:8px 10px; border-radius:7px; font-size:13px; font-family:'Inter',sans-serif; width:100%;
 }
-.interlude-remove-btn{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:13px; opacity:.5; }
+.interlude-remove-btn{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:13px; opacity:.5; align-self:center; }
 .interlude-remove-btn:hover{ opacity:1; color:var(--emo-alta); }
 
 /* Setlist time rail */
@@ -870,6 +871,7 @@ main{ position:relative; }
   background:var(--surface); border:1px solid var(--line); color:var(--text);
   padding:6px 8px; border-radius:6px; font-size:11.5px; font-family:'Inter',sans-serif; width:100%;
 }
+.rd-card-hint{ font-size:9.5px; color:var(--text-faint); margin-top:-2px; }
 .rd-remove-btn{ background:none; border:none; color:var(--text-faint); cursor:pointer; opacity:.6; font-size:12px; }
 .rd-remove-btn:hover{ opacity:1; color:var(--emo-alta); }
 .event-date-card{ border:2px solid var(--gold); max-width:200px; }

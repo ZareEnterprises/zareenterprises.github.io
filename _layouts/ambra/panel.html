@@ -1609,8 +1609,6 @@
       TRANSPORT_ROWS_FOR_FINANCE = [];
     }
 
-    if(FINANCE_ITEMS.length) return;
-
     let rosterNames = [];
     if(bandIds.length){
       const { data: memberRows } = await supabaseClient.from('band').select('artist_name,instrument').in('group_id', bandIds);
@@ -1619,13 +1617,33 @@
         .map(m => m.instrument ? `${m.artist_name.trim()} (${m.instrument})` : m.artist_name.trim());
     }
 
-    let order = 1;
-    const rows = rosterNames
-      .map(item => ({ project_id: projectId, type:'expense', category:'Personnel', item, amount:null, paid:false, notes:null, item_order: order++ }))
-      .concat(FINANCE_TEMPLATE_REST.map(t => ({ project_id: projectId, type:'expense', category: t.category, item: t.item, amount:null, paid:false, notes:null, item_order: order++ })));
+    const wasEmpty = FINANCE_ITEMS.length === 0;
+    let nextOrder = FINANCE_ITEMS.reduce((max, i) => Math.max(max, i.item_order || 0), 0) + 1;
+    const rowsToInsert = [];
 
-    const { data: seeded, error } = await supabaseClient.from('finance_items').insert(rows).select();
-    if(!error) FINANCE_ITEMS = seeded || [];
+    // Personnel should always mirror the project's current Band roster, not
+    // just a one-time snapshot — add a row for any member who doesn't have
+    // one yet. Existing rows (and whatever numbers were typed into them)
+    // are left untouched.
+    const existingPersonnel = new Set(
+      FINANCE_ITEMS.filter(i => (i.type || 'expense') === 'expense' && i.category === 'Personnel').map(i => i.item)
+    );
+    rosterNames.filter(name => !existingPersonnel.has(name)).forEach(item => {
+      rowsToInsert.push({ project_id: projectId, type:'expense', category:'Personnel', item, amount:null, paid:false, notes:null, item_order: nextOrder++ });
+    });
+
+    // First time ever opening Finance for this project, also seed the rest
+    // of the starter Expenses template.
+    if(wasEmpty){
+      FINANCE_TEMPLATE_REST.forEach(t => {
+        rowsToInsert.push({ project_id: projectId, type:'expense', category: t.category, item: t.item, amount:null, paid:false, notes:null, item_order: nextOrder++ });
+      });
+    }
+
+    if(rowsToInsert.length){
+      const { data: seeded, error } = await supabaseClient.from('finance_items').insert(rowsToInsert).select();
+      if(!error) FINANCE_ITEMS = FINANCE_ITEMS.concat(seeded || []);
+    }
   }
 
   function financeTotal(type){

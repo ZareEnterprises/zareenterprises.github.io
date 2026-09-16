@@ -241,7 +241,7 @@
 
       <div id="rehearsal-member-picker" class="rehearsal-member-picker"></div>
 
-      <label class="filter-chip" style="margin:14px 0"><input type="checkbox" id="rehearsal-show-all"> Show them all (availability heatmap)</label>
+      <button type="button" class="btn ghost" id="rehearsal-show-all" style="margin:14px 0">Show Overlapping Availability</button>
       <div class="heatmap-legend">
         <span class="legend-item"><span class="legend-dot" style="background:#5DBE7A"></span>100% available</span>
         <span class="legend-item"><span class="legend-dot" style="background:#4A7FB5"></span>80–99% available</span>
@@ -3074,7 +3074,7 @@ function renderMemberPicker(){
   picker.querySelectorAll('.member-pick-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       rehearsalActiveMember = rehearsalActiveMember === btn.dataset.id ? null : btn.dataset.id;
-      document.getElementById('rehearsal-show-all').checked = false;
+      document.getElementById('rehearsal-show-all').classList.add('ghost');
       rehearsalShowAll = false;
       renderMemberPicker();
       renderRehearsalGrid();
@@ -3097,8 +3097,9 @@ document.getElementById('btn-save-rehearsal-range').addEventListener('click', as
   renderRehearsals();
 });
 
-document.getElementById('rehearsal-show-all').addEventListener('change', (e) => {
-  rehearsalShowAll = e.target.checked;
+document.getElementById('rehearsal-show-all').addEventListener('click', (e) => {
+  rehearsalShowAll = !rehearsalShowAll;
+  e.target.classList.toggle('ghost', !rehearsalShowAll);
   renderRehearsalGrid();
 });
 

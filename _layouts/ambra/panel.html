@@ -51,6 +51,7 @@
         <div class="dropdown-panel" id="settings-panel">
           <span class="dropdown-label">Workspace settings</span>
           <button class="dropdown-item" type="button" id="btn-open-timezone">Time zone</button>
+          <button class="dropdown-item" type="button" id="btn-open-archived">Archived</button>
           <button class="dropdown-item" type="button">Transfer project</button>
           <button class="dropdown-item" type="button">Bank details</button>
           <button class="dropdown-item" type="button">Security</button>
@@ -217,6 +218,18 @@
     <div class="modal-actions">
       <button class="btn-ghost" id="btn-cancel-timezone" type="button">Cancel</button>
       <button class="btn-primary" id="btn-save-timezone" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Archived projects modal -->
+<div class="overlay" id="overlay-archived">
+  <div class="modal" style="max-width:420px">
+    <h2>Archived</h2>
+    <p class="hint">Archived projects are hidden from Projects, Finance and Calendar. Restore one to bring it back.</p>
+    <div id="archived-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-close-archived" type="button">Close</button>
     </div>
   </div>
 </div>
@@ -442,7 +455,7 @@
     const { data, error } = await supabaseClient.from('projects').select('*').order('created_at');
     if(error){ console.error('loadProjects', error); return; }
     PROJECTS = (data || []).map(p => ({
-      id: p.id, slug: p.slug, name: p.name,
+      id: p.id, slug: p.slug, name: p.name, archived: !!p.archived,
       href: p.href, meta: timeAgo(p.updated_at)
     }));
   }
@@ -570,7 +583,7 @@
   function renderProjects(filterText){
     const grid = document.getElementById('project-grid');
     const q = (filterText || '').trim().toLowerCase();
-    const visible = PROJECTS.filter(p => p.name.toLowerCase().includes(q));
+    const visible = PROJECTS.filter(p => !p.archived && p.name.toLowerCase().includes(q));
     grid.innerHTML = visible.map(p => `
       <div class="pcard ${p.href ? 'has-link' : ''}" data-project="${p.id}">
         <button class="pcard-del" type="button" title="Delete project" onclick="handleDeleteProject('${p.id}')">
@@ -596,7 +609,8 @@
         <span>New project</span>
       </button>
     `;
-    document.getElementById('project-count').textContent = `${PROJECTS.length} project${PROJECTS.length === 1 ? '' : 's'}`;
+    const activeCount = PROJECTS.filter(p => !p.archived).length;
+    document.getElementById('project-count').textContent = `${activeCount} project${activeCount === 1 ? '' : 's'}`;
     document.getElementById('btn-new-project').addEventListener('click', openNewProjectModal);
 
     // Cards for projects with a real page (currently just Pa'Lante) navigate
@@ -611,7 +625,30 @@
     });
   }
   function handleDeleteProject(id){ console.log('[visual only] delete project', id); }
-  function handleArchiveProject(id){ console.log('[visual only] archive project', id); }
+  async function handleArchiveProject(id){
+    const p = PROJECTS.find(x => x.id === id);
+    if(!p) return;
+    if(!confirm(`Archive "${p.name}"? It'll disappear from Projects, Finance and Calendar until you restore it from Settings → Archived.`)) return;
+    p.archived = true;
+    const { error } = await supabaseClient.from('projects').update({ archived: true }).eq('id', id);
+    if(error){
+      p.archived = false;
+      alert('Could not archive that project:\n' + error.message);
+      return;
+    }
+    if(currentFinanceProjectId === id){
+      currentFinanceProjectId = '';
+      document.getElementById('finance-project-select').value = '';
+      document.getElementById('finance-empty').style.display = 'block';
+      document.getElementById('finance-sheet').style.display = 'none';
+    }
+    if(calProjectFilter === id) calProjectFilter = 'all';
+    renderProjects(document.getElementById('project-search-input').value);
+    populateFinanceProjectSelect();
+    renderCalFilterPills();
+    renderCalendar();
+    renderReminders();
+  }
 
   document.getElementById('btn-search-toggle').addEventListener('click', () => {
     const box = document.getElementById('search-box');
@@ -1400,7 +1437,7 @@
       document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
     }
   });
-  [ 'overlay-new-project', 'overlay-duplicate-project', 'overlay-user', 'overlay-timezone', 'overlay-calendar-event', 'overlay-day-detail' ].forEach(id => {
+  [ 'overlay-new-project', 'overlay-duplicate-project', 'overlay-archived', 'overlay-user', 'overlay-timezone', 'overlay-calendar-event', 'overlay-day-detail' ].forEach(id => {
     document.getElementById(id).addEventListener('click', (e) => { if(e.target.id === id) closeModal(id); });
   });
 
@@ -1419,6 +1456,45 @@
     localStorage.setItem(TZ_STORAGE_KEY, document.getElementById('tz-select').value);
     closeModal('overlay-timezone');
   });
+
+  // ---------- Archived projects ----------
+  function renderArchivedList(){
+    const list = document.getElementById('archived-list');
+    const archived = PROJECTS.filter(p => p.archived);
+    list.innerHTML = archived.length ? archived.map(p => `
+      <div class="day-detail-item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div class="day-detail-item-title">${escapeHtml(p.name)}</div>
+        <button class="btn-ghost small" data-restore="${p.id}" type="button">Restore</button>
+      </div>
+    `).join('') : '<p class="hint">Nothing archived yet.</p>';
+    list.querySelectorAll('[data-restore]').forEach(btn => {
+      btn.addEventListener('click', () => handleRestoreProject(btn.dataset.restore));
+    });
+  }
+  document.getElementById('btn-open-archived').addEventListener('click', () => {
+    document.getElementById('settings-panel').classList.remove('open');
+    renderArchivedList();
+    openModal('overlay-archived');
+  });
+  document.getElementById('btn-close-archived').addEventListener('click', () => closeModal('overlay-archived'));
+
+  async function handleRestoreProject(id){
+    const p = PROJECTS.find(x => x.id === id);
+    if(!p) return;
+    p.archived = false;
+    const { error } = await supabaseClient.from('projects').update({ archived: false }).eq('id', id);
+    if(error){
+      p.archived = true;
+      alert('Could not restore that project:\n' + error.message);
+      return;
+    }
+    renderProjects(document.getElementById('project-search-input').value);
+    populateFinanceProjectSelect();
+    renderCalFilterPills();
+    renderCalendar();
+    renderReminders();
+    renderArchivedList();
+  }
 
   // ---------- Calendar ----------
   // Pulls together three independent sources into one grid: each project's
@@ -1446,7 +1522,7 @@
   function renderCalFilterPills(){
     const row = document.getElementById('cal-filter-row');
     row.innerHTML = ['<button class="filter-pill active" data-cal-filter="all" type="button">All</button>']
-      .concat(PROJECTS.map(p => `<button class="filter-pill" data-cal-filter="${p.id}" type="button" title="${p.name}">${truncate20(p.name)}</button>`))
+      .concat(PROJECTS.filter(p => !p.archived).map(p => `<button class="filter-pill" data-cal-filter="${p.id}" type="button" title="${p.name}">${truncate20(p.name)}</button>`))
       .join('');
     row.querySelectorAll('.filter-pill').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1504,28 +1580,37 @@
     return currentSession && linked.includes(currentSession.user.id);
   }
 
+  function isProjectArchived(projectId){
+    const p = PROJECTS.find(x => x.id === projectId);
+    return !!p?.archived;
+  }
+
   function itemsForDate(dateStr){
     const items = [];
     EVENT_INFO_ROWS.forEach(e => {
       if(e.event_date_iso !== dateStr) return;
       if(calProjectFilter !== 'all' && e.project_id !== calProjectFilter) return;
+      if(isProjectArchived(e.project_id)) return;
       const proj = PROJECTS.find(p => p.id === e.project_id);
       items.push({ type:'event', title: proj?.name || e.event_name || 'Event', sub: e.venue || '', project_id: e.project_id });
     });
     REHEARSAL_ROWS.forEach(r => {
       if(r.date_iso !== dateStr) return;
       if(calProjectFilter !== 'all' && r.project_id !== calProjectFilter) return;
+      if(isProjectArchived(r.project_id)) return;
       items.push({ type:'rehearsal', title: `Rehearsal — ${r.bandName}`, sub: [r.time_text, r.location_text].filter(Boolean).join(' · '), project_id: r.project_id });
     });
     CALENDAR_EVENTS.forEach(c => {
       if(c.event_date !== dateStr || !isCalendarEventVisibleToMe(c.id)) return;
       if(c.is_reminder && c.done) return; // checked off — same as a template reminder, it drops off the calendar
       if(calProjectFilter !== 'all' && c.project_id !== calProjectFilter) return;
+      if(isProjectArchived(c.project_id)) return;
       const sub = [c.category, c.event_time].filter(Boolean).join(' · ');
       items.push({ type: c.is_reminder ? 'reminder' : 'custom', title: c.title, sub, project_id: c.project_id, customId: c.id });
     });
     EVENT_INFO_ROWS.forEach(e => {
       if(calProjectFilter !== 'all' && e.project_id !== calProjectFilter) return;
+      if(isProjectArchived(e.project_id)) return;
       const proj = PROJECTS.find(p => p.id === e.project_id);
       TEMPLATE_ITEMS.forEach(item => {
         const dueDate = addDays(e.event_date_iso, -(item.days_before || 0));
@@ -1774,7 +1859,7 @@
   }
 
   function renderCustomReminders(){
-    const mine = CALENDAR_EVENTS.filter(c => c.is_reminder && isCalendarEventVisibleToMe(c.id) && (calProjectFilter === 'all' || c.project_id === calProjectFilter));
+    const mine = CALENDAR_EVENTS.filter(c => c.is_reminder && isCalendarEventVisibleToMe(c.id) && !isProjectArchived(c.project_id) && (calProjectFilter === 'all' || c.project_id === calProjectFilter));
     if(!mine.length) return '';
     const boxes = REMINDER_CATEGORIES.map(cat => {
       const items = mine.filter(c => (c.category || 'Other') === cat);
@@ -1793,7 +1878,7 @@
     const todayStr = toDateStr(today);
     const withProject = EVENT_INFO_ROWS
       .map(e => ({ ...e, project: PROJECTS.find(p => p.id === e.project_id) }))
-      .filter(e => e.project && (calProjectFilter === 'all' || e.project_id === calProjectFilter));
+      .filter(e => e.project && !e.project.archived && (calProjectFilter === 'all' || e.project_id === calProjectFilter));
     const upcoming = withProject.filter(e => e.event_date_iso >= todayStr).sort((a,b) => a.event_date_iso.localeCompare(b.event_date_iso));
     const past = withProject.filter(e => e.event_date_iso < todayStr).sort((a,b) => b.event_date_iso.localeCompare(a.event_date_iso));
 
@@ -1880,7 +1965,7 @@
   // regardless of which tab is showing.
   const FINANCE_TYPES = {
     expense: { label:'Expenses', categories:['Personnel','Venue & Permits','Transportation','Audiovisual','Purchases'] },
-    revenue: { label:'Revenue', categories:['Tickets','Merch','Sponsors','Fixed / Other'] }
+    revenue: { label:'Revenue', categories:['Client','Tickets','Merch','Sponsors','Fixed / Other'] }
   };
   // "Musician"/"Stage crew member" aren't generic placeholders — they're
   // replaced at seed time by the project's actual Band/Members roster
@@ -1914,7 +1999,7 @@
     const sel = document.getElementById('finance-project-select');
     const current = sel.value;
     sel.innerHTML = '<option value="">Select a project…</option>' +
-      PROJECTS.map(p => `<option value="${p.id}" ${p.id === current ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
+      PROJECTS.filter(p => !p.archived).map(p => `<option value="${p.id}" ${p.id === current ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
   }
 
   function fmtMoney(n){
@@ -2071,7 +2156,7 @@
       const id = row.dataset.id;
       row.querySelector('.fin-item').addEventListener('change', (e) => saveFinanceField(id, 'item', e.target.value.trim() || null));
       if(isRevenue){
-        row.querySelector('.fin-quantity').addEventListener('change', (e) => saveFinanceField(id, 'quantity', e.target.value === '' ? null : parseFloat(e.target.value), false));
+        row.querySelector('.fin-quantity').addEventListener('change', (e) => saveFinanceField(id, 'quantity', e.target.value === '' ? null : parseFloat(e.target.value)));
       }
       row.querySelector('.fin-amount').addEventListener('change', (e) => saveFinanceField(id, 'amount', e.target.value === '' ? null : parseFloat(e.target.value)));
       row.querySelector('.fin-paid').addEventListener('change', (e) => saveFinanceField(id, 'paid', e.target.checked, false));

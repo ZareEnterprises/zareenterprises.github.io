@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es" class="emn-landing">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMN — Calendar (Admin)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/emn-auth.js?v={{ site.time | date: '%s' }}"></script>
+<style>
+  body{ background:var(--gray-100); font-family:var(--font-body); color:var(--ink); margin:0; }
+  .career-wrap{ max-width:900px; margin:0 auto; padding:32px 24px 60px; }
+  .career-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .career-head h1{ font-family:var(--font-display); font-size:26px; margin:0; }
+  .career-head a.back{ font-size:13px; color:var(--gray-700); text-decoration:none; }
+  #gate-msg{ text-align:center; padding:80px 20px; color:var(--gray-700); }
+  #gate-msg a{ color:var(--red); }
+
+  .student-picker{ margin-bottom:20px; }
+  .student-picker label{ display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--gray-500); margin-bottom:6px; }
+  .student-picker select{
+    width:100%; max-width:340px; border:1px solid var(--gray-300); border-radius:8px; padding:10px 12px;
+    font-size:13.5px; font-family:inherit; background:var(--paper); color:var(--ink);
+  }
+  .no-student-note{ color:var(--gray-500); font-size:13px; font-style:italic; }
+
+  .career-layout{ display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
+  @media (max-width:800px){ .career-layout{ grid-template-columns:1fr; } }
+
+  .cal-card{ background:var(--paper); border:1px solid var(--gray-300); border-radius:var(--radius); padding:20px; }
+  .cal-nav{ display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  .cal-nav-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--gray-300); background:var(--paper); font-size:16px; cursor:pointer; color:var(--red); }
+  .cal-nav-btn:hover{ border-color:var(--red); background:var(--red); color:#fff; }
+  .cal-month-title{ font-family:var(--font-display); font-size:18px; }
+  .cal-today-btn{ margin-left:auto; border:1px solid var(--gray-300); background:var(--paper); border-radius:7px; padding:7px 12px; font-size:12px; cursor:pointer; color:var(--gray-700); }
+  .cal-today-btn:hover{ border-color:var(--red); color:var(--red); }
+
+  .cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:6px; }
+  .cal-weekdays span{ text-align:center; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--gray-500); }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .cal-day{
+    background:var(--gray-100); border:1px solid var(--gray-300); border-radius:8px; padding:6px 7px;
+    display:flex; flex-direction:column; gap:4px; cursor:pointer; min-height:88px; overflow:hidden; transition:.12s;
+  }
+  .cal-day:hover{ border-color:var(--red); }
+  .cal-day-outside{ opacity:.35; cursor:default; }
+  .cal-day-today{ border-color:var(--red); background:var(--red-tint); }
+  .cal-day-num{ font-family:var(--font-display); font-size:13px; color:var(--gray-700); }
+  .cal-day-today .cal-day-num{ color:var(--red); font-weight:700; }
+  .cal-todo-line{
+    font-size:10.5px; padding:2px 5px; border-radius:5px; background:#fff; border:1px solid var(--gray-300);
+    display:flex; align-items:center; gap:4px; overflow:hidden;
+  }
+  .cal-todo-line.is-done{ text-decoration:line-through; color:var(--gray-500); }
+  .cal-todo-text{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cal-more{ font-size:10px; color:var(--gray-500); }
+
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(20,20,20,.4); align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .overlay.open{ display:flex; }
+  .day-modal{ background:var(--paper); border-radius:var(--radius); padding:22px; width:100%; max-width:420px; max-height:80vh; display:flex; flex-direction:column; }
+  .day-modal h2{ font-family:var(--font-display); font-size:18px; margin:0 0 14px; }
+  #todo-list{ display:flex; flex-direction:column; gap:8px; overflow-y:auto; margin-bottom:14px; flex:1; }
+  .todo-row{ display:flex; align-items:center; gap:8px; border:1px solid var(--gray-300); border-radius:8px; padding:8px 10px; }
+  .todo-row input[type=checkbox]{ accent-color:var(--red); flex-shrink:0; }
+  .todo-row span{ flex:1; font-size:13.5px; }
+  .todo-row.is-done span{ text-decoration:line-through; color:var(--gray-500); }
+  .todo-remove{ background:none; border:none; color:var(--gray-500); cursor:pointer; font-size:13px; }
+  .todo-remove:hover{ color:var(--red); }
+  .no-todos{ color:var(--gray-500); font-size:12.5px; font-style:italic; }
+  .todo-add-row{ display:flex; gap:8px; margin-bottom:16px; }
+  .todo-add-row input{ flex:1; border:1px solid var(--gray-300); border-radius:8px; padding:9px 11px; font-size:13.5px; font-family:inherit; }
+  .todo-add-row select{ border:1px solid var(--gray-300); border-radius:8px; padding:9px 8px; font-size:12.5px; font-family:inherit; background:var(--paper); max-width:130px; }
+  .todo-add-row button{ border:none; background:var(--red); color:#fff; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+  .todo-add-row button:hover{ background:var(--red-dark); }
+  .day-modal-actions{ display:flex; justify-content:flex-end; }
+  .day-modal-actions button{ border:1px solid var(--gray-300); background:var(--paper); border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; color:var(--gray-700); }
+  .day-modal-actions button:hover{ border-color:var(--red); color:var(--red); }
+
+  .reminder-box{ background:var(--paper); border:1px solid var(--gray-300); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; }
+  .reminder-box-title{ font-family:var(--font-display); font-size:13.5px; margin-bottom:10px; color:var(--ink); }
+  .reminder-item{ display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid var(--gray-100); }
+  .reminder-box .reminder-item:first-of-type{ border-top:none; }
+  .reminder-item input[type=checkbox]{ accent-color:var(--red); flex-shrink:0; }
+  .reminder-item-text{ flex:1; font-size:12.5px; display:block; }
+  .reminder-item-date{ font-size:10.5px; color:var(--gray-500); display:block; }
+  .reminder-item-x{ background:none; border:none; color:var(--gray-500); cursor:pointer; font-size:12px; flex-shrink:0; }
+  .reminder-item-x:hover{ color:var(--red); }
+  .no-reminders{ color:var(--gray-500); font-size:12.5px; font-style:italic; }
+</style>
+</head>
+<body>
+
+<header class="emn-header">
+  <div class="emn-header__inner">
+    <a href="https://zareenterprises.github.io/emn" class="emn-logo">
+      <img src="/assets/img/emn-logo.png" alt="EMN logo">
+    </a>
+    <nav class="emn-nav">
+      <a href="https://zareenterprises.github.io/emn" class="emn-nav__link">Home</a>
+      <div class="emn-nav__item">
+        <a href="https://zareenterprises.github.io/practice-lab" class="emn-nav__link">EMN Practice Lab</a>
+        <button class="emn-nav__caret" aria-label="Abrir submenú de EMN Practice Lab" aria-expanded="false">&#9662;</button>
+        <div class="emn-nav__dropdown">
+          <a href="https://zareenterprises.github.io/sight-melody" class="emn-nav__dropdown-item">Berklee Sight Read</a>
+          <a href="https://zareenterprises.github.io/interview-prep" class="emn-nav__dropdown-item">Berklee Interview Prep</a>
+          <span class="emn-nav__dropdown-item is-disabled">Berklee Ear Training <span class="soon">Pronto</span></span>
+          <span class="emn-nav__dropdown-item is-disabled">Berklee Piece &amp; Impro <span class="soon">Pronto</span></span>
+        </div>
+      </div>
+      <a href="https://zareenterprises.github.io/feedback" class="emn-nav__link">Obtén Feedback</a>
+      <a href="https://academy.emnlatam.com/" class="emn-nav__link emn-nav__link--external" target="_blank" rel="noopener">Nosotros</a>
+    </nav>
+  </div>
+</header>
+
+<div class="career-wrap">
+  <div class="career-head">
+    <h1>Calendar</h1>
+    <a class="back" href="/usuarios">&larr; Volver a Usuarios</a>
+  </div>
+
+  <div id="gate-msg" style="display:none"></div>
+
+  <div id="admin-body" style="display:none">
+    <div class="student-picker">
+      <label>Alumno</label>
+      <select id="student-select">
+        <option value="">— Elige un alumno —</option>
+      </select>
+    </div>
+
+    <p class="no-student-note" id="no-student-note">Elige un alumno de la lista para ver y editar su calendario.</p>
+
+    <div id="career-body" style="display:none">
+      <div class="career-layout">
+        <div class="cal-card">
+          <div class="cal-nav">
+            <button type="button" class="cal-nav-btn" id="btn-prev-month">‹</button>
+            <span class="cal-month-title" id="cal-month-title">—</span>
+            <button type="button" class="cal-nav-btn" id="btn-next-month">›</button>
+            <button type="button" class="cal-today-btn" id="btn-today">Today</button>
+          </div>
+          <div class="cal-weekdays">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+
+        <div id="reminders-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Day to-do modal -->
+<div class="overlay" id="overlay-day">
+  <div class="day-modal">
+    <h2 id="day-modal-title">—</h2>
+    <div id="todo-list"></div>
+    <div class="todo-add-row">
+      <input type="text" id="todo-input" placeholder="Add a to-do…" maxlength="200">
+      <select id="todo-category"></select>
+      <button type="button" id="btn-add-todo">+ Add</button>
+    </div>
+    <div class="day-modal-actions">
+      <button type="button" id="btn-close-day">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CATEGORIES = [
+  'Contenido Social Media',
+  'Canciones Publicadas',
+  'TV',
+  'Diarios',
+  'PressKit',
+  'Portfolio/Website',
+  'Concursos Musicales',
+  'Voluntariado'
+];
+
+let STUDENTS = [];
+let selectedStudentId = null;
+let TODOS = [];
+let calViewYear, calViewMonth;
+let selectedDateStr = null;
+
+function toDateStr(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function dateFromStr(s){
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function todosForDate(dateStr){
+  return TODOS.filter(t => t.date_iso === dateStr).sort((a,b) => (a.item_order||0) - (b.item_order||0));
+}
+function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function formatDateLong(dateStr){ return dateFromStr(dateStr).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }); }
+function formatDateShort(dateStr){ return dateFromStr(dateStr).toLocaleDateString('en-US', { month:'short', day:'numeric' }); }
+
+async function loadStudents(){
+  const { data } = await emnSupabase.from('students').select('*').eq('role', 'student').order('full_name', { ascending: true });
+  STUDENTS = data || [];
+}
+function renderStudentSelect(){
+  const sel = document.getElementById('student-select');
+  sel.innerHTML = '<option value="">— Elige un alumno —</option>' +
+    STUDENTS.map(s => `<option value="${s.id}">${escapeHtml(s.full_name || s.email)}</option>`).join('');
+}
+document.getElementById('student-select').addEventListener('change', async (e) => {
+  selectedStudentId = e.target.value || null;
+  if(!selectedStudentId){
+    document.getElementById('career-body').style.display = 'none';
+    document.getElementById('no-student-note').style.display = 'block';
+    return;
+  }
+  document.getElementById('no-student-note').style.display = 'none';
+  document.getElementById('career-body').style.display = 'block';
+  const now = new Date();
+  calViewYear = now.getFullYear();
+  calViewMonth = now.getMonth();
+  await loadTodos();
+  renderCalendar();
+  renderReminderBoxes();
+});
+
+async function loadTodos(){
+  const { data, error } = await emnSupabase.from('career_todos').select('*').eq('user_id', selectedStudentId).order('item_order');
+  if(error){ console.error('loadTodos', error); TODOS = []; return; }
+  TODOS = data || [];
+}
+
+function renderCalendar(){
+  const grid = document.getElementById('cal-grid');
+  const first = new Date(calViewYear, calViewMonth, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
+  const daysInPrevMonth = new Date(calViewYear, calViewMonth, 0).getDate();
+  const todayStr = toDateStr(new Date());
+
+  document.getElementById('cal-month-title').textContent = `${MONTH_NAMES[calViewMonth]} ${calViewYear}`;
+
+  const cells = [];
+  for(let i = startDow - 1; i >= 0; i--) cells.push({ day: daysInPrevMonth - i, outside:true });
+  for(let d = 1; d <= daysInMonth; d++) cells.push({ day:d, outside:false, dateStr: toDateStr(new Date(calViewYear, calViewMonth, d)) });
+  let trailing = 1;
+  while(cells.length % 7 !== 0) cells.push({ day: trailing++, outside:true });
+
+  grid.innerHTML = cells.map(c => {
+    if(c.outside) return `<div class="cal-day cal-day-outside"><span class="cal-day-num">${c.day}</span></div>`;
+    const items = todosForDate(c.dateStr);
+    const isToday = c.dateStr === todayStr;
+    const shown = items.slice(0,3).map(t => `<div class="cal-todo-line ${t.done ? 'is-done' : ''}"><span class="cal-todo-text">${escapeHtml(t.text)}</span></div>`).join('');
+    const more = items.length > 3 ? `<div class="cal-more">+${items.length-3} more</div>` : '';
+    return `
+      <div class="cal-day ${isToday ? 'cal-day-today' : ''}" data-date="${c.dateStr}">
+        <span class="cal-day-num">${c.day}</span>
+        ${shown}${more}
+      </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.cal-day[data-date]').forEach(el => {
+    el.addEventListener('click', () => openDayModal(el.dataset.date));
+  });
+}
+
+// One box per category (in the fixed order above), only shown once it
+// actually has something in it — mirrors the student's own /career page,
+// since this reads and writes the exact same career_todos rows (just for
+// whichever student is selected instead of the signed-in admin).
+function renderReminderBoxes(){
+  const container = document.getElementById('reminders-list');
+  const pending = TODOS.filter(t => !t.done).sort((a,b) => a.date_iso.localeCompare(b.date_iso));
+  const boxesHtml = CATEGORIES.map(cat => {
+    const items = pending.filter(t => (t.category || CATEGORIES[0]) === cat);
+    if(!items.length) return '';
+    return `
+      <div class="reminder-box">
+        <div class="reminder-box-title">${escapeHtml(cat)}</div>
+        ${items.map(t => `
+          <div class="reminder-item">
+            <input type="checkbox" data-toggle="${t.id}">
+            <span class="reminder-item-text">${escapeHtml(t.text)}<span class="reminder-item-date">${formatDateShort(t.date_iso)}</span></span>
+            <button type="button" class="reminder-item-x" data-remove="${t.id}" title="Remove">✕</button>
+          </div>`).join('')}
+      </div>`;
+  }).join('');
+  container.innerHTML = boxesHtml || '<p class="no-reminders">Nothing pending yet.</p>';
+
+  container.querySelectorAll('[data-toggle]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      const id = chk.dataset.toggle;
+      await emnSupabase.from('career_todos').update({ done: true }).eq('id', id);
+      const t = TODOS.find(x => x.id === id);
+      if(t) t.done = true;
+      renderReminderBoxes();
+      renderCalendar();
+      if(selectedDateStr) renderTodoList();
+    });
+  });
+  container.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.remove;
+      await emnSupabase.from('career_todos').delete().eq('id', id);
+      TODOS = TODOS.filter(t => t.id !== id);
+      renderReminderBoxes();
+      renderCalendar();
+      if(selectedDateStr) renderTodoList();
+    });
+  });
+}
+
+function renderTodoList(){
+  const list = document.getElementById('todo-list');
+  const items = todosForDate(selectedDateStr);
+  list.innerHTML = items.length ? items.map(t => `
+    <div class="todo-row ${t.done ? 'is-done' : ''}" data-id="${t.id}">
+      <input type="checkbox" data-toggle="${t.id}" ${t.done ? 'checked' : ''}>
+      <span>${escapeHtml(t.text)}<span class="reminder-item-date">${escapeHtml(t.category || CATEGORIES[0])}</span></span>
+      <button type="button" class="todo-remove" data-remove="${t.id}" title="Remove">✕</button>
+    </div>`).join('') : '<p class="no-todos">Nothing here yet.</p>';
+
+  list.querySelectorAll('[data-toggle]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      const id = chk.dataset.toggle;
+      const done = chk.checked;
+      await emnSupabase.from('career_todos').update({ done }).eq('id', id);
+      const t = TODOS.find(x => x.id === id);
+      if(t) t.done = done;
+      renderTodoList();
+      renderCalendar();
+      renderReminderBoxes();
+    });
+  });
+  list.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.remove;
+      await emnSupabase.from('career_todos').delete().eq('id', id);
+      TODOS = TODOS.filter(t => t.id !== id);
+      renderTodoList();
+      renderCalendar();
+      renderReminderBoxes();
+    });
+  });
+}
+
+function openDayModal(dateStr){
+  selectedDateStr = dateStr;
+  document.getElementById('day-modal-title').textContent = formatDateLong(dateStr);
+  document.getElementById('todo-input').value = '';
+  document.getElementById('todo-category').innerHTML = CATEGORIES.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  renderTodoList();
+  document.getElementById('overlay-day').classList.add('open');
+}
+document.getElementById('btn-close-day').addEventListener('click', () => {
+  document.getElementById('overlay-day').classList.remove('open');
+});
+document.getElementById('overlay-day').addEventListener('click', (e) => {
+  if(e.target.id === 'overlay-day') document.getElementById('overlay-day').classList.remove('open');
+});
+
+async function addTodo(){
+  const input = document.getElementById('todo-input');
+  const text = input.value.trim();
+  if(!text || !selectedStudentId) return;
+  const category = document.getElementById('todo-category').value;
+  const existing = todosForDate(selectedDateStr);
+  const { data, error } = await emnSupabase.from('career_todos').insert({
+    user_id: selectedStudentId, date_iso: selectedDateStr, text, category, item_order: existing.length + 1
+  }).select();
+  if(error){ alert('Could not add that:\n' + error.message); return; }
+  TODOS.push(data[0]);
+  input.value = '';
+  renderTodoList();
+  renderCalendar();
+  renderReminderBoxes();
+}
+document.getElementById('btn-add-todo').addEventListener('click', addTodo);
+document.getElementById('todo-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') addTodo(); });
+
+document.getElementById('btn-prev-month').addEventListener('click', () => {
+  calViewMonth--; if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
+  renderCalendar();
+});
+document.getElementById('btn-next-month').addEventListener('click', () => {
+  calViewMonth++; if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
+  renderCalendar();
+});
+document.getElementById('btn-today').addEventListener('click', () => {
+  const now = new Date();
+  calViewYear = now.getFullYear();
+  calViewMonth = now.getMonth();
+  renderCalendar();
+});
+
+async function boot(){
+  await emnInit();
+  const gate = document.getElementById('gate-msg');
+
+  if(!emnSession){
+    gate.innerHTML = 'Esta página es solo para el equipo de EMN. <a href="/emn-login">Inicia sesión</a> para continuar.';
+    gate.style.display = 'block';
+    return;
+  }
+  if(!emnStudentProfile || (emnStudentProfile.role !== 'admin' && emnStudentProfile.role !== 'professor')){
+    gate.innerHTML = 'No disponible.';
+    gate.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('admin-body').style.display = 'block';
+  await loadStudents();
+  renderStudentSelect();
+}
+boot();
+</script>
+
+</body>
+</html>

@@ -61,7 +61,7 @@ function emnInjectAuthLink(){
   nav.appendChild(authLink);
 }
 
-// "Administrar" dropdown (Usuarios / Actividad) — Admin and Professor only.
+// "Administrar" dropdown (Usuarios / Actividad / Calendar) — Admin and Professor only.
 // Students never see this tab at all. Built by hand (not the shared
 // caret-toggle script those other dropdowns use) because it's injected
 // after that script has already wired up whatever `.emn-nav__item`s
@@ -79,6 +79,46 @@ function emnInjectAdminMenu(){
     <div class="emn-nav__dropdown">
       <a href="https://zareenterprises.github.io/usuarios" class="emn-nav__dropdown-item">Usuarios</a>
       <a href="https://zareenterprises.github.io/actividad" class="emn-nav__dropdown-item">Actividad</a>
+      <a href="https://zareenterprises.github.io/admin-calendar" class="emn-nav__dropdown-item">Calendar</a>
+    </div>
+  `;
+  nav.appendChild(item);
+
+  const caret = item.querySelector('.emn-nav__caret');
+  const label = item.querySelector('.emn-nav__link');
+  const toggle = (e) => {
+    e.preventDefault();
+    const isOpen = item.classList.contains('is-open');
+    document.querySelectorAll('.emn-nav__item').forEach((i) => i.classList.remove('is-open'));
+    item.classList.toggle('is-open', !isOpen);
+    caret.setAttribute('aria-expanded', String(!isOpen));
+  };
+  caret.addEventListener('click', toggle);
+  label.addEventListener('click', toggle);
+
+  document.addEventListener('click', (e) => {
+    if(!item.contains(e.target)) item.classList.remove('is-open');
+  });
+}
+
+// "Career" dropdown (Calendar) — any signed-in person (student, professor or
+// admin), never shown to a signed-out visitor since the calendar underneath
+// it is personal, per-account data. Built by hand for the same reason as
+// emnInjectAdminMenu(): it's injected after the shared caret-toggle script
+// has already wired up whatever `.emn-nav__item`s existed at page load.
+function emnInjectCareerMenu(){
+  if(!emnSession) return;
+  const nav = document.querySelector('.emn-nav');
+  if(!nav) return;
+
+  const isActive = location.pathname.replace(/\/$/, '') === '/career';
+  const item = document.createElement('div');
+  item.className = 'emn-nav__item';
+  item.innerHTML = `
+    <a href="#" class="emn-nav__link">Career</a>
+    <button class="emn-nav__caret" aria-label="Abrir submenú de Career" aria-expanded="false">&#9662;</button>
+    <div class="emn-nav__dropdown">
+      <a href="https://zareenterprises.github.io/career" class="emn-nav__dropdown-item ${isActive ? 'is-active' : ''}">Calendar</a>
     </div>
   `;
   nav.appendChild(item);
@@ -103,6 +143,7 @@ function emnInjectAdminMenu(){
 async function emnInit(){
   await emnLoadSession();
   emnInjectAdminMenu();
+  emnInjectCareerMenu();
   emnInjectAuthLink();
 }
 

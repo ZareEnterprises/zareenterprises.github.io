@@ -49,9 +49,10 @@
   .cal-day-num{ font-family:var(--font-display); font-size:13px; color:var(--gray-700); }
   .cal-day-today .cal-day-num{ color:var(--red); font-weight:700; }
   .cal-todo-line{
-    font-size:10.5px; padding:2px 5px; border-radius:5px; background:#fff; border:1px solid var(--gray-300);
-    display:flex; align-items:center; gap:4px; overflow:hidden;
+    font-size:10.5px; padding:2px 5px 2px 6px; border-radius:5px; background:#fff; border:1px solid var(--gray-300);
+    border-left-width:4px; display:flex; align-items:center; gap:4px; overflow:hidden;
   }
+  .cat-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   .cal-todo-line.is-done{ text-decoration:line-through; color:var(--gray-500); }
   .cal-todo-text{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .cal-more{ font-size:10px; color:var(--gray-500); }
@@ -68,17 +69,17 @@
   .todo-remove{ background:none; border:none; color:var(--gray-500); cursor:pointer; font-size:13px; }
   .todo-remove:hover{ color:var(--red); }
   .no-todos{ color:var(--gray-500); font-size:12.5px; font-style:italic; }
-  .todo-add-row{ display:flex; gap:8px; margin-bottom:16px; }
-  .todo-add-row input{ flex:1; border:1px solid var(--gray-300); border-radius:8px; padding:9px 11px; font-size:13.5px; font-family:inherit; }
-  .todo-add-row select{ border:1px solid var(--gray-300); border-radius:8px; padding:9px 8px; font-size:12.5px; font-family:inherit; background:var(--paper); max-width:130px; }
-  .todo-add-row button{ border:none; background:var(--red); color:#fff; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+  .todo-add-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .todo-add-row input{ flex:1 1 100%; min-width:0; border:1px solid var(--gray-300); border-radius:8px; padding:9px 11px; font-size:13.5px; font-family:inherit; box-sizing:border-box; }
+  .todo-add-row select{ flex:1 1 auto; min-width:0; max-width:100%; border:1px solid var(--gray-300); border-radius:8px; padding:9px 8px; font-size:12.5px; font-family:inherit; background:var(--paper); box-sizing:border-box; }
+  .todo-add-row button{ flex:0 0 auto; border:none; background:var(--red); color:#fff; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; }
   .todo-add-row button:hover{ background:var(--red-dark); }
   .day-modal-actions{ display:flex; justify-content:flex-end; }
   .day-modal-actions button{ border:1px solid var(--gray-300); background:var(--paper); border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; color:var(--gray-700); }
   .day-modal-actions button:hover{ border-color:var(--red); color:var(--red); }
 
   .reminder-box{ background:var(--paper); border:1px solid var(--gray-300); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; }
-  .reminder-box-title{ font-family:var(--font-display); font-size:13.5px; margin-bottom:10px; color:var(--ink); }
+  .reminder-box-title{ font-family:var(--font-display); font-size:13.5px; margin-bottom:10px; color:var(--ink); display:flex; align-items:center; gap:6px; }
   .reminder-item{ display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid var(--gray-100); }
   .reminder-box .reminder-item:first-of-type{ border-top:none; }
   .reminder-item input[type=checkbox]{ accent-color:var(--red); flex-shrink:0; }
@@ -181,6 +182,17 @@ const CATEGORIES = [
   'Concursos Musicales',
   'Voluntariado'
 ];
+const CATEGORY_COLORS = {
+  'Contenido Social Media': '#2E86AB',
+  'Canciones Publicadas': '#8C6FB5',
+  'TV': '#D98A3D',
+  'Diarios': '#6B4F3A',
+  'PressKit': '#2E9E8C',
+  'Portfolio/Website': '#C8102E',
+  'Concursos Musicales': '#E0B400',
+  'Voluntariado': '#5DBE7A'
+};
+function categoryColor(cat){ return CATEGORY_COLORS[cat] || CATEGORY_COLORS[CATEGORIES[0]]; }
 
 let STUDENTS = [];
 let selectedStudentId = null;
@@ -254,7 +266,7 @@ function renderCalendar(){
     if(c.outside) return `<div class="cal-day cal-day-outside"><span class="cal-day-num">${c.day}</span></div>`;
     const items = todosForDate(c.dateStr);
     const isToday = c.dateStr === todayStr;
-    const shown = items.slice(0,3).map(t => `<div class="cal-todo-line ${t.done ? 'is-done' : ''}"><span class="cal-todo-text">${escapeHtml(t.text)}</span></div>`).join('');
+    const shown = items.slice(0,3).map(t => `<div class="cal-todo-line ${t.done ? 'is-done' : ''}" style="border-left-color:${categoryColor(t.category)}"><span class="cal-todo-text">${escapeHtml(t.text)}</span></div>`).join('');
     const more = items.length > 3 ? `<div class="cal-more">+${items.length-3} more</div>` : '';
     return `
       <div class="cal-day ${isToday ? 'cal-day-today' : ''}" data-date="${c.dateStr}">
@@ -280,7 +292,7 @@ function renderReminderBoxes(){
     if(!items.length) return '';
     return `
       <div class="reminder-box">
-        <div class="reminder-box-title">${escapeHtml(cat)}</div>
+        <div class="reminder-box-title"><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat)}</div>
         ${items.map(t => `
           <div class="reminder-item">
             <input type="checkbox" data-toggle="${t.id}">
@@ -320,7 +332,7 @@ function renderTodoList(){
   list.innerHTML = items.length ? items.map(t => `
     <div class="todo-row ${t.done ? 'is-done' : ''}" data-id="${t.id}">
       <input type="checkbox" data-toggle="${t.id}" ${t.done ? 'checked' : ''}>
-      <span>${escapeHtml(t.text)}<span class="reminder-item-date">${escapeHtml(t.category || CATEGORIES[0])}</span></span>
+      <span>${escapeHtml(t.text)}<span class="reminder-item-date"><span class="cat-dot" style="background:${categoryColor(t.category)}"></span>${escapeHtml(t.category || CATEGORIES[0])}</span></span>
       <button type="button" class="todo-remove" data-remove="${t.id}" title="Remove">✕</button>
     </div>`).join('') : '<p class="no-todos">Nothing here yet.</p>';
 

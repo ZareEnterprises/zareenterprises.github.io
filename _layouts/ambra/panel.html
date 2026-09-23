@@ -1786,11 +1786,14 @@
       `<option value="${c}" ${(event?.category || 'Other') === c ? 'selected' : ''}>${c}</option>`).join('');
     document.getElementById('ce-is-reminder').checked = !!event?.is_reminder;
     document.getElementById('ce-category').disabled = !event?.is_reminder;
+    // New event, no project on it yet — default to whichever project pill
+    // is currently filtering the Calendar tab, so it's not asked again.
+    const defaultProjectId = event?.project_id || (!event && calProjectFilter !== 'all' ? calProjectFilter : '');
     document.getElementById('ce-project').innerHTML = '<option value="">— None —</option>' +
-      PROJECTS.map(p => `<option value="${p.id}" ${event?.project_id === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
+      PROJECTS.map(p => `<option value="${p.id}" ${defaultProjectId === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
 
     const linkedUserIds = event ? CALENDAR_EVENT_USERS.filter(u => u.event_id === event.id).map(u => u.user_id) : [];
-    renderCeUserChips(event?.project_id || '', linkedUserIds);
+    renderCeUserChips(defaultProjectId, linkedUserIds);
 
     document.getElementById('btn-delete-calendar-event').style.display = event ? 'inline-block' : 'none';
     openModal('overlay-calendar-event');

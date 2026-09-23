@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMBRA — Invoice Builder</title>
+<link rel="icon" type="image/png" href="/assets/img/ambraSubmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --green:#FF711C; --green-2:#CC5A16; --gold:#FF711C; --gold-bright:#FF8A44; --gold-soft:#F4E6D6;
+    --ink:#1C211E; --muted:#5E655F; --faint:#8E938D; --line:#DCD8CE; --paper:#FFFFFF; --cream:#F8F5EE;
+    --danger:#C0392B;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Inter',sans-serif; background:var(--cream); color:var(--ink); }
+
+  .topbar{
+    background:var(--gold); color:#1a1310; padding:14px 24px; display:flex; align-items:center;
+    justify-content:space-between; gap:16px; flex-wrap:wrap; border-bottom:3px solid var(--ink);
+  }
+  .brand{ font-family:'Fraunces',serif; font-weight:600; font-size:19px; letter-spacing:.05em; }
+  .brand span{ color:#1a1310; }
+  .topbar-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .topbar a.back{ color:#1a1310; text-decoration:none; font-size:12.5px; align-self:center; opacity:.75; }
+  .topbar a.back:hover{ opacity:1; }
+
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:12.5px; cursor:pointer; border-radius:8px;
+    padding:9px 14px; border:1px solid transparent; transition:.15s;
+  }
+  .btn-primary{ background:var(--ink); color:#F1ECE0; }
+  .btn-primary:hover{ background:#33403A; }
+  .btn-ghost{ background:transparent; border-color:#1a1310; color:#1a1310; }
+  .btn-ghost:hover{ background:rgba(26,19,16,.08); }
+  .btn-sm{ padding:5px 9px; font-size:11.5px; border-radius:6px; }
+
+  .layout{ display:grid; grid-template-columns:440px 1fr; gap:0; align-items:start; min-height:calc(100vh - 60px); }
+  @media (max-width:980px){ .layout{ grid-template-columns:1fr; } .layout .preview-pane{ display:none; } }
+
+  .form-pane{ padding:24px; overflow-y:auto; max-height:calc(100vh - 60px); }
+  .preview-pane{ background:#e9e6df; padding:24px; position:sticky; top:0; max-height:calc(100vh - 60px); overflow-y:auto; }
+  .preview-pane iframe{ width:100%; height:1250px; border:none; background:#fff; box-shadow:0 4px 20px rgba(0,0,0,.15); }
+
+  .card-head-row{ display:flex; justify-content:space-between; align-items:center; margin:0 0 12px; }
+  .card-head-row h3{ margin:0; }
+
+  .load-anchor{ position:relative; }
+  .load-dropdown{
+    position:absolute; top:calc(100% + 6px); right:0; background:var(--paper); border:1px solid var(--line);
+    border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18); min-width:280px; max-height:340px;
+    overflow-y:auto; z-index:50; padding:6px;
+  }
+  .load-item{
+    display:flex; flex-direction:column; gap:2px; width:100%; text-align:left; background:none; border:none;
+    padding:9px 10px; border-radius:7px; cursor:pointer; font-family:'Inter',sans-serif; color:var(--ink);
+  }
+  .load-item:hover{ background:var(--cream); }
+  .load-item-num{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--gold); font-weight:600; }
+  .load-item-org{ font-size:13px; font-weight:600; }
+  .load-item-date{ font-size:10.5px; color:var(--faint); }
+  .load-dropdown p.hint{ padding:9px 10px; margin:0; }
+
+  /* Preview is optional — hiding it lets the form stretch and use the
+     freed-up width instead of sitting narrow in a fixed column. */
+  .layout.preview-hidden{ grid-template-columns:1fr; }
+  .layout.preview-hidden .preview-pane{ display:none; }
+  .layout.preview-hidden .form-pane{
+    display:grid; grid-template-columns:1fr 1fr; gap:18px; align-content:start;
+    max-width:1200px; margin:0 auto; max-height:none;
+  }
+  .layout.preview-hidden .form-pane > .card-wide{ grid-column:1 / -1; }
+  @media (max-width:900px){ .layout.preview-hidden .form-pane{ grid-template-columns:1fr; } }
+
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; }
+  .card h3{ font-family:'Fraunces',serif; font-size:14.5px; margin:0 0 12px; color:var(--ink); }
+
+  .field{ margin-bottom:11px; }
+  .field label{ display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--faint);
+    font-family:'IBM Plex Mono',monospace; margin-bottom:4px; }
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--cream); border:1px solid var(--line); color:var(--ink);
+    padding:8px 10px; border-radius:7px; font-size:13px; font-family:'Inter',sans-serif;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:none; border-color:var(--gold); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+
+  .item-card{ border:1px solid var(--line); border-radius:9px; padding:12px; margin-bottom:10px; background:var(--cream); }
+  .item-card-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .item-card-top .idx{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--gold); font-weight:600; }
+  .item-actions{ display:flex; gap:4px; }
+  .item-actions button{
+    background:none; border:1px solid var(--line); border-radius:5px; width:22px; height:22px; cursor:pointer;
+    color:var(--muted); font-size:12px; display:flex; align-items:center; justify-content:center;
+  }
+  .item-actions button:hover{ border-color:var(--gold); color:var(--gold); }
+  .item-actions button.danger:hover{ border-color:var(--danger); color:var(--danger); }
+  .item-row3{ display:grid; grid-template-columns:1fr 70px 1fr; gap:8px; }
+  .included-row{ display:flex; align-items:center; gap:6px; margin-top:8px; font-size:11.5px; color:var(--muted); }
+  .included-row input{ width:auto; }
+
+  .internal-box{ margin-top:10px; border-top:1px dashed var(--line); padding-top:10px; }
+  .internal-box-title{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold); margin-bottom:8px; }
+  .internal-hint{ font-size:10.5px; color:var(--faint); margin:0 0 8px; }
+  .musician-row{ display:grid; grid-template-columns:1fr 1fr 90px 22px; gap:6px; margin-bottom:6px; align-items:center; }
+  .musician-row input{ background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-size:12px; font-family:'Inter',sans-serif; width:100%; }
+  .musician-row button{ background:none; border:1px solid var(--line); border-radius:5px; width:22px; height:22px; cursor:pointer; color:var(--muted); font-size:11px; }
+  .musician-row button:hover{ border-color:var(--danger); color:var(--danger); }
+  .btn-add-musician{ background:none; border:1px dashed var(--line); border-radius:6px; padding:6px 10px; font-size:11.5px; color:var(--muted); cursor:pointer; width:100%; margin-bottom:8px; }
+  .btn-add-musician:hover{ border-color:var(--gold); color:var(--gold); }
+  .internal-profit{ background:var(--green); color:#1a1310; border-radius:7px; padding:8px 10px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; }
+  .internal-profit input{
+    width:100px; text-align:right; background:#fff; border:1px solid rgba(26,19,16,.25); border-radius:6px;
+    padding:5px 8px; font-family:'Fraunces',serif; font-weight:600; color:#1a1310; font-size:13px;
+  }
+
+  .add-item-row{ display:flex; gap:8px; }
+  .add-item-row select{ flex:1; }
+
+  .totals-box{ background:var(--green); color:#F1ECE0; border-radius:10px; padding:14px 16px; margin-bottom:16px; }
+  .totals-box .l{ display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; color:rgba(26,19,16,.75); }
+  .totals-box .l.grand{ color:#1a1310; font-weight:700; font-size:15px; border-top:1px solid rgba(26,19,16,.25); margin-top:6px; padding-top:8px; }
+  .totals-box .l.grand .v{ color:#1a1310; font-family:'Fraunces',serif; }
+
+  .hint{ font-size:11.5px; color:var(--faint); margin:0 0 12px; line-height:1.5; }
+  .warn-banner{ background:#FCE9EB; border:1px solid #E8B4B4; color:#8a2e2e; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:14px; display:none; }
+  .warn-banner.show{ display:block; }
+  .warn-banner ul{ margin:6px 0 0; padding-left:18px; }
+
+</style>
+</head>
+<body style="visibility:hidden">
+
+<div class="topbar">
+  <div>
+    <div class="brand">AMBRA<span>.</span> Invoices</div>
+  </div>
+  <div class="topbar-actions">
+    <a class="back" href="/panel/">&larr; Back to panel</a>
+    <button class="btn btn-primary" id="btn-create-new" type="button">+ Create New</button>
+    <button class="btn btn-ghost" id="btn-save-invoice" type="button">Save</button>
+    <div class="load-anchor">
+      <button class="btn btn-ghost" id="btn-load-invoice" type="button">Load</button>
+      <div class="load-dropdown" id="load-dropdown" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<div class="layout" id="app-body" style="display:none">
+  <div class="form-pane">
+
+    <div class="warn-banner card-wide" id="warn-banner"></div>
+
+    <div class="card">
+      <div class="card-head-row">
+        <h3>Invoice</h3>
+        <button class="btn btn-ghost btn-sm" id="btn-toggle-preview" type="button">Hide preview</button>
+      </div>
+      <div class="row3">
+        <div class="field"><label>Number</label><input type="text" id="inv-number"></div>
+        <div class="field"><label>Issued</label><input type="date" id="inv-issue-date"></div>
+        <div class="field"><label>Valid through</label><input type="date" id="inv-valid-through"></div>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="inv-status">
+          <option>Awaiting deposit</option>
+          <option>Deposit received</option>
+          <option>Paid in full</option>
+          <option>Cancelled</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Bill to</h3>
+      <div class="field">
+        <label>Choose existing client (optional)</label>
+        <select id="cl-airtable-select"><option value="">— Type it in manually below —</option></select>
+      </div>
+      <div class="field"><label>Organization</label><input type="text" id="cl-org" placeholder="e.g. Harbor Arts Foundation"></div>
+      <div class="row2">
+        <div class="field"><label>Contact name</label><input type="text" id="cl-name" placeholder="Jane Smith"></div>
+        <div class="field"><label>Contact title</label><input type="text" id="cl-title" placeholder="Events Director"></div>
+      </div>
+      <div class="field"><label>Address</label><input type="text" id="cl-address" placeholder="100 Federal Street, Boston, MA 02110"></div>
+      <div class="field"><label>Email</label><input type="email" id="cl-email" placeholder="jane.smith@harborarts.org"></div>
+    </div>
+
+    <div class="card">
+      <h3>Event</h3>
+      <div class="field"><label>Event name</label><input type="text" id="ev-name" placeholder="Annual Winter Gala"></div>
+      <div class="row3">
+        <div class="field"><label>Date</label><input type="date" id="ev-date"></div>
+        <div class="field"><label>Start time</label><input type="time" id="ev-start-time"></div>
+        <div class="field"><label>End time</label><input type="time" id="ev-end-time"></div>
+      </div>
+      <div class="field"><label>Venue (blank = "To be confirmed")</label><input type="text" id="ev-venue"></div>
+      <div class="field"><label>Program</label><input type="text" id="ev-program" placeholder="Live Latin ensemble · 2 sets × 60 min"></div>
+    </div>
+
+    <div class="card card-wide">
+      <h3>Line items</h3>
+      <p class="hint">Page 1 is designed to fit about 7 lines comfortably — you'll get a warning past that, but it won't stop you.</p>
+      <div id="items-list"></div>
+      <div class="add-item-row">
+        <select id="preset-select"></select>
+        <button class="btn btn-primary btn-sm" id="btn-add-preset" type="button">+ Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Tax &amp; payment</h3>
+      <div class="row3">
+        <div class="field"><label>Sales tax %</label><input type="number" id="pay-tax" value="0" min="0" step="0.1"></div>
+        <div class="field"><label>Deposit %</label><input type="number" id="pay-deposit-pct" value="25" min="0" max="100" step="1"></div>
+        <div class="field"><label>Balance due (days before)</label><input type="number" id="pay-due-days" value="14" min="0" step="1"></div>
+      </div>
+      <div class="field"><label>Stripe deposit link</label><input type="url" id="pay-deposit-link" placeholder="https://buy.stripe.com/…"></div>
+      <div class="field"><label>Stripe balance link (optional)</label><input type="url" id="pay-balance-link" placeholder="https://buy.stripe.com/…"></div>
+    </div>
+
+    <div class="totals-box card-wide" id="totals-box"></div>
+
+    <button class="btn btn-primary card-wide" id="btn-export-pdf" type="button" style="width:100%">Export PDF</button>
+
+  </div>
+
+  <div class="preview-pane">
+    <iframe id="preview-frame" src="/assets/ambra/invoice-template.html?v={{ site.time | date: '%s' }}"></iframe>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // AUTH GUARD — same AMBRA project/session as the rest of the panel.
+  // No session redirects to /ambra/.
+  // ============================================================
+  const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+  const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  let currentSession = null;
+
+  if (supabaseClient) {
+    supabaseClient.auth.getSession().then(({ data }) => {
+      if (!data.session) { window.location.href = '/ambra/'; return; }
+      currentSession = data.session;
+      document.body.style.visibility = 'visible';
+      boot();
+    });
+  }
+
+  /* ───────── Optional: pull a client straight from Airtable ───────── */
+  let AIRTABLE_CLIENTS = [];
+  async function loadAirtableClients(){
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/airtable-directory?type=clients`, {
+        headers: { 'Authorization': `Bearer ${currentSession.access_token}`, 'apikey': SUPABASE_ANON_KEY }
+      });
+      if(!res.ok) return;
+      const body = await res.json();
+      AIRTABLE_CLIENTS = body.records || [];
+      const sel = document.getElementById('cl-airtable-select');
+      sel.innerHTML = '<option value="">— Type it in manually below —</option>' +
+        AIRTABLE_CLIENTS.map((c, i) => `<option value="${i}">${escapeHtml(c.name)}${c.company ? ' — ' + escapeHtml(c.company) : ''}</option>`).join('');
+    } catch(err){
+      console.error('loadAirtableClients', err);
+    }
+  }
+  document.getElementById('cl-airtable-select').addEventListener('change', (e) => {
+    if(e.target.value === '') return;
+    const c = AIRTABLE_CLIENTS[+e.target.value];
+    if(!c) return;
+    document.getElementById('cl-org').value = c.company || '';
+    document.getElementById('cl-name').value = c.name || '';
+    document.getElementById('cl-address').value = [c.address, c.city, c.state, c.zip, c.country].filter(Boolean).join(', ');
+    document.getElementById('cl-email').value = c.email || '';
+    readFormIntoData();
+    updatePreview();
+  });
+
+  /* ───────── Presets (mirrors AMBRA's common services) ───────── */
+  const PRESETS = [
+    { label: 'Musicians', title: 'Musicians', description: '', qty: 1, unit: '', rate: 0, isMusicians: true },
+    { label: 'Sound Equipment', title: 'Sound Equipment', description: '', qty: 1, unit: '', rate: 0 },
+    { label: 'Stage Rental', title: 'Stage Rental', description: '', qty: 1, unit: '', rate: 0 },
+    { label: 'Lights Rental', title: 'Lights Rental', description: '', qty: 1, unit: '', rate: 0 },
+    { label: 'DJ', title: 'DJ', description: '', qty: 1, unit: '', rate: 0 },
+    { label: 'Audio Engineer + Assistants', title: 'Audio Engineer + Assistants', description: '', qty: 1, unit: '', rate: 0 },
+    { label: 'Blank line', title: '', description: '', qty: 1, unit: '', rate: 0 }
+  ];
+
+  /* ───────── Blank state — always what "Crear Invoice" starts from ───────── */
+  function todayIso(){ const d = new Date(); return d.toISOString().slice(0,10); }
+  function addDaysIso(iso, days){ const d = new Date(iso); d.setDate(d.getDate() + days); return d.toISOString().slice(0,10); }
+
+  function blankInvoiceData(){
+    return {
+      invoice: { number: '', issueDate: todayIso(), validThrough: addDaysIso(todayIso(), 30), status: 'Awaiting deposit' },
+      client: { organization: '', contactName: '', contactTitle: '', address: '', email: '' },
+      event: { name: '', date: '', startTime: '', endTime: '', schedule: '', venue: '', program: '' },
+      items: [],
+      taxRate: 0,
+      payment: { depositPercent: 25, balanceDueDaysBefore: 14, depositLink: '', balanceLink: '' }
+    };
+  }
+
+  let invoiceNumberTouched = false;
+  let DATA = blankInvoiceData();
+
+  // Start/end are native <input type="time"> (arrow-steppable — the same
+  // pattern used elsewhere in the app for time fields), combined here into
+  // the free-text "schedule" label the invoice template actually displays.
+  function label12h(t){
+    if(!t) return '';
+    let [h, m] = t.split(':').map(Number);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if(h === 0) h = 12;
+    return `${h}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+  function computeScheduleLabel(start, end){
+    if(!start && !end) return '';
+    if(start && end){
+      let [sh, sm] = start.split(':').map(Number);
+      let [eh, em] = end.split(':').map(Number);
+      let mins = (eh*60 + em) - (sh*60 + sm);
+      if(mins < 0) mins += 24*60;
+      const hours = mins / 60;
+      const hoursText = Number.isInteger(hours) ? hours : hours.toFixed(1);
+      return `${label12h(start)} – ${label12h(end)} · ${hoursText} hour${hours === 1 ? '' : 's'}`;
+    }
+    return label12h(start || end);
+  }
+
+  function suggestInvoiceNumber(){
+    if(!DATA.event.date) return '';
+    const [y,m,dd] = DATA.event.date.split('-');
+    return `AMB-${y}-${m}${dd}-01`;
+  }
+
+  /* ───────── Wiring: form <-> DATA ───────── */
+  function readFormIntoData(){
+    DATA.invoice.number = document.getElementById('inv-number').value.trim();
+    DATA.invoice.issueDate = document.getElementById('inv-issue-date').value;
+    DATA.invoice.validThrough = document.getElementById('inv-valid-through').value;
+    DATA.invoice.status = document.getElementById('inv-status').value;
+
+    DATA.client.organization = document.getElementById('cl-org').value.trim();
+    DATA.client.contactName = document.getElementById('cl-name').value.trim();
+    DATA.client.contactTitle = document.getElementById('cl-title').value.trim();
+    DATA.client.address = document.getElementById('cl-address').value.trim();
+    DATA.client.email = document.getElementById('cl-email').value.trim();
+
+    DATA.event.name = document.getElementById('ev-name').value.trim();
+    DATA.event.date = document.getElementById('ev-date').value;
+    DATA.event.startTime = document.getElementById('ev-start-time').value;
+    DATA.event.endTime = document.getElementById('ev-end-time').value;
+    DATA.event.schedule = computeScheduleLabel(DATA.event.startTime, DATA.event.endTime);
+    DATA.event.venue = document.getElementById('ev-venue').value.trim();
+    DATA.event.program = document.getElementById('ev-program').value.trim();
+
+    DATA.taxRate = parseFloat(document.getElementById('pay-tax').value) || 0;
+    DATA.payment.depositPercent = parseFloat(document.getElementById('pay-deposit-pct').value) || 0;
+    DATA.payment.balanceDueDaysBefore = parseFloat(document.getElementById('pay-due-days').value) || 0;
+    DATA.payment.depositLink = document.getElementById('pay-deposit-link').value.trim();
+    DATA.payment.balanceLink = document.getElementById('pay-balance-link').value.trim();
+  }
+
+  function writeDataIntoForm(){
+    document.getElementById('inv-number').value = DATA.invoice.number || '';
+    document.getElementById('inv-issue-date').value = DATA.invoice.issueDate || '';
+    document.getElementById('inv-valid-through').value = DATA.invoice.validThrough || '';
+    document.getElementById('inv-status').value = DATA.invoice.status || 'Awaiting deposit';
+
+    document.getElementById('cl-org').value = DATA.client.organization || '';
+    document.getElementById('cl-name').value = DATA.client.contactName || '';
+    document.getElementById('cl-title').value = DATA.client.contactTitle || '';
+    document.getElementById('cl-address').value = DATA.client.address || '';
+    document.getElementById('cl-email').value = DATA.client.email || '';
+
+    document.getElementById('ev-name').value = DATA.event.name || '';
+    document.getElementById('ev-date').value = DATA.event.date || '';
+    document.getElementById('ev-start-time').value = DATA.event.startTime || '';
+    document.getElementById('ev-end-time').value = DATA.event.endTime || '';
+    document.getElementById('ev-venue').value = DATA.event.venue || '';
+    document.getElementById('ev-program').value = DATA.event.program || '';
+
+    document.getElementById('pay-tax').value = DATA.taxRate ?? 0;
+    document.getElementById('pay-deposit-pct').value = DATA.payment.depositPercent ?? 25;
+    document.getElementById('pay-due-days').value = DATA.payment.balanceDueDaysBefore ?? 14;
+    document.getElementById('pay-deposit-link').value = DATA.payment.depositLink || '';
+    document.getElementById('pay-balance-link').value = DATA.payment.balanceLink || '';
+
+    renderItems();
+  }
+
+  function renderItems(){
+    const list = document.getElementById('items-list');
+    list.innerHTML = DATA.items.map((it, i) => `
+      <div class="item-card" data-i="${i}">
+        <div class="item-card-top">
+          <span class="idx">${String(i+1).padStart(2,'0')}</span>
+          <div class="item-actions">
+            <button type="button" data-move-up="${i}" title="Move up" ${i===0 ? 'disabled' : ''}>↑</button>
+            <button type="button" data-move-down="${i}" title="Move down" ${i===DATA.items.length-1 ? 'disabled' : ''}>↓</button>
+            <button type="button" class="danger" data-remove="${i}" title="Remove">✕</button>
+          </div>
+        </div>
+        <div class="field"><input type="text" data-field="title" data-i="${i}" value="${escapeAttr(it.title)}" placeholder="Item title"></div>
+        <div class="field"><textarea rows="2" data-field="description" data-i="${i}" placeholder="Description (optional)">${escapeHtml(it.description || '')}</textarea></div>
+        <div class="item-row3">
+          <div class="field"><label>Qty</label><input type="number" step="1" data-field="qty" data-i="${i}" value="${it.qty ?? 1}"></div>
+          <div class="field"><label>Unit</label><input type="text" data-field="unit" data-i="${i}" value="${escapeAttr(it.unit || '')}" placeholder="h"></div>
+          <div class="field"><label>Rate (USD)</label><input type="number" step="0.01" min="0" data-field="rate" data-i="${i}" value="${it.rate ?? 0}"></div>
+        </div>
+        <label class="included-row"><input type="checkbox" data-field="included" data-i="${i}" ${it.included ? 'checked' : ''}> Included (no charge — shows "Included")</label>
+        ${it.internal ? renderInternalBox(it, i) : ''}
+      </div>
+    `).join('') || '<p class="hint">No line items yet — add one from the preset list below.</p>';
+
+    list.querySelectorAll('[data-field]').forEach(el => {
+      const evt = el.type === 'checkbox' ? 'change' : 'input';
+      el.addEventListener(evt, () => {
+        const i = +el.dataset.i, field = el.dataset.field;
+        if(field === 'included'){
+          DATA.items[i].included = el.checked;
+        } else if(field === 'transportCost'){
+          DATA.items[i].internal.transportCost = parseFloat(el.value) || 0;
+          recomputeRateFromInternal(i);
+        } else if(field === 'profit'){
+          DATA.items[i].internal.profit = parseFloat(el.value) || 0;
+          recomputeRateFromInternal(i);
+        } else if(field === 'qty'){
+          DATA.items[i][field] = parseFloat(el.value) || 0;
+          if(DATA.items[i].internal) recomputeRateFromInternal(i);
+        } else if(field === 'rate'){
+          DATA.items[i][field] = parseFloat(el.value) || 0;
+        } else {
+          DATA.items[i][field] = el.value;
+        }
+        updatePreview();
+      });
+    });
+
+    // Musicians internal breakdown — typing never re-renders the list (that
+    // would drop focus mid-keystroke); only add/remove a row does.
+    list.querySelectorAll('[data-musician-rows] [data-mfield]').forEach(el => {
+      el.addEventListener('input', () => {
+        const row = el.closest('.musician-row');
+        const i = +row.dataset.item, j = +row.dataset.musician, field = el.dataset.mfield;
+        DATA.items[i].internal.musicians[j][field] = field === 'pay' ? (parseFloat(el.value) || 0) : el.value;
+        if(field === 'pay') recomputeRateFromInternal(i);
+        updatePreview();
+      });
+    });
+    list.querySelectorAll('[data-add-musician]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = +btn.dataset.addMusician;
+        DATA.items[i].internal.musicians.push({ name: '', instrument: '', pay: 0 });
+        renderItems();
+      });
+    });
+    list.querySelectorAll('[data-remove-musician]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = btn.closest('.musician-row');
+        const i = +row.dataset.item, j = +row.dataset.musician;
+        DATA.items[i].internal.musicians.splice(j, 1);
+        renderItems();
+      });
+    });
+    list.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', () => { DATA.items.splice(+btn.dataset.remove, 1); renderItems(); updatePreview(); });
+    });
+    list.querySelectorAll('[data-move-up]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = +btn.dataset.moveUp;
+        [DATA.items[i-1], DATA.items[i]] = [DATA.items[i], DATA.items[i-1]];
+        renderItems(); updatePreview();
+      });
+    });
+    list.querySelectorAll('[data-move-down]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = +btn.dataset.moveDown;
+        [DATA.items[i+1], DATA.items[i]] = [DATA.items[i], DATA.items[i+1]];
+        renderItems(); updatePreview();
+      });
+    });
+
+    const warn = document.getElementById('warn-banner');
+    const longDesc = DATA.items.some(it => (it.description || '').length > 160);
+    if(DATA.items.length > 7 || longDesc){
+      warn.classList.add('show');
+      warn.innerHTML = 'Heads up — this invoice may not fit cleanly on page 1:<ul>' +
+        (DATA.items.length > 7 ? '<li>More than 7 line items.</li>' : '') +
+        (longDesc ? '<li>One or more descriptions are quite long.</li>' : '') +
+        '</ul>';
+    } else {
+      warn.classList.remove('show');
+    }
+  }
+
+  function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function escapeAttr(str){ return escapeHtml(str); }
+
+  // Musicians-only, admin-side breakdown: who gets paid what, one transport
+  // cost for the group, and a profit YOU set. Rate (what the client is
+  // charged) is the one that's derived here — pay + transport + profit,
+  // divided back out by qty — never sent to the invoice template's
+  // rendering either way, since it only ever reads title/description/qty/
+  // unit/rate/included off an item, so this stays purely internal even
+  // though it travels along in the same item object and saved DB row.
+  function recomputeRateFromInternal(i){
+    const it = DATA.items[i];
+    const paidOut = (it.internal.musicians || []).reduce((s, m) => s + (+m.pay || 0), 0);
+    const transport = +it.internal.transportCost || 0;
+    const profit = +it.internal.profit || 0;
+    const qty = (+it.qty) || 1;
+    it.rate = Math.round(((paidOut + transport + profit) / qty) * 100) / 100;
+    const rateInput = document.querySelector(`.item-card[data-i="${i}"] [data-field="rate"]`);
+    if(rateInput) rateInput.value = it.rate;
+  }
+
+  function renderInternalBox(it, i){
+    const rows = (it.internal.musicians || []).map((m, j) => `
+      <div class="musician-row" data-item="${i}" data-musician="${j}">
+        <input type="text" data-mfield="name" placeholder="Musician name" value="${escapeAttr(m.name || '')}">
+        <input type="text" data-mfield="instrument" placeholder="Instrument" value="${escapeAttr(m.instrument || '')}">
+        <input type="number" step="0.01" min="0" data-mfield="pay" placeholder="Pay" value="${m.pay ?? ''}">
+        <button type="button" data-remove-musician="${j}" title="Remove">✕</button>
+      </div>`).join('');
+    return `
+      <div class="internal-box">
+        <div class="internal-box-title">Internal breakdown — only you see this</div>
+        <p class="internal-hint">Who's getting paid, how much, and what you want to make — never printed on the invoice. These three add up to the Rate above (what the client is charged).</p>
+        <div class="musician-rows" data-musician-rows="${i}">${rows}</div>
+        <button type="button" class="btn-add-musician" data-add-musician="${i}">+ Add musician</button>
+        <div class="field"><label>Transport cost (USD)</label><input type="number" step="0.01" min="0" data-field="transportCost" data-i="${i}" value="${it.internal.transportCost ?? 0}"></div>
+        <div class="internal-profit">
+          <span>Your profit</span>
+          <input type="number" step="0.01" data-field="profit" data-i="${i}" value="${it.internal.profit ?? 0}">
+        </div>
+      </div>`;
+  }
+
+  /* ───────── Preview + totals ───────── */
+  const frame = document.getElementById('preview-frame');
+  let frameReady = false;
+  frame.addEventListener('load', () => { frameReady = true; updatePreview(); });
+
+  function updatePreview(){
+    if(!frameReady || !frame.contentWindow || !frame.contentWindow.renderInvoice) return;
+    const totals = frame.contentWindow.renderInvoice(DATA);
+    renderTotalsBox(totals);
+  }
+
+  function renderTotalsBox(totals){
+    const box = document.getElementById('totals-box');
+    const usd = n => '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+    box.innerHTML = `
+      <div class="l"><span>Subtotal</span><span>${usd(totals.subtotal)}</span></div>
+      <div class="l"><span>Tax</span><span>${usd(totals.tax)}</span></div>
+      <div class="l grand"><span>Total</span><span class="v">${usd(totals.total)}</span></div>
+      <div class="l"><span>Deposit (${DATA.payment.depositPercent}%)</span><span>${usd(totals.deposit)}</span></div>
+      <div class="l"><span>Balance</span><span>${usd(totals.balance)}</span></div>
+    `;
+  }
+
+  /* ───────── Preview visibility toggle ───────── */
+  document.getElementById('btn-toggle-preview').addEventListener('click', (e) => {
+    const layout = document.getElementById('app-body');
+    const nowHidden = layout.classList.toggle('preview-hidden');
+    e.target.textContent = nowHidden ? 'Show preview' : 'Hide preview';
+  });
+
+  /* ───────── Field listeners ───────── */
+  document.querySelectorAll('.form-pane input, .form-pane select').forEach(el => {
+    if(el.id === 'inv-number') return; // handled separately (auto-suggest logic)
+    el.addEventListener('input', () => { readFormIntoData(); updatePreview(); });
+    el.addEventListener('change', () => { readFormIntoData(); updatePreview(); });
+  });
+  document.getElementById('inv-number').addEventListener('input', () => {
+    invoiceNumberTouched = true;
+    readFormIntoData();
+    updatePreview();
+  });
+  document.getElementById('ev-date').addEventListener('change', () => {
+    if(!invoiceNumberTouched){
+      DATA.event.date = document.getElementById('ev-date').value;
+      DATA.invoice.number = suggestInvoiceNumber();
+      document.getElementById('inv-number').value = DATA.invoice.number;
+      updatePreview();
+    }
+  });
+
+  /* ───────── Presets ───────── */
+  const presetSelect = document.getElementById('preset-select');
+  presetSelect.innerHTML = PRESETS.map((p, i) => `<option value="${i}">${escapeHtml(p.label)}</option>`).join('');
+  document.getElementById('btn-add-preset').addEventListener('click', () => {
+    const p = PRESETS[+presetSelect.value];
+    const item = { title: p.title, description: p.description, qty: p.qty, unit: p.unit, rate: p.rate, included: !!p.included };
+    if(p.isMusicians) item.internal = { musicians: [], transportCost: 0, profit: 0 };
+    DATA.items.push(item);
+    renderItems();
+    updatePreview();
+  });
+
+  /* ───────── Create New — resets the form without a full page reload ───────── */
+  document.getElementById('btn-create-new').addEventListener('click', () => {
+    if(!confirm('Start a new blank invoice? Anything unsaved on this one will be lost.')) return;
+    DATA = blankInvoiceData();
+    currentInvoiceId = null;
+    invoiceNumberTouched = false;
+    writeDataIntoForm();
+    updatePreview();
+  });
+
+  /* ───────── Validation + export ───────── */
+  function validationErrors(){
+    const errors = [];
+    if(!DATA.client.organization) errors.push('Bill to → Organization is required.');
+    if(!DATA.event.date) errors.push('Event → Date is required.');
+    if(!DATA.items.length) errors.push('At least one line item is required.');
+    if(DATA.items.some(it => (+it.rate || 0) < 0)) errors.push('Rates cannot be negative.');
+    if(!DATA.payment.depositLink) errors.push('Payment → Stripe deposit link is required.');
+    return errors;
+  }
+
+  document.getElementById('btn-export-pdf').addEventListener('click', () => {
+    readFormIntoData();
+    const errors = validationErrors();
+    if(errors.length){
+      alert('Fix these before exporting:\n\n' + errors.map(e => '• ' + e).join('\n'));
+      return;
+    }
+    if(!frame.contentWindow.print){ alert('Preview did not load — try again in a moment.'); return; }
+    alert('In the print dialog, choose:\n• Destination: Save as PDF\n• Paper size: Letter\n• Margins: None\n• Background graphics: ON');
+    // A PDF can't be clicked once printed, so the Stripe buttons swap for
+    // plain, copyable link text just for this export — reverted right after.
+    frame.contentWindow.renderInvoice(DATA, { pdfMode: true });
+    frame.contentWindow.addEventListener('afterprint', function revert(){
+      frame.contentWindow.renderInvoice(DATA, { pdfMode: false });
+      frame.contentWindow.removeEventListener('afterprint', revert);
+    });
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  });
+
+  /* ───────── Save to AMBRA (Supabase) — optionally linked to a new project ───────── */
+  const PERM_COUNT_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning'];
+
+  // Mirrors panel.html's own createProject(), plus an event_info row and a
+  // Finance sheet built from this invoice's line items: one Revenue/Client
+  // row per item (what the client is charged), and — for a Musicians item —
+  // the real Expense breakdown (Personnel pay per musician, Transportation
+  // for the group), so Finance's own Profit = Revenue − Expenses lines up
+  // with "Your profit" shown here.
+  async function createLinkedProject(){
+    const name = DATA.event.name || DATA.client.organization || 'Untitled event';
+    const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+    let slug = baseSlug, n = 2;
+    while(true){
+      const { data: existing } = await supabaseClient.from('projects').select('id').eq('slug', slug).maybeSingle();
+      if(!existing) break;
+      slug = `${baseSlug}-${n++}`;
+    }
+
+    const { data: projRows, error: projErr } = await supabaseClient
+      .from('projects')
+      .insert({ name, slug, href: `/project/?p=${slug}`, is_template: false })
+      .select();
+    if(projErr){ alert('Could not create the project:\n' + projErr.message); return null; }
+    const project = projRows[0];
+
+    await supabaseClient.from('project_members').insert({
+      project_id: project.id, user_id: currentSession.user.id, role: 'Admin', status: 'active',
+      permissions: Object.fromEntries(PERM_COUNT_KEYS.map(k => [k, 'edit']))
+    });
+    await supabaseClient.from('role_options').insert([
+      { name: 'MainBand', project_id: project.id },
+      { name: 'Guest', project_id: project.id }
+    ]);
+    await supabaseClient.from('event_info').insert({
+      project_id: project.id,
+      client: DATA.client.organization || null,
+      event_name: DATA.event.name || null,
+      venue: DATA.event.venue || null,
+      event_date_iso: DATA.event.date || null,
+      show_time: DATA.event.schedule || null,
+      intro_shown: true
+    });
+
+    const financeRows = [];
+    let order = 1;
+    DATA.items.forEach(it => {
+      // `amount` is already qty × rate combined into one line total, so
+      // Finance's own Quantity column is left blank here — it treats a
+      // blank Quantity as 1 and would otherwise multiply this total again.
+      const amount = it.included ? 0 : ((+it.qty || 0) * (+it.rate || 0));
+      financeRows.push({ project_id: project.id, type:'revenue', category:'Client', item: it.title || 'Item', amount, paid:false, item_order: order++ });
+      if(it.internal){
+        (it.internal.musicians || []).forEach(m => {
+          if(!m.name && !m.pay) return;
+          const label = m.instrument ? `${m.name || 'Musician'} (${m.instrument})` : (m.name || 'Musician');
+          financeRows.push({ project_id: project.id, type:'expense', category:'Personnel', item: label, amount: +m.pay || 0, paid:false, item_order: order++ });
+        });
+        if(+it.internal.transportCost > 0){
+          financeRows.push({ project_id: project.id, type:'expense', category:'Transportation', item:'Transport', amount: +it.internal.transportCost, paid:false, item_order: order++ });
+        }
+      }
+    });
+    if(financeRows.length) await supabaseClient.from('finance_items').insert(financeRows);
+
+    return project;
+  }
+
+  let currentInvoiceId = null; // set once loaded/saved — makes "Save" update that same row instead of creating a new one
+
+  document.getElementById('btn-save-invoice').addEventListener('click', async () => {
+    readFormIntoData();
+    const errors = validationErrors();
+    if(errors.length){
+      alert('Fix these before saving:\n\n' + errors.map(e => '• ' + e).join('\n'));
+      return;
+    }
+
+    const btn = document.getElementById('btn-save-invoice');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      // Already an existing invoice (loaded via "Load") — just update it in
+      // place, no re-prompt about linking a project (that was already
+      // decided the first time this invoice was saved).
+      if(currentInvoiceId){
+        const { error } = await supabaseClient.from('invoices')
+          .update({ number: DATA.invoice.number || null, data: DATA })
+          .eq('id', currentInvoiceId);
+        if(error){ alert('Could not save the invoice:\n' + error.message); return; }
+        alert('Invoice updated.');
+        return;
+      }
+
+      let projectId = null;
+      const wantsProject = confirm(
+        '¿Querés crear un proyecto en Projects vinculado a este invoice?\n' +
+        'Se arma también su hoja de Finance con estos mismos datos.\n\n' +
+        'Aceptar = sí, crear proyecto\nCancelar = no, solo guardar el invoice'
+      );
+      if(wantsProject){
+        const project = await createLinkedProject();
+        if(project){
+          projectId = project.id;
+          window.open(project.href, '_blank', 'noopener');
+        }
+      }
+
+      const { data: rows, error } = await supabaseClient.from('invoices').insert({
+        number: DATA.invoice.number || null,
+        project_id: projectId,
+        data: DATA
+      }).select();
+      if(error){ alert('Could not save the invoice:\n' + error.message); return; }
+
+      const invoice = rows[0];
+      currentInvoiceId = invoice.id;
+      const shareUrl = `${location.origin}/invoice-view/?id=${invoice.id}`;
+      prompt('Invoice saved. Share this link with the client (no login required):', shareUrl);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    }
+  });
+
+  /* ───────── Load — pick a previously saved invoice back into the form ───────── */
+  document.getElementById('btn-load-invoice').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('load-dropdown');
+    if(dropdown.style.display === 'block'){ dropdown.style.display = 'none'; return; }
+
+    dropdown.innerHTML = '<p class="hint">Loading…</p>';
+    dropdown.style.display = 'block';
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/invoices?select=id,number,created_at,data&order=created_at.desc`, {
+      headers: { 'Authorization': `Bearer ${currentSession.access_token}`, 'apikey': SUPABASE_ANON_KEY }
+    });
+    if(!res.ok){ dropdown.innerHTML = '<p class="hint">Could not load invoices.</p>'; return; }
+    const rows = await res.json();
+    if(!rows.length){ dropdown.innerHTML = '<p class="hint">No saved invoices yet.</p>'; return; }
+
+    dropdown.innerHTML = rows.map(r => {
+      const org = r.data?.client?.organization || 'Untitled';
+      const dateLabel = new Date(r.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      return `<button type="button" class="load-item" data-id="${r.id}">
+        <span class="load-item-num">${escapeHtml(r.number || '—')}</span>
+        <span class="load-item-org">${escapeHtml(org)}</span>
+        <span class="load-item-date">${dateLabel}</span>
+      </button>`;
+    }).join('');
+    dropdown.querySelectorAll('[data-id]').forEach(itemBtn => {
+      itemBtn.addEventListener('click', () => {
+        const row = rows.find(r => r.id === itemBtn.dataset.id);
+        if(row){
+          DATA = Object.assign(blankInvoiceData(), row.data);
+          currentInvoiceId = row.id;
+          invoiceNumberTouched = true;
+          writeDataIntoForm();
+          updatePreview();
+        }
+        dropdown.style.display = 'none';
+      });
+    });
+  });
+  document.addEventListener('click', (e) => {
+    const anchor = document.querySelector('.load-anchor');
+    if(anchor && !anchor.contains(e.target)) document.getElementById('load-dropdown').style.display = 'none';
+  });
+
+  /* ───────── Boot — always starts from a blank invoice ───────── */
+  function boot(){
+    DATA = blankInvoiceData();
+    currentInvoiceId = null;
+    invoiceNumberTouched = false;
+    writeDataIntoForm();
+    document.getElementById('app-body').style.display = 'grid';
+    loadAirtableClients();
+  }
+</script>
+
+</body>
+</html>

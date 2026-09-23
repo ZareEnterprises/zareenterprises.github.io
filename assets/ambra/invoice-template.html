@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMBRA — Invoice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#FF711C; --green-2:#CC5A16; --gold:#FF711C; --gold-soft:#F4E6D6;
+  --ink:#1C211E; --muted:#5E655F; --faint:#8E938D; --line:#DCD8CE; --paper:#FFFFFF; --cream:#F8F5EE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+@page{size:8.5in 11in;margin:0}
+body{font-family:'Inter',sans-serif;color:var(--ink);font-size:9.4pt;line-height:1.45;background:#e9e6df;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:8.5in;min-height:11in;background:var(--paper);position:relative;margin:0 auto;page-break-after:always;display:flex;flex-direction:column}
+.page:last-child{page-break-after:auto}
+.mono{font-family:'IBM Plex Mono',monospace}
+.label{font-family:'IBM Plex Mono',monospace;font-size:6.9pt;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.num{font-variant-numeric:tabular-nums}
+
+/* Header */
+header.band{background:var(--green);color:#F1ECE0;padding:.38in .6in .28in;position:relative}
+header.band::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--ink)}
+.hrow{display:flex;justify-content:space-between;align-items:flex-end}
+.brand-logo{height:34pt;display:block}
+.brand .tag{font-family:'IBM Plex Mono',monospace;font-size:7pt;letter-spacing:.24em;text-transform:uppercase;color:#1a1310;margin-top:9px}
+.doc{text-align:right}
+.doc .title{font-family:'Fraunces',serif;font-weight:400;font-size:24pt;letter-spacing:.32em;line-height:1;margin-right:-.32em}
+.doc .no{font-family:'IBM Plex Mono',monospace;font-size:8pt;color:#1a1310;letter-spacing:.08em;margin-top:9px}
+.hcontact{display:flex;gap:26px;margin-top:16px;padding-top:11px;border-top:1px solid rgba(26,19,16,.25);font-size:7.8pt;color:rgba(26,19,16,.75)}
+.hcontact b{color:#1a1310;font-weight:500}
+
+main{padding:.28in .6in 0;flex:1}
+
+/* Meta strip */
+.meta{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:4px}
+.meta>div{padding:8px 14px;border-right:1px solid var(--line)}
+.meta>div:last-child{border-right:0}
+.meta .v{font-size:10pt;font-weight:500;margin-top:4px}
+.status{display:inline-block;margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:7.4pt;letter-spacing:.08em;text-transform:uppercase;color:#9A5A1F;background:var(--gold-soft);padding:3px 8px;border-radius:2px}
+
+/* Parties */
+.parties{display:grid;grid-template-columns:1fr 1.35fr;gap:28px;margin-top:16px}
+h3.sec{font-family:'IBM Plex Mono',monospace;font-size:7.2pt;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);padding-bottom:7px;border-bottom:1px solid var(--ink);margin-bottom:9px}
+.who{font-family:'Fraunces',serif;font-size:13pt;font-weight:500;line-height:1.25}
+.addr{color:var(--muted);margin-top:4px;font-size:8.8pt}
+dl.kv{display:grid;grid-template-columns:92px 1fr;row-gap:3px;font-size:8.8pt}
+dl.kv dt{color:var(--faint);font-family:'IBM Plex Mono',monospace;font-size:7pt;letter-spacing:.1em;text-transform:uppercase;padding-top:2px}
+dl.kv dd{color:var(--ink)}
+.tbc{color:var(--faint);font-style:italic}
+
+/* Items table */
+table.items{width:100%;border-collapse:collapse;margin-top:18px}
+table.items thead th{font-family:'IBM Plex Mono',monospace;font-size:6.9pt;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:#1a1310;background:var(--green);text-align:left;padding:8px 10px}
+table.items thead th.r,table.items td.r{text-align:right}
+table.items thead th.c,table.items td.c{text-align:center}
+table.items td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.items td.idx{font-family:'IBM Plex Mono',monospace;font-size:7.6pt;color:var(--gold);width:28px;padding-top:8px}
+.it{font-weight:600;font-size:9.3pt}
+.it-d{color:var(--muted);font-size:8.1pt;margin-top:1px;max-width:4.3in}
+td.amt{font-weight:500;white-space:nowrap}
+.incl{font-family:'IBM Plex Mono',monospace;font-size:7.2pt;letter-spacing:.08em;text-transform:uppercase;color:#4C7A5C}
+
+/* Summary */
+.summary{display:grid;grid-template-columns:1fr 2.75in;gap:28px;margin-top:16px;align-items:start}
+.pay{background:var(--cream);border-left:3px solid var(--gold);padding:11px 16px}
+.pay p{font-size:8.5pt;color:var(--muted);margin-top:6px}
+.pay .row{display:grid;grid-template-columns:98px 1fr;font-size:8.6pt;margin-top:5px}
+.pay .row span:first-child{font-family:'IBM Plex Mono',monospace;font-size:7pt;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding-top:2px}
+.totals{font-size:9pt}
+.totals .l{display:flex;justify-content:space-between;padding:5px 0}
+.totals .l.sub{color:var(--muted);border-bottom:1px solid var(--line)}
+.totals .grand{display:flex;justify-content:space-between;align-items:baseline;background:var(--green);color:#F1ECE0;padding:11px 12px;margin-top:8px}
+.totals .grand .k{font-family:'IBM Plex Mono',monospace;font-size:7.4pt;letter-spacing:.2em;text-transform:uppercase;color:#1a1310}
+.totals .grand .v{font-family:'Fraunces',serif;font-size:17pt;font-weight:500}
+.sched{margin-top:10px;border:1px solid var(--line)}
+.sched .l{display:flex;justify-content:space-between;padding:6px 12px;font-size:8.7pt}
+.sched .l+.l{border-top:1px solid var(--line)}
+.sched .l.due{background:var(--gold-soft);font-weight:600}
+.sched small{display:block;color:var(--faint);font-size:7.2pt;font-weight:400}
+
+.pending{margin-top:12px;display:flex;gap:14px;align-items:flex-start;border:1px dashed #C9C3B6;padding:10px 14px;font-size:8.3pt;color:var(--muted)}
+.pending .label{white-space:nowrap;color:var(--gold);padding-top:2px}
+
+/* Footer */
+footer{padding:0 .6in .3in;margin-top:auto}
+footer .f{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-family:'IBM Plex Mono',monospace;font-size:6.9pt;letter-spacing:.08em;color:var(--faint)}
+
+/* Page 2 */
+.p2head{padding:.5in .6in 0;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:1px solid var(--ink);margin:0 .6in;padding-left:0;padding-right:0}
+.p2head .mk{font-family:'Fraunces',serif;font-weight:600;font-size:15pt;letter-spacing:.14em}
+.p2head .mk span{color:var(--gold)}
+.p2head .rt{font-family:'IBM Plex Mono',monospace;font-size:7.2pt;letter-spacing:.12em;color:var(--faint);text-align:right;text-transform:uppercase}
+h2.tt{font-family:'Fraunces',serif;font-weight:500;font-size:17pt;margin:26px 0 4px}
+.lead{color:var(--muted);font-size:8.8pt;max-width:5.8in}
+ol.terms{list-style:none;counter-reset:t;columns:2;column-gap:30px;margin-top:20px}
+ol.terms li{break-inside:avoid;counter-increment:t;margin-bottom:14px;font-size:8.3pt;color:#3A403B;line-height:1.5}
+ol.terms li b{display:block;font-size:8.7pt;color:var(--ink);font-weight:600;margin-bottom:2px}
+ol.terms li b::before{content:counter(t,decimal-leading-zero);font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--gold);font-size:7.4pt;margin-right:8px;letter-spacing:.06em}
+.accept{margin-top:10px;border-top:1px solid var(--ink);padding-top:14px}
+.accept p{font-size:8.4pt;color:var(--muted);max-width:6.2in}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}
+.sig .line{border-bottom:1px solid var(--ink);height:34px}
+.sig .who2{display:flex;justify-content:space-between;margin-top:6px}
+.sig .who2 div{font-size:8.3pt}
+.thanks{margin-top:34px;font-family:'Fraunces',serif;font-style:italic;font-size:11pt;color:var(--muted)}
+.thanks span{color:var(--gold)}
+.terms2{margin-top:18px;border-top:1px solid var(--ink)}
+.terms2 .t{display:grid;grid-template-columns:30px 1.55in 1fr;gap:0 14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:8.4pt;line-height:1.5}
+.terms2 .n{font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--gold);font-size:7.6pt;padding-top:1px}
+.terms2 .h{font-weight:600;color:var(--ink)}
+.terms2 .b{color:#3A403B}
+.terms2 ul{margin:4px 0 0 0;padding-left:13px}
+.terms2 li{margin-bottom:3px}
+.terms2 li::marker{color:var(--gold)}
+.contact{margin-top:16px;font-size:8.6pt;color:var(--muted)}
+.contact b{color:var(--ink);font-weight:600}
+
+
+/* Stripe payment links */
+.paylink{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #E6E0D3}
+.paylink:first-of-type{margin-top:6px}
+.pl-k{font-weight:600;font-size:8.8pt}
+.pl-d{font-size:7.3pt;color:var(--faint)}
+.btn{display:inline-block;background:var(--green);color:#F1ECE0;text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:7.6pt;letter-spacing:.06em;padding:6px 11px;border-radius:2px;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--green);border:1px solid var(--green)}
+.pl-later{font-family:'IBM Plex Mono',monospace;font-size:7pt;color:var(--faint);letter-spacing:.04em}
+.pay .row:first-of-type{margin-top:8px}
+@media screen{ .page{box-shadow:0 2px 18px rgba(0,0,0,.12);margin:24px auto} }
+@media print{ body{background:#fff} .page{margin:0;box-shadow:none} }
+
+/* PDF mode — set by renderInvoice(data, {pdfMode:true}). A "Pay →" button
+   is not clickable once printed on paper, so this swaps it for the plain,
+   copyable URL text instead. Web/live views leave this off. */
+.pl-url{ display:none; font-family:'IBM Plex Mono',monospace; font-size:7.4pt; color:var(--green-2); word-break:break-all; margin-top:5px; text-align:left; }
+body.pdf-mode .paylink{ align-items:flex-start; flex-direction:column; }
+body.pdf-mode .btn{ display:none; }
+body.pdf-mode .pl-url{ display:block; width:100%; }
+</style></head>
+<body>
+<!--
+  AMBRA INVOICE TEMPLATE
+  ─────────────────────────────────────────────────────────────
+  This file renders itself from ONE data object: window.INVOICE_DATA
+  (see invoice-data.example.json for the full shape).
+  • All money math (subtotal, tax, deposit, balance) is computed here.
+  • The prefill tool only needs to set window.INVOICE_DATA and call
+    renderInvoice(), or call renderInvoice(data) directly.
+  • To export: open in Chrome → Print → Save as PDF, Letter,
+    Margins: None, "Background graphics" ON.
+-->
+
+<!-- ============ PAGE 1 ============ -->
+<section class="page">
+  <header class="band">
+    <div class="hrow">
+      <div class="brand">
+        <img class="brand-logo" src="/assets/img/ambra-logo.png" alt="AMBRA">
+        <div class="tag" data-f="company.tagline"></div>
+      </div>
+      <div class="doc">
+        <div class="title">INVOICE</div>
+        <div class="no">No. <span data-f="invoice.number"></span></div>
+      </div>
+    </div>
+    <div class="hcontact">
+      <div><b data-f="company.website"></b></div>
+      <div><b data-f="company.email"></b></div>
+      <div><b data-f="company.phone"></b></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="meta">
+      <div><div class="label">Issued</div><div class="v num" data-f="fmt.issueDate"></div></div>
+      <div><div class="label">Event date</div><div class="v num" data-f="fmt.eventDate"></div></div>
+      <div><div class="label">Valid through</div><div class="v num" data-f="fmt.validThrough"></div></div>
+      <div><div class="label">Status</div><span class="status" data-f="invoice.status"></span></div>
+    </div>
+
+    <div class="parties">
+      <div>
+        <h3 class="sec">Bill to</h3>
+        <div class="who" data-f="client.organization"></div>
+        <div class="addr" id="clientAddr"></div>
+      </div>
+      <div>
+        <h3 class="sec">Event</h3>
+        <dl class="kv">
+          <dt>Event</dt><dd data-f="event.name"></dd>
+          <dt>Date</dt><dd data-f="fmt.eventDateLong"></dd>
+          <dt>Schedule</dt><dd class="num" data-f="event.schedule"></dd>
+          <dt>Venue</dt><dd data-f="event.venue" data-empty="To be confirmed"></dd>
+          <dt>Program</dt><dd data-f="event.program"></dd>
+        </dl>
+      </div>
+    </div>
+
+    <table class="items">
+      <thead><tr><th></th><th>Description</th><th class="c">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead>
+      <tbody id="items"></tbody>
+    </table>
+
+    <div class="summary">
+      <div class="pay">
+        <div class="label" style="color:var(--gold)">Payment · Stripe</div>
+        <p style="margin-top:5px">Pay securely online through Stripe using the links below. Please keep the invoice number as your reference.</p>
+        <div class="paylink">
+          <div><div class="pl-k">Deposit · <span data-f="fmt.depositPct"></span></div><div class="pl-d">Required to confirm the booking</div></div>
+          <a class="btn" id="depositBtn" target="_blank">Pay <span data-f="fmt.deposit"></span> →</a>
+          <div class="pl-url" id="depositUrl"></div>
+        </div>
+        <div class="paylink">
+          <div><div class="pl-k">Balance · <span data-f="fmt.balancePct"></span></div><div class="pl-d">Due by <span data-f="fmt.balanceDueDate"></span></div></div>
+          <a class="btn ghost" id="balanceBtn" target="_blank">Pay <span data-f="fmt.balance"></span> →</a>
+          <span class="pl-later" id="balanceLater">Link sent before due date</span>
+          <div class="pl-url" id="balanceUrl"></div>
+        </div>
+        <div class="row"><span>Payable to</span><b data-f="company.legalName"></b></div>
+        <div class="row"><span>Reference</span><div class="mono" style="font-size:8pt" data-f="invoice.number"></div></div>
+      </div>
+      <div class="totals">
+        <div class="l sub"><span>Subtotal</span><span class="num" data-f="fmt.subtotal"></span></div>
+        <div class="l sub"><span>Sales tax <span data-f="fmt.taxPct"></span></span><span class="num" data-f="fmt.tax"></span></div>
+        <div class="grand"><span class="k">Total</span><span class="v num" data-f="fmt.total"></span></div>
+        <div class="sched">
+          <div class="l due"><span>Deposit · <span data-f="fmt.depositPct"></span><small>Required to confirm the booking</small></span><span class="num" data-f="fmt.deposit"></span></div>
+          <div class="l"><span>Balance · <span data-f="fmt.balancePct"></span><small>Due <span data-f="payment.balanceDueDaysBefore"></span> days before the event</small></span><span class="num" data-f="fmt.balance"></span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer><div class="f"><span><span data-f="company.legalNameUpper"></span> · <span data-f="company.cityUpper"></span></span><span>INVOICE <span data-f="invoice.number"></span></span><span>PAGE 1 / 2</span></div></footer>
+</section>
+
+<!-- ============ PAGE 2 · TERMS (fixed text; only % and days are dynamic) ============ -->
+<section class="page">
+  <div class="p2head">
+    <div class="mk">AMBRA<span>.</span></div>
+    <div class="rt">Invoice <span data-f="invoice.number"></span><br>Service Terms &amp; Conditions</div>
+  </div>
+  <main style="padding-top:0">
+    <h2 class="tt">Service Terms &amp; Conditions</h2>
+    <p class="lead">This Service Agreement is entered into on the invoice issue date between <b data-f="company.legalName"></b> (“AMBRA”), a limited liability company organized under the laws of the United States, and the client named on page 1 (the “Client”). It sets the terms under which AMBRA provides the entertainment and production services described in this invoice.</p>
+
+    <div class="terms2">
+      <div class="t"><div class="n">01</div><div class="h">Scope of services</div><div class="b">AMBRA will provide the services described in this invoice.</div></div>
+      <div class="t"><div class="n">02</div><div class="h">Event schedule</div><div class="b">Services take place on the date shown on page 1. Setup, performance and breakdown follow the agreed schedule. AMBRA is not obligated to extend performance time or move the agreed time slot unless both parties approve it in writing beforehand. Additional time requested during the event may incur extra fees, subject to performer availability.</div></div>
+      <div class="t"><div class="n">03</div><div class="h">Payment</div><div class="b">A deposit of <span data-f="fmt.depositPct"></span> of the total is required, and services are confirmed only once it is received. The remaining balance is due no later than <span data-f="payment.balanceDueDaysBefore"></span> days before the event, unless otherwise agreed in writing. Payments are processed through Stripe via the payment links provided. AMBRA may withhold services if full payment has not been received by that deadline.</div></div>
+      <div class="t"><div class="n">04</div><div class="h">Cancellation &amp; refunds</div><div class="b">
+        <ul>
+          <li><b>Client cancels 14 days or more before the event:</b> 50% of the total paid is refunded. AMBRA retains the rest to cover preparation, reserved personnel and administrative costs.</li>
+          <li><b>Client cancels 3 days or less before the event:</b> no refund.</li>
+          <li><b>AMBRA cancels for reasons within its control:</b> full refund of all payments made.</li>
+          <li><b>Force majeure</b> (natural disasters, extreme weather, government restrictions, venue closures, public emergencies or other circumstances beyond either party’s control): neither party is liable for non-performance, and the full amount is refunded.</li>
+        </ul></div></div>
+      <div class="t"><div class="n">05</div><div class="h">Event conditions</div><div class="b">The Client is responsible for:
+        <ul>
+          <li>Adequate space and safe conditions for performers and equipment.</li>
+          <li>Venue access and electricity at the agreed setup time.</li>
+          <li>Compliance with local noise regulations, venue rules and any required event permits.</li>
+          <li>A clean, unobstructed performance area suitable for the contracted services.</li>
+          <li>An adequate sound system that meets the agreed requirements.</li>
+        </ul></div></div>
+      <div class="t"><div class="n">06</div><div class="h">Damages</div><div class="b">The Client is responsible for any damage to equipment caused by guests, staff or venue conditions during the event. Repair or replacement costs may be billed to the Client.</div></div>
+      <div class="t"><div class="n">07</div><div class="h">Acceptance</div><div class="b">Payment of this invoice or written confirmation of the booking constitutes acceptance of these terms. By paying the requested amount, the Client confirms they have read, understood and agree to be bound by them.</div></div>
+    </div>
+
+    <div class="contact">Questions about this agreement: <b data-f="company.email"></b></div>
+  </main>
+  <footer><div class="f"><span><span data-f="company.legalNameUpper"></span> · <span data-f="company.websiteUpper"></span> · <span data-f="company.emailUpper"></span></span><span>PAGE 2 / 2</span></div></footer>
+</section>
+
+<script>
+/* ───────── Fixed company info (edit once) ───────── */
+const COMPANY = {
+  legalName: "AMBRA Live Productions LLC",
+  tagline:   "AMBRA Live Productions · Boston, MA",
+  city:      "Boston, MA",
+  website:   "ambraliveproductions.com",
+  email:     "info@ambralp.com",
+  phone:     "+1 (857) 384-8773",
+  instagram: "@ambra.us"
+};
+
+/* ───────── Example data (the prefill tool replaces this) ───────── */
+window.INVOICE_DATA = window.INVOICE_DATA || {
+  invoice: { number: "AMB-2026-1205-01", issueDate: "2026-09-22", validThrough: "2026-10-22", status: "Awaiting deposit" },
+  client:  { organization: "Harbor Arts Foundation", contactName: "Jane Smith", contactTitle: "Events Director",
+             address: "100 Federal Street, Boston, MA 02110", email: "jane.smith@harborarts.org" },
+  event:   { name: "Annual Winter Gala", date: "2026-12-05", schedule: "6:00 PM – 12:00 AM · 6 hours",
+             venue: "", program: "Live Latin ensemble · 2 sets × 60 min" },
+  items: [
+    { title: "Live Latin ensemble — 8 musicians", description: "Two 60-min sets · musicians matched by country of origin to the event's culture.", qty: 1, unit: "", rate: 6400 },
+    { title: "Musical direction & repertoire curation", description: "Setlist design, arrangements and musical direction for the full program.", qty: 1, unit: "", rate: 1200 },
+    { title: "Full-band rehearsal", description: "One 3-hour rehearsal with the complete ensemble prior to the event.", qty: 1, unit: "", rate: 900 },
+    { title: "Sound reinforcement & FOH engineer", description: "PA system, stage monitors, microphones and FOH engineer for the full schedule.", qty: 6, unit: "h", rate: 300 },
+    { title: "Production coordination", description: "Advance with venue, stage plot, input list and run of show.", qty: 1, unit: "", rate: 600 },
+    { title: "Stage wash lighting", description: "Basic stage lighting package for the performance area.", qty: 1, unit: "", rate: 0, included: true }
+  ],
+  taxRate: 0,
+  payment: { depositPercent: 25, balanceDueDaysBefore: 14,
+             depositLink: "https://buy.stripe.com/your-deposit-link", balanceLink: "" }
+};
+
+/* ───────── Helpers ───────── */
+const USD = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n);
+const round2 = n => Math.round(n*100)/100;
+const d = iso => { const [y,m,dd] = iso.split("-").map(Number); return new Date(y, m-1, dd); };
+const fmtShort = iso => iso ? d(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
+const fmtLong  = iso => iso ? d(iso).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "—";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const get = (o,p) => p.split(".").reduce((a,k)=> a==null ? a : a[k], o);
+
+/* ───────── Totals (single source of truth) ───────── */
+function computeTotals(data){
+  const lines = data.items.map(it => it.included ? 0 : round2((+it.qty||0) * (+it.rate||0)));
+  const subtotal = round2(lines.reduce((a,b)=>a+b,0));
+  const tax = round2(subtotal * (+data.taxRate||0) / 100);
+  const total = round2(subtotal + tax);
+  const deposit = round2(total * data.payment.depositPercent / 100);
+  const balance = round2(total - deposit);
+  return { lines, subtotal, tax, total, deposit, balance };
+}
+
+/* ───────── Render ───────── */
+function renderInvoice(data = window.INVOICE_DATA, opts = {}){
+  document.body.classList.toggle('pdf-mode', !!opts.pdfMode);
+  const t = computeTotals(data);
+  const due = d(data.event.date); due.setDate(due.getDate() - data.payment.balanceDueDaysBefore);
+  const ctx = {
+    ...data,
+    company: { ...COMPANY,
+      legalNameUpper: COMPANY.legalName.toUpperCase(), cityUpper: COMPANY.city.toUpperCase(),
+      websiteUpper: COMPANY.website.toUpperCase(), emailUpper: COMPANY.email.toUpperCase() },
+    fmt: {
+      issueDate: fmtShort(data.invoice.issueDate), validThrough: fmtShort(data.invoice.validThrough),
+      eventDate: fmtShort(data.event.date), eventDateLong: fmtLong(data.event.date),
+      balanceDueDate: due.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),
+      subtotal: USD(t.subtotal), tax: USD(t.tax), total: USD(t.total),
+      deposit: USD(t.deposit), balance: USD(t.balance),
+      taxPct: data.taxRate ? `(${data.taxRate}%)` : "",
+      depositPct: `${data.payment.depositPercent}%`, balancePct: `${100 - data.payment.depositPercent}%`
+    }
+  };
+
+  document.querySelectorAll("[data-f]").forEach(el => {
+    const v = get(ctx, el.dataset.f);
+    const empty = el.dataset.empty;
+    if ((v === "" || v == null) && empty){ el.textContent = empty; el.classList.add("tbc"); }
+    else { el.textContent = v ?? ""; el.classList.remove("tbc"); }
+  });
+
+  const c = data.client;
+  const attn = [c.contactName, c.contactTitle].filter(Boolean).join(", ");
+  document.getElementById("clientAddr").innerHTML =
+    [attn && `Attn. ${esc(attn)}`, esc(c.address), esc(c.email)].filter(Boolean).join("<br>");
+
+  document.getElementById("items").innerHTML = data.items.map((it,i) => `
+    <tr>
+      <td class="idx">${String(i+1).padStart(2,"0")}</td>
+      <td><div class="it">${esc(it.title)}</div>${it.description ? `<div class="it-d">${esc(it.description)}</div>` : ""}</td>
+      <td class="c num">${esc(it.qty)}${it.unit ? " " + esc(it.unit) : ""}</td>
+      <td class="r num">${it.included ? "—" : USD(+it.rate||0)}</td>
+      <td class="r amt num">${it.included ? '<span class="incl">Included</span>' : USD(t.lines[i])}</td>
+    </tr>`).join("");
+
+  const dep = document.getElementById("depositBtn"), bal = document.getElementById("balanceBtn"), later = document.getElementById("balanceLater");
+  dep.href = data.payment.depositLink || "#";
+  dep.style.display = data.payment.depositLink ? "" : "none";
+  bal.href = data.payment.balanceLink || "#";
+  bal.style.display = data.payment.balanceLink ? "" : "none";
+  later.style.display = data.payment.balanceLink ? "none" : "";
+  document.getElementById("depositUrl").textContent = data.payment.depositLink || "";
+  document.getElementById("balanceUrl").textContent = data.payment.balanceLink || "";
+
+  document.title = `AMBRA — Invoice ${data.invoice.number}`;
+  return t;
+}
+
+renderInvoice();
+</script>
+</body></html>

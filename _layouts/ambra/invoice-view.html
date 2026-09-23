@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMBRA — Invoice</title>
+<link rel="icon" type="image/png" href="/assets/img/ambraSubmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --green:#161F1A; --gold:#D98A3D; --gold-bright:#E8A55A; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Inter',sans-serif; background:#e9e6df; color:#1C211E; min-height:100vh; }
+
+  .topbar{
+    background:var(--green); color:#F1ECE0; padding:16px 24px; display:flex; align-items:center;
+    justify-content:space-between; gap:16px; flex-wrap:wrap; border-bottom:3px solid var(--gold);
+  }
+  .brand{ font-family:'Fraunces',serif; font-weight:600; font-size:19px; letter-spacing:.05em; }
+  .brand span{ color:var(--gold); }
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:12.5px; cursor:pointer; border-radius:8px;
+    padding:9px 16px; border:1px solid var(--gold); background:var(--gold); color:#1a1310; transition:.15s;
+  }
+  .btn:hover{ background:var(--gold-bright); }
+
+  .wrap{ max-width:900px; margin:0 auto; padding:32px 20px 60px; }
+  .frame-card{ background:#fff; box-shadow:0 10px 40px rgba(0,0,0,.18); }
+  .frame-card iframe{ width:100%; height:1300px; border:none; display:block; }
+
+  #state-msg{ text-align:center; padding:120px 20px; color:#5E655F; font-family:'Inter',sans-serif; font-size:15px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">AMBRA<span>.</span></div>
+  <button class="btn" id="btn-download-pdf" type="button" style="display:none">Download as PDF</button>
+</div>
+
+<div class="wrap">
+  <div id="state-msg">Loading…</div>
+  <div class="frame-card" id="frame-card" style="display:none">
+    <iframe id="preview-frame" src="/assets/ambra/invoice-template.html?v={{ site.time | date: '%s' }}"></iframe>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+  const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+  const frame = document.getElementById('preview-frame');
+  let renderData = null;
+  let frameReady = false;
+
+  function tryRender(){
+    if(frameReady && renderData) frame.contentWindow.renderInvoice(renderData);
+  }
+
+  async function boot(){
+    const id = new URLSearchParams(location.search).get('id');
+    const stateMsg = document.getElementById('state-msg');
+    if(!id || !supabaseClient){ stateMsg.textContent = 'Invoice not found.'; return; }
+
+    const { data: row, error } = await supabaseClient.from('invoices').select('id,data').eq('id', id).maybeSingle();
+    if(error || !row){ stateMsg.textContent = 'Invoice not found.'; return; }
+
+    // Defensive strip — the admin-only musician pay/profit breakdown never
+    // gets read by the template's own rendering, but it shouldn't even be
+    // handed to this page's iframe in the first place.
+    renderData = JSON.parse(JSON.stringify(row.data));
+    (renderData.items || []).forEach(it => { delete it.internal; });
+
+    stateMsg.style.display = 'none';
+    document.getElementById('frame-card').style.display = 'block';
+    document.getElementById('btn-download-pdf').style.display = '';
+    tryRender();
+  }
+
+  frame.addEventListener('load', () => { frameReady = true; tryRender(); });
+
+  document.getElementById('btn-download-pdf').addEventListener('click', () => {
+    if(!frame.contentWindow || !frame.contentWindow.print) return;
+    frame.contentWindow.renderInvoice(renderData, { pdfMode: true });
+    frame.contentWindow.addEventListener('afterprint', function revert(){
+      frame.contentWindow.renderInvoice(renderData, { pdfMode: false });
+      frame.contentWindow.removeEventListener('afterprint', revert);
+    });
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  });
+
+  boot();
+</script>
+
+</body>
+</html>

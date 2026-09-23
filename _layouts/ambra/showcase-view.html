@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMBRA — Musicians</title>
+<link rel="icon" type="image/png" href="/assets/img/ambraSubmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --green:#161F1A; --gold:#D98A3D; --gold-bright:#E8A55A; --card:#1F2A23; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; font-family:'Inter',sans-serif; background:var(--green); color:#F1ECE0; min-height:100vh;
+  }
+  .topbar{ padding:28px 24px 10px; text-align:center; }
+  .brand{ font-family:'Fraunces',serif; font-weight:700; font-size:26px; letter-spacing:.06em; }
+  .brand span{ color:var(--gold); }
+  .event-name{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:#B7AF9E; margin-top:8px; }
+
+  .grid{ max-width:1100px; margin:0 auto; padding:20px 20px 60px; display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:22px; }
+
+  .mcard{
+    background:var(--card); border:1px solid #33403A; border-radius:16px; overflow:hidden;
+    display:flex; flex-direction:column; transition:transform .2s, box-shadow .2s;
+  }
+  .mcard:hover{ transform:translateY(-4px); box-shadow:0 14px 34px rgba(0,0,0,.35); border-color:var(--gold); }
+  .mcard-photo{ width:100%; aspect-ratio:1/1; object-fit:cover; background:#2A362F; display:block; }
+  .mcard-photo-placeholder{ width:100%; aspect-ratio:1/1; background:#2A362F; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:34px; color:#4C5A52; }
+  .mcard-body{ padding:16px 16px 18px; display:flex; flex-direction:column; gap:10px; flex:1; }
+  .mcard-name{ font-family:'Fraunces',serif; font-weight:700; font-size:19px; }
+  .mcard-name span{ color:var(--gold); }
+  .mcard-bio{ font-size:12px; color:#C9C2B4; line-height:1.5; flex:1; }
+  .mcard-audio audio{ width:100%; height:32px; }
+  .mcard-videos{ display:flex; flex-wrap:wrap; gap:6px; }
+  .mcard-videos a{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.04em; color:var(--gold);
+    text-decoration:none; border:1px solid #3A4A3F; border-radius:6px; padding:4px 8px;
+  }
+  .mcard-videos a:hover{ border-color:var(--gold); color:var(--gold-bright); }
+
+  #state-msg{ text-align:center; padding:120px 20px; color:#B7AF9E; font-size:15px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">AMBRA<span>.</span></div>
+  <div class="event-name" id="event-name-label"></div>
+</div>
+
+<div id="state-msg">Loading…</div>
+<div class="grid" id="grid"></div>
+
+<script>
+  const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+  const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+
+  function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  async function boot(){
+    const id = new URLSearchParams(location.search).get('id');
+    const stateMsg = document.getElementById('state-msg');
+    if(!id){ stateMsg.textContent = 'Showcase not found.'; return; }
+
+    const showcaseRes = await fetch(`${SUPABASE_URL}/rest/v1/showcases?select=*&id=eq.${id}&limit=1`, { headers });
+    const showcaseRows = showcaseRes.ok ? await showcaseRes.json() : [];
+    const showcase = showcaseRows[0];
+    if(!showcase){ stateMsg.textContent = 'Showcase not found.'; return; }
+
+    document.getElementById('event-name-label').textContent = showcase.event_name || '';
+
+    const musiciansRes = await fetch(`${SUPABASE_URL}/functions/v1/airtable-directory?type=musicians`, { headers });
+    if(!musiciansRes.ok){ stateMsg.textContent = 'Could not load the musicians right now — try again shortly.'; return; }
+    const { records } = await musiciansRes.json();
+    const byId = Object.fromEntries((records || []).map(m => [m.id, m]));
+    const musicians = (showcase.musician_ids || []).map(mid => byId[mid]).filter(Boolean);
+
+    if(!musicians.length){ stateMsg.textContent = 'No musicians listed yet.'; return; }
+    stateMsg.style.display = 'none';
+
+    document.getElementById('grid').innerHTML = musicians.map(m => `
+      <div class="mcard">
+        ${m.photoUrl
+          ? `<img class="mcard-photo" src="${escapeHtml(m.photoUrl)}" alt="${escapeHtml(m.firstName)}">`
+          : `<div class="mcard-photo-placeholder">${escapeHtml((m.firstName||'?')[0])}</div>`}
+        <div class="mcard-body">
+          <div class="mcard-name">${escapeHtml(m.firstName)}<span>.</span></div>
+          ${m.bio ? `<div class="mcard-bio">${escapeHtml(m.bio)}</div>` : ''}
+          <div class="mcard-audio">
+            <audio controls preload="none" src="/assets/ambra/musician-audio/${encodeURIComponent(m.slug)}.mp3"
+              onerror="this.closest('.mcard-audio').style.display='none'"></audio>
+          </div>
+          ${(m.youtubeLinks || []).length ? `<div class="mcard-videos">${m.youtubeLinks.map((u,i) => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener">▶ Video ${i+1}</a>`).join('')}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  boot();
+</script>
+
+</body>
+</html>

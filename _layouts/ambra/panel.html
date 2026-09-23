@@ -134,7 +134,10 @@
       <div class="section-head-left">
         <h2>Finance</h2>
       </div>
-      <select id="finance-project-select" class="select-project"><option value="">Select a project…</option></select>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn-primary" id="btn-create-invoice" type="button">Crear Invoice</button>
+        <select id="finance-project-select" class="select-project"><option value="">Select a project…</option></select>
+      </div>
     </div>
 
     <div class="pcard-new" id="finance-empty" style="pointer-events:none;min-height:120px">
@@ -355,6 +358,18 @@
   </div>
 </div>
 
+<!-- Confirm delete user modal -->
+<div class="overlay" id="overlay-delete-user">
+  <div class="modal" style="max-width:400px">
+    <h2>Delete user?</h2>
+    <p class="hint" id="delete-user-message"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-cancel-delete-user" type="button">Cancel</button>
+      <button class="btn-primary" id="btn-confirm-delete-user" type="button" style="background:var(--error);color:#fff">Delete user</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ============================================================
   // AUTH GUARD — ON. No session redirects to /ambra/ (the login
@@ -561,9 +576,10 @@
       { key:'sound',     label:'Sound' },
       { key:'stage',     label:'Stage' },
       { key:'lightning', label:'Lightning' }
-    ]}
+    ]},
+    { key:'directory', label:'Directory (musician showcase)', sub:null }
   ];
-  const PERM_COUNT_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning'];
+  const PERM_COUNT_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning','directory'];
 
   let activeProjectFilter = 'all';
   let currentModalMode = 'add'; // 'add' | 'change'
@@ -1033,6 +1049,11 @@
   }
 
   // ---------- Users ----------
+  // The workspace owner's own account — nobody (not even other admins, and
+  // not the owner's own "isMe" row) gets a menu to change its permissions
+  // or delete it from the UI. Everyone else's own row still shows "Change
+  // Permissions" for themselves (just not "Delete user").
+  const PROTECTED_OWNER_EMAIL = 'ddavilaxr@gmail.com';
   function statusLabel(s){ return s === 'active' ? 'Active' : s === 'pending' ? 'Pending' : 'Inactive'; }
   function statusIcon(s){
     if(s === 'pending') return '<svg class="ustatus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
@@ -1052,7 +1073,7 @@
         </div>
         <span class="urole-pill">${u.role}</span>
         <span class="ustatus ${u.status}">${statusIcon(u.status)}${statusLabel(u.status)}</span>
-        ${u.isMe ? '<div></div>' : `
+        ${u.email === PROTECTED_OWNER_EMAIL ? '<div></div>' : `
         <div class="udots-anchor">
           <button class="udots-btn" type="button" onclick="toggleUserMenu('${u.id}')">
             <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
@@ -1062,10 +1083,11 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="16" r="4"/><path d="M10.8 13.2L20 4"/><path d="M15 9l3 3"/><path d="M18 6l3 3"/></svg>
               Change Permissions
             </button>
+            ${u.isMe ? '' : `
             <button class="dropdown-item" type="button" onclick="handleDeleteUser('${u.id}')" style="color:var(--error)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
               Delete user
-            </button>
+            </button>`}
           </div>
         </div>`}
         </div>
@@ -1290,11 +1312,26 @@
   }
   document.getElementById('btn-cancel-user').addEventListener('click', () => closeModal('overlay-user'));
 
-  async function handleDeleteUser(userId){
+  let pendingDeleteUserId = null;
+  function handleDeleteUser(userId){
     document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
     const user = USERS.find(u => u.id === userId);
     if(!user || user.isMe) return;
-    if(!confirm(`Delete ${user.name} (${user.email})? This permanently removes their account and all project access — it can't be undone.`)) return;
+    pendingDeleteUserId = userId;
+    document.getElementById('delete-user-message').textContent =
+      `Delete ${user.name} (${user.email})? This permanently removes their account and all project access — it can't be undone.`;
+    openModal('overlay-delete-user');
+  }
+  document.getElementById('btn-cancel-delete-user').addEventListener('click', () => {
+    pendingDeleteUserId = null;
+    closeModal('overlay-delete-user');
+  });
+  document.getElementById('btn-confirm-delete-user').addEventListener('click', async () => {
+    if(!pendingDeleteUserId) return;
+    const userId = pendingDeleteUserId;
+    const btn = document.getElementById('btn-confirm-delete-user');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
       method: 'POST',
@@ -1306,13 +1343,18 @@
       body: JSON.stringify({ user_id: userId })
     });
     const result = await res.json().catch(() => ({}));
+    btn.disabled = false;
+    btn.textContent = 'Delete user';
     if(!res.ok){
+      console.error('delete-user failed', result);
       alert(result.error || 'Could not delete this user.');
       return;
     }
+    pendingDeleteUserId = null;
+    closeModal('overlay-delete-user');
     await loadUsers();
     renderUsers();
-  }
+  });
 
   async function inviteNewMember(email, fullName, projectIds, bandIds){
     const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
@@ -1437,7 +1479,7 @@
       document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
     }
   });
-  [ 'overlay-new-project', 'overlay-duplicate-project', 'overlay-archived', 'overlay-user', 'overlay-timezone', 'overlay-calendar-event', 'overlay-day-detail' ].forEach(id => {
+  [ 'overlay-new-project', 'overlay-duplicate-project', 'overlay-archived', 'overlay-user', 'overlay-delete-user', 'overlay-timezone', 'overlay-calendar-event', 'overlay-day-detail' ].forEach(id => {
     document.getElementById(id).addEventListener('click', (e) => { if(e.target.id === id) closeModal(id); });
   });
 
@@ -2217,6 +2259,10 @@
       currentFinanceType = btn.dataset.finType;
       renderFinanceSheet();
     });
+  });
+
+  document.getElementById('btn-create-invoice').addEventListener('click', () => {
+    window.open('/invoice/', '_blank', 'noopener');
   });
 
   document.getElementById('finance-project-select').addEventListener('change', async (e) => {

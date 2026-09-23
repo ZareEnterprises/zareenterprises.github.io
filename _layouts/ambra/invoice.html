@@ -129,6 +129,24 @@
   .warn-banner.show{ display:block; }
   .warn-banner ul{ margin:6px 0 0; padding-left:18px; }
 
+  /* In-page modals — replace the browser's own confirm()/prompt() so
+     dialogs look like part of AMBRA instead of a generic OS popup. */
+  .overlay{
+    display:none; position:fixed; inset:0; background:rgba(26,19,16,.5);
+    align-items:center; justify-content:center; z-index:200; padding:20px;
+  }
+  .overlay.open{ display:flex; }
+  .modal-box{ background:var(--paper); border-radius:14px; padding:26px; max-width:420px; width:100%; box-shadow:0 24px 60px rgba(0,0,0,.3); }
+  .modal-box h3{ font-family:'Fraunces',serif; font-size:19px; margin:0 0 10px; color:var(--ink); }
+  .modal-box p{ font-size:13.5px; color:var(--muted); line-height:1.55; margin:0 0 20px; }
+  .modal-box-actions{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+  .modal-box-actions .btn{ padding:10px 16px; }
+  .share-row{ display:flex; gap:8px; margin-bottom:20px; }
+  .share-row input{
+    flex:1; min-width:0; background:var(--cream); border:1px solid var(--line); border-radius:8px;
+    padding:9px 11px; font-size:12px; font-family:'IBM Plex Mono',monospace; color:var(--ink);
+  }
+
 </style>
 </head>
 <body style="visibility:hidden">
@@ -230,6 +248,33 @@
 
   <div class="preview-pane">
     <iframe id="preview-frame" src="/assets/ambra/invoice-template.html?v={{ site.time | date: '%s' }}"></iframe>
+  </div>
+</div>
+
+<!-- In-page confirm modal — reused for every yes/no prompt this page needs -->
+<div class="overlay" id="overlay-confirm">
+  <div class="modal-box">
+    <h3 id="confirm-modal-title">—</h3>
+    <p id="confirm-modal-message"></p>
+    <div class="modal-box-actions">
+      <button class="btn btn-ghost" id="btn-confirm-no" type="button">Cancel</button>
+      <button class="btn btn-primary" id="btn-confirm-yes" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- In-page "invoice saved" modal, with a copyable share link -->
+<div class="overlay" id="overlay-share">
+  <div class="modal-box">
+    <h3>Invoice saved</h3>
+    <p>Share this link with the client — no login required:</p>
+    <div class="share-row">
+      <input type="text" id="share-link-input" readonly>
+      <button class="btn btn-primary btn-sm" id="btn-copy-share-link" type="button">Copy</button>
+    </div>
+    <div class="modal-box-actions">
+      <button class="btn btn-ghost" id="btn-close-share" type="button">Close</button>
+    </div>
   </div>
 </div>
 
@@ -606,9 +651,56 @@
     updatePreview();
   });
 
+  /* ───────── In-page modals (replace confirm()/prompt()) ───────── */
+  function showConfirmModal(title, message, yesLabel = 'Confirm', noLabel = 'Cancel'){
+    return new Promise((resolve) => {
+      document.getElementById('confirm-modal-title').textContent = title;
+      document.getElementById('confirm-modal-message').textContent = message;
+      const yesBtn = document.getElementById('btn-confirm-yes');
+      const noBtn = document.getElementById('btn-confirm-no');
+      yesBtn.textContent = yesLabel;
+      noBtn.textContent = noLabel;
+      const overlay = document.getElementById('overlay-confirm');
+      overlay.classList.add('open');
+      function cleanup(result){
+        overlay.classList.remove('open');
+        yesBtn.removeEventListener('click', onYes);
+        noBtn.removeEventListener('click', onNo);
+        resolve(result);
+      }
+      function onYes(){ cleanup(true); }
+      function onNo(){ cleanup(false); }
+      yesBtn.addEventListener('click', onYes);
+      noBtn.addEventListener('click', onNo);
+    });
+  }
+  function showShareModal(url){
+    document.getElementById('share-link-input').value = url;
+    document.getElementById('overlay-share').classList.add('open');
+  }
+  document.getElementById('btn-close-share').addEventListener('click', () => {
+    document.getElementById('overlay-share').classList.remove('open');
+  });
+  document.getElementById('overlay-share').addEventListener('click', (e) => {
+    if(e.target.id === 'overlay-share') e.target.classList.remove('open');
+  });
+  document.getElementById('btn-copy-share-link').addEventListener('click', async () => {
+    const input = document.getElementById('share-link-input');
+    const btn = document.getElementById('btn-copy-share-link');
+    try {
+      await navigator.clipboard.writeText(input.value);
+      const original = btn.textContent;
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.textContent = original; }, 1200);
+    } catch(err){
+      input.select();
+    }
+  });
+
   /* ───────── Create New — resets the form without a full page reload ───────── */
-  document.getElementById('btn-create-new').addEventListener('click', () => {
-    if(!confirm('Start a new blank invoice? Anything unsaved on this one will be lost.')) return;
+  document.getElementById('btn-create-new').addEventListener('click', async () => {
+    const ok = await showConfirmModal('Start a new invoice?', 'Anything unsaved on this one will be lost.', 'Start new', 'Cancel');
+    if(!ok) return;
     DATA = blankInvoiceData();
     currentInvoiceId = null;
     invoiceNumberTouched = false;
@@ -743,10 +835,10 @@
       }
 
       let projectId = null;
-      const wantsProject = confirm(
-        '¿Querés crear un proyecto en Projects vinculado a este invoice?\n' +
-        'Se arma también su hoja de Finance con estos mismos datos.\n\n' +
-        'Aceptar = sí, crear proyecto\nCancelar = no, solo guardar el invoice'
+      const wantsProject = await showConfirmModal(
+        '¿Crear un proyecto vinculado?',
+        'Se arma también su hoja de Finance con estos mismos datos, lista en Projects.',
+        'Sí, crear proyecto', 'No, solo guardar'
       );
       if(wantsProject){
         const project = await createLinkedProject();
@@ -766,7 +858,7 @@
       const invoice = rows[0];
       currentInvoiceId = invoice.id;
       const shareUrl = `${location.origin}/invoice-view/?id=${invoice.id}`;
-      prompt('Invoice saved. Share this link with the client (no login required):', shareUrl);
+      showShareModal(shareUrl);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Save';

@@ -1062,7 +1062,8 @@
   }
   function renderUsers(){
     const body = document.getElementById('users-table-body');
-    const rows = USERS.filter(u => activeProjectFilter === 'all' || u.projects.includes(activeProjectFilter));
+    const rows = USERS.filter(u => activeProjectFilter === 'all' || u.projects.includes(activeProjectFilter))
+      .sort((a, b) => (b.email === PROTECTED_OWNER_EMAIL) - (a.email === PROTECTED_OWNER_EMAIL));
     body.innerHTML = rows.map(u => `
       <div class="utable-row" data-user="${u.id}">
         <div class="urow-user">

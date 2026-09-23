@@ -52,6 +52,7 @@
           <span class="dropdown-label">Workspace settings</span>
           <button class="dropdown-item" type="button" id="btn-open-timezone">Time zone</button>
           <button class="dropdown-item" type="button" id="btn-open-archived">Archived</button>
+          <button class="dropdown-item" type="button" id="btn-connect-google-calendar">Connect Google Calendar</button>
           <button class="dropdown-item" type="button">Transfer project</button>
           <button class="dropdown-item" type="button">Bank details</button>
           <button class="dropdown-item" type="button">Security</button>
@@ -1499,6 +1500,18 @@
     closeModal('overlay-timezone');
   });
 
+  // ---------- Connect Google Calendar ----------
+  // A top-level navigation, not a fetch() call like other Edge Function
+  // calls in this file — the next hop is Google's own consent screen
+  // redirecting back to google-calendar-callback, which a fetch() can't
+  // follow, so the session token rides along as a query param instead of
+  // an Authorization header.
+  document.getElementById('btn-connect-google-calendar').addEventListener('click', () => {
+    document.getElementById('settings-panel').classList.remove('open');
+    if(!currentSession) return;
+    window.location.href = `${SUPABASE_URL}/functions/v1/google-calendar-connect?access_token=${currentSession.access_token}`;
+  });
+
   // ---------- Archived projects ----------
   function renderArchivedList(){
     const list = document.getElementById('archived-list');
@@ -1818,6 +1831,30 @@
     await supabaseClient.from('calendar_event_users').delete().eq('event_id', eventId);
     if(linkedUserIds.length){
       await supabaseClient.from('calendar_event_users').insert(linkedUserIds.map(user_id => ({ event_id: eventId, user_id })));
+    }
+
+    // Only push to Google when there's actually someone to invite — a
+    // reminder nobody's been shared with has no attendee, so there's
+    // nothing for Google's calendar to add. A failed push (e.g. Google
+    // Calendar hasn't been connected yet) shouldn't undo or block the save
+    // above, which already succeeded in AMBRA — just warn about it.
+    const attendeeEmails = linkedUserIds.map(id => USERS.find(u => u.id === id)?.email).filter(Boolean);
+    if(attendeeEmails.length){
+      try {
+        const pushRes = await fetch(`${SUPABASE_URL}/functions/v1/google-calendar-push-event`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSession.access_token}`,
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ title, description: payload.notes, date, time: payload.event_time, attendeeEmails })
+        });
+        const pushResult = await pushRes.json().catch(() => ({}));
+        if(!pushRes.ok) console.warn('google-calendar-push-event failed', pushResult);
+      } catch(err) {
+        console.warn('google-calendar-push-event failed', err);
+      }
     }
 
     closeModal('overlay-calendar-event');

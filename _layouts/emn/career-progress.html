@@ -34,11 +34,17 @@
 
   section.cat h2{ font-family:var(--font-display); font-size:20px; margin:0 0 4px; }
   .cat-intro{ font-size:13px; color:var(--gray-700); margin:0 0 16px; max-width:70ch; }
-  .toolbar{ display:flex; flex-wrap:wrap; gap:10px; margin:0 0 12px; }
+  .toolbar{ display:flex; flex-wrap:wrap; gap:10px; margin:0 0 12px; justify-content:flex-end; }
   .btn{ border:1px solid var(--gray-300); background:var(--paper); border-radius:8px; padding:9px 16px; cursor:pointer; font-weight:600; font-size:13px; font-family:inherit; }
   .btn:hover{ border-color:var(--red); color:var(--red); }
   .btn.primary{ background:var(--red); border-color:var(--red); color:#fff; }
   .btn.primary:hover{ background:var(--red-dark); color:#fff; }
+  .btn.outline-red{ background:#fff; border-color:var(--red); color:var(--red); }
+  .btn.outline-red:hover{ background:var(--red-tint); }
+
+  .url-cell{ display:flex; align-items:center; gap:6px; }
+  .link-chip{ flex-shrink:0; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; border:1px solid var(--red); color:var(--red); text-decoration:none; white-space:nowrap; }
+  .link-chip.is-disabled{ opacity:.35; pointer-events:none; color:var(--gray-500); border-color:var(--gray-300); }
 
   .table-scroll{ overflow-x:auto; background:var(--paper); border:1px solid var(--gray-300); border-radius:var(--radius); }
   table{ border-collapse:collapse; width:100%; min-width:900px; font-size:13.5px; }
@@ -165,7 +171,7 @@ const CATS = [
     fields:[
       {k:'elemento',l:'Elemento',t:'text',w:220},
       {k:'estado',l:'Estado',t:'stage',o:['Pendiente','En progreso','En revisión','Listo']},
-      {k:'link',l:'Link / archivo',t:'url',w:200},
+      {k:'link',l:'Link / archivo',t:'url',w:200,linkBtn:'CV'},
       {k:'notas',l:'Notas',t:'textarea',w:260}]},
   { id:'portfolio', name:'Portfolio/Website', intro:'Secciones de tu web o portfolio y su estado.',
     seed:['Home','Bio','Música','Videos','Conciertos / fechas','Galería de fotos','Press kit (EPK)','Contacto','Tienda / merch'].map(e=>({seccion:e})),
@@ -262,7 +268,12 @@ function cellHTML(f,row){
     case 'textarea': return `<textarea ${a} rows="1"${mw}>${esc(v)}</textarea>`;
     case 'date': return `<input type="date" ${a} value="${esc(v)}" style="min-width:140px">`;
     case 'number': return `<input type="number" min="0" step="0.5" ${a} value="${esc(v)}"${mw}>`;
-    case 'url': return `<input type="url" ${a} value="${esc(v)}" placeholder="https://"${mw}>`;
+    case 'url': {
+      const input = `<input type="url" ${a} value="${esc(v)}" placeholder="https://"${mw}>`;
+      if(!f.linkBtn) return input;
+      const disabled = v ? '' : ' is-disabled';
+      return `<div class="url-cell">${input}<a class="link-chip${disabled}" href="${v ? esc(v) : '#'}" target="_blank" rel="noopener">${esc(f.linkBtn)}</a></div>`;
+    }
     case 'stage': return trackHTML(f,v);
     default: return `<input type="text" ${a} value="${esc(v)}"${f.list?` list="dl-${f.k}"`:''}${mw}>`;
   }
@@ -286,7 +297,7 @@ function renderCat(){
     <p class="cat-intro">${esc(c.intro)}</p>
     <div class="toolbar">
       <button class="btn primary" id="add" type="button">Añadir fila</button>
-      <button class="btn" id="csv" type="button">Descargar CSV</button>
+      <button class="btn outline-red" id="excel" type="button">Descargar Excel</button>
     </div>
     ${lists}
     <div class="table-scroll"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
@@ -324,6 +335,10 @@ $('#cat').addEventListener('input', e=>{
   const el = e.target, row = rowOf(el); if(!row || !el.dataset.k) return;
   row[el.dataset.k] = el.value;
   if(el.tagName==='TEXTAREA') autoGrow(el);
+  if(el.type==='url'){
+    const chip = el.parentElement.querySelector('.link-chip');
+    if(chip){ chip.href = el.value || '#'; chip.classList.toggle('is-disabled', !el.value); }
+  }
   if(el.dataset.k==='objetivo'){ markOverdue(); renderBoard(); }
   scheduleSave();
 });
@@ -334,7 +349,7 @@ $('#cat').addEventListener('click', e=>{
     const trs = document.querySelectorAll('#cat tbody tr'); trs[trs.length-1]?.querySelector('input,select,textarea')?.focus();
     return;
   }
-  if(e.target.id==='csv'){ exportCSV(); return; }
+  if(e.target.id==='excel'){ exportExcel(); return; }
   const stepBtn = e.target.closest('[data-stage]');
   if(stepBtn){
     const track = stepBtn.closest('.track'), row = rowOf(track);
@@ -365,15 +380,19 @@ $('#undo').addEventListener('click', ()=>{
   $('#toast').classList.remove('show'); render(); scheduleSave();
 });
 
-/* ---------- CSV ---------- */
-function exportCSV(){
+/* ---------- Excel ---------- */
+// Same "HTML masquerading as the real file" trick used for Word docs
+// elsewhere in this project: Excel opens an HTML table fine when it's given
+// the .xls extension and the ms-excel MIME type — no real .xlsx/OOXML or
+// external library needed for plain tabular data like this.
+function exportExcel(){
   const c = CATS.find(x=>x.id===state.current);
-  const q = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
-  const lines = [c.fields.map(f=>q(f.l)).join(',')].concat(state.rows[c.id].map(r=>c.fields.map(f=>q(r[f.k])).join(',')));
-  const name = (state.student ? state.student.trim().replace(/\s+/g,'-')+'-' : '') + c.name.replace(/[^\wÀ-ÿ]+/g,'-') + '.csv';
-  const data = '﻿'+lines.join('\n');
+  const headerRow = '<tr>' + c.fields.map(f=>`<th>${esc(f.l)}</th>`).join('') + '</tr>';
+  const bodyRows = state.rows[c.id].map(r => '<tr>' + c.fields.map(f=>`<td>${esc(r[f.k])}</td>`).join('') + '</tr>').join('');
+  const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1">${headerRow}${bodyRows}</table></body></html>`;
+  const name = (state.student ? state.student.trim().replace(/\s+/g,'-')+'-' : '') + c.name.replace(/[^\wÀ-ÿ]+/g,'-') + '.xls';
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));
+  a.href = URL.createObjectURL(new Blob(['﻿', html],{type:'application/vnd.ms-excel'}));
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 }

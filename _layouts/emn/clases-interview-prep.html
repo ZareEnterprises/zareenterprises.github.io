@@ -43,6 +43,11 @@
   .qlist-card.grp-g3{ border-left-color:#2E8B47; }
   .qlist-card.grp-g4{ border-left-color:#7A4FBE; }
   .qlist-card .qlist-progress{ font-size:11.5px; color:var(--gray-500); margin:6px 0 0; }
+  .qlist-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .qlist-check{
+    flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+    width:20px; height:20px; border-radius:50%; background:#1E8E5A; color:#fff; font-size:12px; font-weight:700;
+  }
 
   .view-actions{ display:flex; justify-content:flex-end; margin-bottom:16px; }
   .intro-textarea{ font-weight:700; }
@@ -362,9 +367,13 @@ function renderPreguntasList(){
   container.innerHTML = FINAL_QUESTIONS.map((fq, idx) => {
     const total = fq.prelim.length;
     const answered = fq.prelim.filter(p => (prelimAnswers[p.key]?.answer_text || '').trim()).length;
+    const isComplete = total > 0 && answered === total;
     return `
       <button type="button" class="qlist-card ${fq.group ? 'grp-' + fq.group : ''}" data-final-id="${fq.id}">
-        ${idx + 1}. ${fq.text}
+        <div class="qlist-row">
+          <span>${idx + 1}. ${fq.text}</span>
+          ${isComplete ? '<span class="qlist-check" title="Todas las preguntas previas respondidas">✓</span>' : ''}
+        </div>
         <p class="qlist-progress">${total === 0 ? 'Sin preguntas previas todavía' : `${answered}/${total} respondidas`}</p>
       </button>
     `;

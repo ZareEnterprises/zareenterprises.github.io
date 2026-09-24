@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es" class="emn-landing">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMN — Interview Prep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/emn-auth.js?v={{ site.time | date: '%s' }}"></script>
+<style>
+  body{ background:var(--gray-100); font-family:var(--font-body); color:var(--ink); margin:0; }
+  .wrap{ max-width:820px; margin:0 auto; padding:32px 24px 60px; }
+  .head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:12px; }
+  .head h1{ font-family:var(--font-display); font-size:26px; margin:0; }
+  .head a.back{ font-size:13px; color:var(--gray-700); text-decoration:none; }
+  .intro{ font-size:13.5px; color:var(--gray-700); margin:0 0 20px; line-height:1.5; }
+  #gate-msg{ text-align:center; padding:100px 20px; color:var(--gray-700); }
+  #gate-msg a{ color:var(--red); }
+  #admin-view-banner{
+    background:var(--red-tint); border:1px solid var(--red); border-radius:8px; padding:10px 16px;
+    font-size:12.5px; color:var(--red); margin:0 0 18px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  #admin-view-banner a{ color:var(--red); font-weight:600; }
+
+  .tabs{ display:flex; gap:10px; margin-bottom:22px; flex-wrap:wrap; }
+  .tab-btn{
+    border:1px solid var(--red); background:var(--red-tint); font-family:var(--font-display); font-size:13.5px; font-weight:600;
+    color:var(--red); padding:10px 18px; border-radius:8px; cursor:pointer; transition:.15s;
+  }
+  .tab-btn.is-active, .tab-btn:hover{ background:var(--red); color:#fff; }
+  .view{ display:none; }
+  .view.is-active{ display:block; }
+
+  .qlist-card{
+    display:block; width:100%; text-align:left; background:var(--paper); border:1px solid var(--gray-300);
+    border-left:4px solid var(--gray-300); border-radius:var(--radius); padding:16px 20px; margin-bottom:12px;
+    cursor:pointer; font-family:inherit; font-size:14px; color:var(--ink); transition:.15s;
+  }
+  .qlist-card:hover{ box-shadow:0 4px 14px rgba(0,0,0,.07); }
+  .qlist-card.grp-g1{ border-left-color:#E08A00; }
+  .qlist-card.grp-g2{ border-left-color:var(--blue); }
+  .qlist-card.grp-g3{ border-left-color:#2E8B47; }
+  .qlist-card.grp-g4{ border-left-color:#7A4FBE; }
+  .qlist-card .qlist-progress{ font-size:11.5px; color:var(--gray-500); margin:6px 0 0; }
+
+  .view-actions{ display:flex; justify-content:flex-end; margin-bottom:16px; }
+  .intro-textarea{ font-weight:700; }
+  .field-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gray-500); margin:0 0 4px; }
+
+  .final-row{ display:flex; gap:12px; align-items:flex-start; }
+  .final-boxes{ flex:1; display:flex; flex-direction:column; }
+  .final-summary-col{ flex-shrink:0; width:190px; display:flex; flex-direction:column; gap:8px; }
+  .final-summary-btn{ font-size:12px; padding:7px 12px; white-space:nowrap; }
+  .final-summary-col .ai-box{ margin-top:0; }
+
+  .q-card{ background:var(--paper); border:1px solid var(--gray-300); border-left:4px solid var(--gray-300); border-radius:var(--radius); padding:20px 22px; margin-bottom:16px; }
+  .q-card.grp-g1{ border-left-color:#E08A00; }
+  .q-card.grp-g2{ border-left-color:var(--blue); }
+  .q-card.grp-g3{ border-left-color:#2E8B47; }
+  .q-card.grp-g4{ border-left-color:#7A4FBE; }
+  .q-card .parent-q{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gray-500); margin:0 0 4px; }
+  .q-card.grp-g1 .parent-q{ color:#E08A00; }
+  .q-card.grp-g2 .parent-q{ color:var(--blue); }
+  .q-card.grp-g3 .parent-q{ color:#2E8B47; }
+  .q-card.grp-g4 .parent-q{ color:#7A4FBE; }
+  .q-card label{ display:block; font-family:var(--font-display); font-size:15.5px; font-weight:600; margin-bottom:4px; }
+  .q-card .es{ font-size:12.5px; color:var(--gray-500); font-style:italic; margin:0 0 12px; }
+  .gema-tag{
+    display:inline-block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--red); background:var(--red-tint); border-radius:4px; padding:2px 7px; margin:0 0 10px;
+  }
+
+  .q-row{ display:flex; gap:8px; align-items:flex-start; }
+  textarea{
+    flex:1; min-height:90px; border:1px solid var(--gray-300); border-radius:8px; padding:10px 12px;
+    font-family:inherit; font-size:13.5px; color:var(--ink); resize:vertical;
+  }
+  textarea:focus{ outline:none; border-color:var(--red); }
+  .mic-btn{
+    flex-shrink:0; border:1px solid var(--gray-300); background:var(--paper); border-radius:8px;
+    width:38px; height:38px; font-size:16px; cursor:pointer; transition:.15s;
+  }
+  .mic-btn:hover{ border-color:var(--red); }
+  .mic-btn.is-recording{ background:var(--red); border-color:var(--red); animation:pulse 1.2s infinite; }
+  .mic-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(200,16,46,.4); } 50%{ box-shadow:0 0 0 6px rgba(200,16,46,0); } }
+
+  .card-actions{ display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
+  .btn-primary{
+    border:none; background:var(--red); color:#fff; font-weight:600; font-size:13px;
+    padding:9px 16px; border-radius:8px; cursor:pointer; transition:.15s;
+  }
+  .btn-primary:hover{ background:var(--red-dark); }
+  .btn-primary:disabled{ opacity:.6; cursor:default; }
+  .btn-ghost{
+    border:1px solid var(--gray-300); background:none; color:var(--gray-700); font-weight:600; font-size:12.5px;
+    padding:8px 14px; border-radius:8px; cursor:pointer; transition:.15s;
+  }
+  .btn-ghost:hover{ border-color:var(--red); color:var(--red); }
+  .btn-ghost:disabled{ opacity:.5; cursor:default; }
+  .mini-status{ font-size:11.5px; color:var(--gray-500); }
+
+  .ai-box{
+    display:none; margin-top:12px; background:var(--gray-100); border:1px dashed var(--gray-300);
+    border-radius:8px; padding:12px 14px; font-size:12.5px; color:var(--ink); line-height:1.55;
+  }
+  .ai-box.has-content{ display:block; }
+  .ai-box .ai-label{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--red); margin:0 0 6px; }
+
+  /* -------- Preguntas (stepper) -------- */
+  .stepper-progress{ font-size:12px; color:var(--gray-500); margin-bottom:10px; }
+  .stepper-nav{ display:flex; justify-content:space-between; margin-top:16px; }
+
+  /* -------- Gemas -------- */
+  .gema-section{ margin-bottom:30px; }
+  .gema-section h2{ font-family:var(--font-display); font-size:18px; margin:0 0 4px; }
+  .gema-section .gema-count{ font-size:12px; color:var(--gray-500); margin:0 0 14px; }
+  .gema-empty{ font-size:12.5px; color:var(--gray-500); font-style:italic; }
+</style>
+</head>
+<body>
+
+<header class="emn-header">
+  <div class="emn-header__inner">
+    <a href="https://zareenterprises.github.io/emn" class="emn-logo">
+      <img src="/assets/img/emn-logo.png" alt="EMN logo">
+    </a>
+    <nav class="emn-nav">
+      <a href="https://zareenterprises.github.io/emn" class="emn-nav__link">Home</a>
+      <div class="emn-nav__item">
+        <a href="https://zareenterprises.github.io/practice-lab" class="emn-nav__link">EMN Practice Lab</a>
+        <button class="emn-nav__caret" aria-label="Abrir submenú de EMN Practice Lab" aria-expanded="false">&#9662;</button>
+        <div class="emn-nav__dropdown">
+          <a href="https://zareenterprises.github.io/sight-melody" class="emn-nav__dropdown-item">Sight reading &amp; Audio Practice</a>
+          <a href="https://zareenterprises.github.io/interview-prep" class="emn-nav__dropdown-item">Berklee Interview Prep</a>
+          <span class="emn-nav__dropdown-item is-disabled">Berklee Improvisation Practice <span class="soon">Pronto</span></span>
+          <span class="emn-nav__dropdown-item is-disabled">Berklee Piece &amp; Impro <span class="soon">Pronto</span></span>
+        </div>
+      </div>
+      <a href="https://zareenterprises.github.io/feedback" class="emn-nav__link">Obtén Feedback</a>
+      <a href="https://www.instagram.com/emn.latam/" class="emn-nav__link emn-nav__link--external" target="_blank" rel="noopener">Nosotros</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="head">
+    <h1>Interview Prep</h1>
+    <a class="back" href="/practice-lab">&larr; Volver a Practice Lab</a>
+  </div>
+  <p class="intro">Preparate para la entrevista de la audición. Respondé primero las preguntas previas en español (te van a ayudar a pensar), después escribí tus respuestas finales en inglés. Solo vos las ves.</p>
+
+  <div id="gate-msg" style="display:none"></div>
+  <div id="admin-view-banner" style="display:none"></div>
+
+  <div id="body" style="display:none">
+    <div class="tabs">
+      <button type="button" class="tab-btn is-active" data-view="preguntas">Preguntas</button>
+      <button type="button" class="tab-btn" data-view="finales">Respuestas Finales</button>
+      <button type="button" class="tab-btn" data-view="gemas">Gemas</button>
+    </div>
+
+    <div class="view is-active" id="view-preguntas"></div>
+    <div class="view" id="view-finales"></div>
+    <div class="view" id="view-gemas"></div>
+  </div>
+</div>
+
+<script>
+const GEMAS = ['Capacidad', 'Motor', 'Origen', 'Progreso', 'Identidad', 'Vision', 'Comunidad'];
+
+// group = color grouping of final questions that share the same ambito;
+// null = not yet assigned. prelim = preliminary Spanish questions that
+// unlock/build toward that final English answer; each one is answered and
+// saved on its own.
+const FINAL_QUESTIONS = [
+  {
+    id: 'favorite-part',
+    text: 'What is your favorite part of being a musician?',
+    group: 'g1',
+    prelim: [
+      { key: 'origen-inicio', text: '¿Cómo iniciaste con la música?', gema: 'Origen' },
+      { key: 'origen-influencia-padres', text: '¿Cuál fue la influencia de tus padres o personas cercanas en tu acercamiento a la música?', gema: 'Origen' }
+    ]
+  },
+  {
+    id: 'inspiration',
+    text: 'What inspired you to pursue a music career?',
+    group: 'g1',
+    prelim: [
+      { key: 'motor-emociones', text: '¿Qué emociones desahogabas o creabas mientras tocabas música?', gema: 'Motor' },
+      { key: 'motor-sucesos', text: '¿Qué sucesos únicos te inclinaron a tocar el instrumento o el género que te llevó a querer ser músico?', gema: 'Motor' },
+      { key: 'motor-quien-inspira', text: '¿Quién/es te inspiran a hacer música?', gema: 'Motor' }
+    ]
+  },
+  {
+    id: 'community',
+    text: 'What does community / safe environment mean to you?',
+    group: 'g2',
+    prelim: [
+      { key: 'comunidad-representas', text: '¿De qué comunidad te sientes parte y puedes decir que la representas?', gema: 'Comunidad' },
+      { key: 'comunidad-aportas', text: '¿Con qué aportas a una comunidad de la que formas parte?', gema: 'Comunidad' }
+    ]
+  },
+  {
+    id: 'offer-different',
+    text: 'What could you offer Berklee? What makes you different from other applicants?',
+    group: 'g2',
+    prelim: [
+      { key: 'origen-costumbres-familia', text: '¿Qué costumbres mantienen en tu familia desde hace generaciones?', gema: 'Identidad' },
+      { key: 'origen-diferente', text: '¿Qué te hace diferente a los demás?', gema: 'Identidad' }
+    ]
+  },
+  {
+    id: 'practice-routine',
+    text: 'What are your practice routines?',
+    group: 'g3',
+    prelim: [
+      { key: 'progreso-consiste-practica', text: '¿En qué consiste tu práctica con tu instrumento?', gema: 'Progreso' },
+      { key: 'progreso-frecuencia', text: '¿Con qué frecuencia practicas?', gema: 'Progreso' },
+      { key: 'progreso-objetivo-complejo', text: 'Da un ejemplo de algún objetivo complejo musical y cómo practicaste para lograrlo.', gema: 'Progreso' }
+    ]
+  },
+  {
+    id: 'success-qualities',
+    text: 'What are the qualities of a successful musician?',
+    group: 'g3',
+    prelim: [
+      { key: 'progreso-cualidades-exitoso', text: '¿Cuáles son las cualidades que, de tenerlas, crees que serías un músico exitoso?', gema: 'Progreso' }
+    ]
+  },
+  {
+    id: 'strengths',
+    text: 'What are your musical strengths?',
+    group: 'g3',
+    prelim: [
+      { key: 'capacidad-no-tienes-ganas', text: '¿En qué piensas para sentarte a practicar cuando no tienes ganas?', gema: 'Capacidad' },
+      { key: 'capacidad-debilidades', text: '¿Cuáles son tus debilidades musicales?', gema: 'Capacidad' },
+      { key: 'capacidad-orgulloso', text: '¿Qué aspectos musicales te sientes orgulloso/a de tener y/o haber desarrollado?', gema: 'Capacidad' }
+    ]
+  },
+  {
+    id: 'industry-excitement',
+    text: 'What excites you about the industry? What career opportunities would you like to take advantage of in the music industry?',
+    group: 'g4',
+    prelim: [
+      { key: 'vision-lograr-berklee', text: '¿Qué te gustaría lograr una vez inicies tus clases en Berklee?', gema: 'Vision' },
+      { key: 'vision-5-anos', text: '¿Dónde te ves en 5 años después de egresar de Berklee?', gema: 'Vision' }
+    ]
+  },
+  {
+    id: 'why-berklee',
+    text: "Why Berklee? What about Berklee's programs and activities speak to your career goals?",
+    group: 'g4',
+    prelim: [
+      { key: 'vision-por-que-major', text: '¿Por qué te gusta tu major escogido?', gema: 'Vision' },
+      { key: 'vision-resources-berklee', text: 'Investiga exactamente qué resources tiene Berklee que te ayudarían a tu proyecto a largo plazo.', gema: 'Vision' },
+      { key: 'vision-comparar-escuelas', text: 'Investiga otras 3 escuelas y compáralas con Berklee — ¿qué tiene Berklee que no tengan esas otras, y que te sirva exclusivamente a ti?', gema: 'Vision' }
+    ]
+  }
+];
+
+// Flattened list of every preliminary question across all final questions,
+// each carrying a reference back to its parent for context/coloring.
+const PRELIM_FLAT = FINAL_QUESTIONS.flatMap(fq =>
+  fq.prelim.map(p => ({ ...p, parentId: fq.id, parentText: fq.text, group: fq.group }))
+);
+
+let prelimAnswers = {};   // question_key -> { answer_text, ai_summary }
+let finalAnswers = {};    // question_id  -> { intro_text, explicacion_text, ai_intro_draft, ai_explicacion_draft }
+let selectedFinalId = null; // which final question's prelim stepper is open, in the Preguntas view
+let stepIndex = 0;
+
+// Admin/professor view-as-student mode: ?student=<id> in the URL, only
+// honored when the signed-in person is staff — otherwise everyone always
+// reads/writes their own row, same as before.
+let effectiveStudentId = null;
+let viewingStudent = null;
+
+/* ============================= DATA LOADING ============================= */
+
+async function loadPrelimAnswers(){
+  const { data, error } = await emnSupabase
+    .from('interview_prep_prelim_answers')
+    .select('question_key, answer_text, ai_summary')
+    .eq('student_id', effectiveStudentId);
+  if(error){ console.error('loadPrelimAnswers', error); return; }
+  prelimAnswers = {};
+  (data || []).forEach(row => { prelimAnswers[row.question_key] = row; });
+}
+
+async function loadFinalAnswers(){
+  const { data, error } = await emnSupabase
+    .from('interview_prep_final_answers')
+    .select('question_id, intro_text, explicacion_text, ai_intro_draft, ai_explicacion_draft')
+    .eq('student_id', effectiveStudentId);
+  if(error){ console.error('loadFinalAnswers', error); return; }
+  finalAnswers = {};
+  (data || []).forEach(row => { finalAnswers[row.question_id] = row; });
+}
+
+async function savePrelimAnswer(key, answerText){
+  const { data, error } = await emnSupabase
+    .from('interview_prep_prelim_answers')
+    .upsert({ student_id: effectiveStudentId, question_key: key, answer_text: answerText, updated_at: new Date().toISOString() }, { onConflict: 'student_id,question_key' })
+    .select('question_key, answer_text, ai_summary')
+    .single();
+  if(error){ console.error('savePrelimAnswer', error); return null; }
+  prelimAnswers[key] = data;
+  return data;
+}
+
+async function saveFinalAnswer(id, introText, explicacionText){
+  const { data, error } = await emnSupabase
+    .from('interview_prep_final_answers')
+    .upsert({ student_id: effectiveStudentId, question_id: id, intro_text: introText, explicacion_text: explicacionText, updated_at: new Date().toISOString() }, { onConflict: 'student_id,question_id' })
+    .select('question_id, intro_text, explicacion_text, ai_intro_draft, ai_explicacion_draft')
+    .single();
+  if(error){ console.error('saveFinalAnswer', error); return null; }
+  finalAnswers[id] = data;
+  return data;
+}
+
+/* ===== AI summary / draft — calls the emn-interview-summarize Edge Function.
+   Not deployed yet (needs an AI API key set as a Supabase secret first). ===== */
+async function requestAiSummary(mode, payload){
+  const { data: { session } } = await emnSupabase.auth.getSession();
+  const res = await fetch('https://gpoddvcrsdkpgfmyniqu.supabase.co/functions/v1/emn-interview-summarize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ mode, ...payload })
+  });
+  const json = await res.json();
+  if(!res.ok) throw new Error(json.error || 'AI request failed');
+  return json;
+}
+
+/* ============================= TABS ============================= */
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('is-active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    document.getElementById(`view-${btn.dataset.view}`).classList.add('is-active');
+  });
+});
+
+/* ============================= VIEW: PREGUNTAS (lista + stepper por pregunta) ============================= */
+
+function renderPreguntasView(){
+  if(selectedFinalId){
+    renderPreguntasStepper();
+  } else {
+    renderPreguntasList();
+  }
+}
+
+function renderPreguntasList(){
+  const container = document.getElementById('view-preguntas');
+  container.innerHTML = FINAL_QUESTIONS.map((fq, idx) => {
+    const total = fq.prelim.length;
+    const answered = fq.prelim.filter(p => (prelimAnswers[p.key]?.answer_text || '').trim()).length;
+    return `
+      <button type="button" class="qlist-card ${fq.group ? 'grp-' + fq.group : ''}" data-final-id="${fq.id}">
+        ${idx + 1}. ${fq.text}
+        <p class="qlist-progress">${total === 0 ? 'Sin preguntas previas todavía' : `${answered}/${total} respondidas`}</p>
+      </button>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.qlist-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const fq = FINAL_QUESTIONS.find(f => f.id === card.dataset.finalId);
+      if(!fq.prelim.length) return;
+      selectedFinalId = fq.id;
+      stepIndex = 0;
+      renderPreguntasView();
+    });
+  });
+}
+
+function renderPreguntasStepper(){
+  const container = document.getElementById('view-preguntas');
+  const fq = FINAL_QUESTIONS.find(f => f.id === selectedFinalId);
+  const prelim = fq.prelim;
+  if(stepIndex >= prelim.length) stepIndex = prelim.length - 1;
+  const p = prelim[stepIndex];
+  const existing = prelimAnswers[p.key];
+
+  container.innerHTML = `
+    <button type="button" class="btn-ghost" id="back-to-list" style="margin-bottom:14px;">&larr; Volver a todas las preguntas</button>
+    <p class="stepper-progress">${fq.text} — pregunta previa ${stepIndex + 1} de ${prelim.length}</p>
+    <div class="q-card ${fq.group ? 'grp-' + fq.group : ''}">
+      <p class="parent-q">${fq.text}</p>
+      <span class="gema-tag">${p.gema}</span>
+      <label for="prelim-input">${p.text}</label>
+      <div class="q-row">
+        <textarea id="prelim-input" placeholder="Tu respuesta…">${existing?.answer_text || ''}</textarea>
+        <button type="button" class="mic-btn" id="prelim-mic" title="Dictar por voz en español">🎤</button>
+      </div>
+      <div class="card-actions">
+        <button type="button" class="btn-primary" id="prelim-submit">Guardar y continuar</button>
+        <button type="button" class="btn-ghost" id="prelim-ai-btn">Generar conclusión con AI</button>
+        <span class="mini-status" id="prelim-status"></span>
+      </div>
+      <div class="ai-box ${existing?.ai_summary ? 'has-content' : ''}" id="prelim-ai-box">
+        <p class="ai-label">Conclusión AI</p>
+        <div id="prelim-ai-text">${existing?.ai_summary || ''}</div>
+      </div>
+    </div>
+    <div class="stepper-nav">
+      <button type="button" class="btn-ghost" id="prelim-prev" ${stepIndex === 0 ? 'disabled' : ''}>&larr; Anterior</button>
+      <button type="button" class="btn-ghost" id="prelim-next" ${stepIndex === prelim.length - 1 ? 'disabled' : ''}>Siguiente &rarr;</button>
+    </div>
+  `;
+
+  document.getElementById('back-to-list').addEventListener('click', () => {
+    selectedFinalId = null;
+    renderPreguntasView();
+  });
+
+  attachSpeechToText(document.getElementById('prelim-input'), document.getElementById('prelim-mic'));
+
+  document.getElementById('prelim-submit').addEventListener('click', async () => {
+    const btn = document.getElementById('prelim-submit');
+    const status = document.getElementById('prelim-status');
+    const text = document.getElementById('prelim-input').value.trim();
+    btn.disabled = true;
+    const saved = await savePrelimAnswer(p.key, text);
+    btn.disabled = false;
+    if(!saved){ status.textContent = 'No se pudo guardar.'; return; }
+    status.textContent = 'Guardado ✓';
+    setTimeout(() => { status.textContent = ''; }, 2000);
+    if(stepIndex < prelim.length - 1){ stepIndex++; renderPreguntasView(); }
+  });
+
+  document.getElementById('prelim-ai-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('prelim-ai-btn');
+    const box = document.getElementById('prelim-ai-box');
+    const text = document.getElementById('prelim-input').value.trim();
+    if(!text) return;
+    btn.disabled = true;
+    btn.textContent = 'Generando…';
+    try {
+      const { summary } = await requestAiSummary('prelim', { question: p.text, answer: text });
+      document.getElementById('prelim-ai-text').textContent = summary;
+      box.classList.add('has-content');
+      await emnSupabase.from('interview_prep_prelim_answers')
+        .update({ ai_summary: summary })
+        .eq('student_id', effectiveStudentId).eq('question_key', p.key);
+      if(prelimAnswers[p.key]) prelimAnswers[p.key].ai_summary = summary;
+    } catch(err){
+      console.error(err);
+      alert('No se pudo generar la conclusión — probá de nuevo en un momento.');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Generar conclusión con AI';
+  });
+
+  document.getElementById('prelim-prev').addEventListener('click', () => { stepIndex--; renderPreguntasView(); });
+  document.getElementById('prelim-next').addEventListener('click', () => { stepIndex++; renderPreguntasView(); });
+}
+
+/* ============================= VIEW: RESPUESTAS FINALES ============================= */
+
+function renderFinalesView(){
+  const container = document.getElementById('view-finales');
+  container.innerHTML = `
+    <div class="view-actions">
+      <button type="button" class="btn-primary" id="download-word-btn">Descargar todas en Word</button>
+    </div>
+  ` + FINAL_QUESTIONS.map(fq => {
+    const existing = finalAnswers[fq.id];
+    const hasPrelim = fq.prelim.length > 0;
+    return `
+      <div class="q-card ${fq.group ? 'grp-' + fq.group : ''}">
+        <label>${fq.text}</label>
+
+        <div class="final-row">
+          <div class="final-boxes">
+            <p class="field-label">Intro</p>
+            <textarea id="final-intro-${fq.id}" class="intro-textarea" placeholder="Frase de apertura…">${existing?.intro_text || ''}</textarea>
+            <p class="field-label" style="margin-top:10px;">Explicación</p>
+            <textarea id="final-explicacion-${fq.id}" placeholder="Desarrollo de tu respuesta…">${existing?.explicacion_text || ''}</textarea>
+          </div>
+          <div class="final-summary-col">
+            <button type="button" class="btn-primary final-summary-btn" data-final-ai="${fq.id}" ${hasPrelim ? '' : 'disabled title="Respondé primero las preguntas previas de esta pregunta"'}>Generar resumen</button>
+            <div class="ai-box ${(existing?.ai_intro_draft || existing?.ai_explicacion_draft) ? 'has-content' : ''}" data-final-ai-box="${fq.id}">
+              <p class="ai-label">Resumen AI</p>
+              <p><b data-final-ai-intro="${fq.id}">${existing?.ai_intro_draft || ''}</b></p>
+              <div data-final-ai-explicacion="${fq.id}">${existing?.ai_explicacion_draft || ''}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button type="button" class="btn-primary" data-final-save="${fq.id}">Guardar</button>
+          <span class="mini-status" data-final-status="${fq.id}"></span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('download-word-btn').addEventListener('click', downloadFinalAnswersAsWord);
+
+  FINAL_QUESTIONS.forEach(fq => {
+    document.querySelector(`[data-final-save="${fq.id}"]`).addEventListener('click', async () => {
+      const status = document.querySelector(`[data-final-status="${fq.id}"]`);
+      const introText = document.getElementById(`final-intro-${fq.id}`).value.trim();
+      const explicacionText = document.getElementById(`final-explicacion-${fq.id}`).value.trim();
+      const saved = await saveFinalAnswer(fq.id, introText, explicacionText);
+      status.textContent = saved ? 'Guardado ✓' : 'No se pudo guardar.';
+      setTimeout(() => { status.textContent = ''; }, 2000);
+    });
+
+    const aiBtn = document.querySelector(`[data-final-ai="${fq.id}"]`);
+    if(aiBtn && fq.prelim.length > 0){
+      aiBtn.addEventListener('click', async () => {
+        aiBtn.disabled = true;
+        aiBtn.textContent = 'Generando…';
+        try {
+          const prelimQAs = fq.prelim.map(p => ({ question: p.text, answer: prelimAnswers[p.key]?.answer_text || '' }));
+          const { introDraft, explicacionDraft } = await requestAiSummary('final', { finalQuestion: fq.text, prelimQAs });
+          document.querySelector(`[data-final-ai-intro="${fq.id}"]`).textContent = introDraft;
+          document.querySelector(`[data-final-ai-explicacion="${fq.id}"]`).textContent = explicacionDraft;
+          document.querySelector(`[data-final-ai-box="${fq.id}"]`).classList.add('has-content');
+          await emnSupabase.from('interview_prep_final_answers')
+            .upsert({ student_id: effectiveStudentId, question_id: fq.id, ai_intro_draft: introDraft, ai_explicacion_draft: explicacionDraft, updated_at: new Date().toISOString() }, { onConflict: 'student_id,question_id' });
+        } catch(err){
+          console.error(err);
+          alert('No se pudo generar el resumen — probá de nuevo en un momento.');
+        }
+        aiBtn.disabled = false;
+        aiBtn.textContent = 'Generar resumen';
+      });
+    }
+  });
+}
+
+function escapeHtml(str){
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// "Download as Word" without any library: Word opens an HTML file fine when
+// it's given a .doc extension and the msword MIME type — no real .docx/OOXML
+// needed for plain text + bold like this.
+function downloadFinalAnswersAsWord(){
+  let html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Calibri, Arial, sans-serif;">';
+  html += '<h1>EMN — Interview Prep: Respuestas Finales</h1>';
+  FINAL_QUESTIONS.forEach((fq, idx) => {
+    const ans = finalAnswers[fq.id] || {};
+    html += `<h2>${idx + 1}. ${escapeHtml(fq.text)}</h2>`;
+    html += `<p><b>${escapeHtml(ans.intro_text || '').replace(/\n/g, '<br>')}</b></p>`;
+    html += `<p>${escapeHtml(ans.explicacion_text || '').replace(/\n/g, '<br>')}</p>`;
+    html += '<hr>';
+  });
+  html += '</body></html>';
+
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'EMN-Interview-Prep-Respuestas-Finales.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ============================= VIEW: GEMAS ============================= */
+
+function renderGemasView(){
+  const container = document.getElementById('view-gemas');
+  container.innerHTML = GEMAS.map(gema => {
+    const items = PRELIM_FLAT.filter(p => p.gema === gema);
+    return `
+      <div class="gema-section">
+        <h2>${gema}</h2>
+        <p class="gema-count">${items.length} pregunta${items.length === 1 ? '' : 's'}</p>
+        ${items.length === 0 ? '<p class="gema-empty">Todavía no hay preguntas en esta gema.</p>' : items.map(p => {
+          const ans = prelimAnswers[p.key];
+          return `
+            <div class="q-card ${p.group ? 'grp-' + p.group : ''}">
+              <p class="parent-q">${p.parentText}</p>
+              <label>${p.text}</label>
+              <p style="font-size:13.5px; white-space:pre-wrap; margin:0 0 8px;">${ans?.answer_text ? ans.answer_text : '<span class="gema-empty">Sin responder todavía.</span>'}</p>
+              ${ans?.ai_summary ? `<div class="ai-box has-content"><p class="ai-label">Conclusión AI</p><div>${ans.ai_summary}</div></div>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ============================= SPEECH TO TEXT (shared) ============================= */
+// Dictado por voz en español — Web Speech API, corre 100% en el navegador
+// (sin backend). Solo Chrome/Edge la soportan; en Safari/Firefox el botón
+// queda deshabilitado.
+function attachSpeechToText(textarea, micBtn){
+  if(!textarea || !micBtn) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    micBtn.disabled = true;
+    micBtn.title = 'Tu navegador no soporta dictado por voz — probá con Chrome o Edge.';
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'es-419';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  let listening = false;
+  let baseText = '';
+
+  recognition.onresult = (e) => {
+    let finalChunk = '';
+    let interimChunk = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const transcript = e.results[i][0].transcript;
+      if(e.results[i].isFinal) finalChunk += transcript;
+      else interimChunk += transcript;
+    }
+    if(finalChunk) baseText = (baseText + ' ' + finalChunk).trim();
+    textarea.value = (baseText + ' ' + interimChunk).trim();
+  };
+
+  recognition.onerror = (e) => {
+    console.error('speech recognition error', e.error);
+    stopListening();
+  };
+
+  recognition.onend = () => {
+    if(listening) recognition.start();
+  };
+
+  function startListening(){
+    baseText = textarea.value;
+    listening = true;
+    micBtn.classList.add('is-recording');
+    micBtn.textContent = '⏹';
+    recognition.start();
+  }
+  function stopListening(){
+    listening = false;
+    micBtn.classList.remove('is-recording');
+    micBtn.textContent = '🎤';
+    recognition.stop();
+  }
+
+  micBtn.addEventListener('click', () => {
+    listening ? stopListening() : startListening();
+  });
+}
+
+/* ============================= BOOT ============================= */
+
+async function boot(){
+  await emnInit();
+  const gate = document.getElementById('gate-msg');
+  if(!emnSession){
+    gate.innerHTML = 'Inicia sesión para completar tus respuestas. <a href="/emn-login">Inicia sesión</a> para continuar.';
+    gate.style.display = 'block';
+    return;
+  }
+
+  effectiveStudentId = emnSession.user.id;
+
+  const isStaff = emnStudentProfile?.role === 'admin' || emnStudentProfile?.role === 'professor';
+  const requestedStudentId = new URLSearchParams(location.search).get('student');
+  if(isStaff && requestedStudentId && requestedStudentId !== emnSession.user.id){
+    const { data: target } = await emnSupabase.from('students').select('*').eq('id', requestedStudentId).maybeSingle();
+    if(target){
+      viewingStudent = target;
+      effectiveStudentId = target.id;
+      const banner = document.getElementById('admin-view-banner');
+      banner.innerHTML = `<span>Estás viendo y editando las respuestas de <b>${target.full_name || target.email}</b> (modo staff).</span> <a href="/clases-interview-prep">Volver a las tuyas</a>`;
+      banner.style.display = 'flex';
+    }
+  }
+
+  await Promise.all([loadPrelimAnswers(), loadFinalAnswers()]);
+  renderPreguntasView();
+  renderFinalesView();
+  renderGemasView();
+  document.getElementById('body').style.display = 'block';
+}
+boot();
+</script>
+
+</body>
+</html>

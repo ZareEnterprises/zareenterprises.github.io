@@ -89,7 +89,7 @@
     <div class="card">
       <h2>Personas</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
         <tbody id="users-tbody"></tbody>
       </table>
     </div>
@@ -129,6 +129,7 @@ async function loadUsers(){
 
 function renderUsersTable(){
   const isAdmin = emnStudentProfile?.role === 'admin';
+  const isStaff = isAdmin || emnStudentProfile?.role === 'professor';
   document.getElementById('users-tbody').innerHTML = ALL_USERS.map(u => `
     <tr data-id="${u.id}">
       <td>${u.full_name || '—'}</td>
@@ -141,8 +142,9 @@ function renderUsersTable(){
            </select>`
         : `<span class="role-pill ${u.role}">${ROLE_LABELS[u.role] || u.role}</span>`}</td>
       <td><span class="status-pill ${u.status}">${u.status === 'active' ? 'Activo' : 'Pendiente'}</span></td>
+      <td>${isStaff ? `<a href="/clases-interview-prep?student=${u.id}" style="font-size:12.5px;color:var(--red);font-weight:600;text-decoration:none;">Ver Interview Prep</a>` : ''}</td>
     </tr>
-  `).join('') || '<tr><td colspan="4" style="color:var(--gray-500)">Nadie agregado todavía.</td></tr>';
+  `).join('') || '<tr><td colspan="5" style="color:var(--gray-500)">Nadie agregado todavía.</td></tr>';
 
   if(isAdmin){
     document.querySelectorAll('[data-role-for]').forEach(sel => {

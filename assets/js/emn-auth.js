@@ -101,24 +101,26 @@ function emnInjectAdminMenu(){
   });
 }
 
-// "Career" dropdown (Calendar) — any signed-in person (student, professor or
-// admin), never shown to a signed-out visitor since the calendar underneath
-// it is personal, per-account data. Built by hand for the same reason as
-// emnInjectAdminMenu(): it's injected after the shared caret-toggle script
-// has already wired up whatever `.emn-nav__item`s existed at page load.
+// "Clases" dropdown (Calendar, Interview Prep) — any signed-in person
+// (student, professor or admin), never shown to a signed-out visitor since
+// everything underneath it is personal, per-account data. Built by hand for
+// the same reason as emnInjectAdminMenu(): it's injected after the shared
+// caret-toggle script has already wired up whatever `.emn-nav__item`s
+// existed at page load.
 function emnInjectCareerMenu(){
   if(!emnSession) return;
   const nav = document.querySelector('.emn-nav');
   if(!nav) return;
 
-  const isActive = location.pathname.replace(/\/$/, '') === '/career';
+  const path = location.pathname.replace(/\/$/, '');
   const item = document.createElement('div');
   item.className = 'emn-nav__item';
   item.innerHTML = `
-    <a href="#" class="emn-nav__link">Career</a>
-    <button class="emn-nav__caret" aria-label="Abrir submenú de Career" aria-expanded="false">&#9662;</button>
+    <a href="#" class="emn-nav__link">Clases</a>
+    <button class="emn-nav__caret" aria-label="Abrir submenú de Clases" aria-expanded="false">&#9662;</button>
     <div class="emn-nav__dropdown">
-      <a href="https://zareenterprises.github.io/career" class="emn-nav__dropdown-item ${isActive ? 'is-active' : ''}">Calendar</a>
+      <a href="https://zareenterprises.github.io/career" class="emn-nav__dropdown-item ${path === '/career' ? 'is-active' : ''}">Calendar</a>
+      <a href="https://zareenterprises.github.io/clases-interview-prep" class="emn-nav__dropdown-item ${path === '/clases-interview-prep' ? 'is-active' : ''}">Interview Prep</a>
     </div>
   `;
   nav.appendChild(item);

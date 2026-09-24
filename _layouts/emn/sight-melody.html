@@ -490,8 +490,8 @@ function fillMeasureCompound(totalTicks, diff, meter, opts={}){
 
       // a multi-beat sustained value occasionally takes over from here
       const sustained = sustainedForCompound(meter, position, remaining);
-      if(sustained.length && Math.random() < 0.18){
-        const pick = sustained[Math.floor(Math.random()*sustained.length)];
+      if(sustained.length && rngFn() < 0.18){
+        const pick = sustained[Math.floor(rngFn()*sustained.length)];
         seq.push(pick);
         noteCount += 1;
         position += pick.ticks;
@@ -524,11 +524,11 @@ function fillMeasureCompound(totalTicks, diff, meter, opts={}){
       if(restsAllowed && maxRestTicks!=null && restTicksUsed < maxRestTicks){
         const weights = pool.map(p => p.some(n=>n.rest) ? 10 : 1);
         const total = weights.reduce((s,w)=>s+w,0);
-        let r = Math.random()*total;
+        let r = rngFn()*total;
         pattern = pool[pool.length-1];
         for(let i=0;i<pool.length;i++){ r -= weights[i]; if(r<=0){ pattern = pool[i]; break; } }
       } else {
-        pattern = pool[Math.floor(Math.random()*pool.length)];
+        pattern = pool[Math.floor(rngFn()*pool.length)];
       }
 
       seq.push({ticks: CB, notes: pattern});
@@ -595,11 +595,11 @@ function fillMeasure78(diff, opts={}){
       if(restsAllowed && maxRestTicks!=null && restTicksUsed < maxRestTicks){
         const weights = pool.map(a => a.notes.some(n=>n.rest) ? 10 : 1);
         const total = weights.reduce((s,w)=>s+w,0);
-        let r = Math.random()*total;
+        let r = rngFn()*total;
         atom = pool[pool.length-1];
         for(let i=0;i<pool.length;i++){ r -= weights[i]; if(r<=0){ atom = pool[i]; break; } }
       } else {
-        atom = pool[Math.floor(Math.random()*pool.length)];
+        atom = pool[Math.floor(rngFn()*pool.length)];
       }
       seq.push(atom);
       restCount += atom.notes.filter(n=>n.rest).length;
@@ -676,11 +676,11 @@ function fillMeasure(totalTicks, diff, opts={}){
       if(maxRestTicks!=null && restTicksUsed < maxRestTicks){
         const weights = candidates.map(a => a.notes.some(n=>n.rest) ? 10 : 1);
         const total = weights.reduce((s,w)=>s+w, 0);
-        let r = Math.random()*total;
+        let r = rngFn()*total;
         atom = candidates[candidates.length-1];
         for(let i=0;i<candidates.length;i++){ r -= weights[i]; if(r<=0){ atom = candidates[i]; break; } }
       } else {
-        atom = candidates[Math.floor(Math.random()*candidates.length)];
+        atom = candidates[Math.floor(rngFn()*candidates.length)];
       }
       seq.push(atom);
       restCount += atom.notes.filter(n=>n.rest).length;
@@ -841,6 +841,24 @@ const state = {
 
 const rangeList = buildNaturalRangeList();
 
+/* ============================= LIVE MODE (seeded RNG) =============================
+   Every randomized choice in the generator reads from `rngFn()` instead of
+   Math.random() directly. Normally that's just Math.random(); but Live Mode
+   needs the follower's browser to render the EXACT same exercise the host
+   just generated, not just one built from the same settings -- so instead of
+   syncing the whole generated note/rhythm structure, we sync a tiny (state,
+   seed) pair and have the follower's generator walk the identical sequence
+   of "random" picks deterministically. See emnLiveInit() further below. */
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let rngFn = Math.random;
+
 /* ============================= UI BUILD ============================= */
 function el(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!==undefined) e.textContent=txt; return e; }
 
@@ -921,7 +939,7 @@ const registerGrid = document.getElementById('registerGrid');
 [['middle','Middle register (7 notes)'],['lower','Lower register'],['higher','Higher register']].forEach(([key,label])=>{
   const l = el('label','check-item');
   const cb = document.createElement('input');
-  cb.type='checkbox'; cb.checked = state.registers[key];
+  cb.type='checkbox'; cb.checked = state.registers[key]; cb.dataset.register = key;
   cb.onchange = ()=>{ state.registers[key]=cb.checked; generate(); };
   l.appendChild(cb);
   l.appendChild(document.createTextNode(label));
@@ -1217,7 +1235,7 @@ function weightedPick(pool, prevMidi, usageCounts){
     return w;
   });
   const total = weights.reduce((a,b)=>a+b, 0);
-  let r = Math.random() * total;
+  let r = rngFn() * total;
   for(let i=0; i<pool.length; i++){ r -= weights[i]; if(r<=0) return pool[i]; }
   return pool[pool.length-1];
 }
@@ -1273,7 +1291,7 @@ function buildDiatonicChords(tonicKey, modeId, isMinorTonic){
 // math is needed beyond what buildDiatonicChords already spelled out.
 const TENSION_OPTIONS = ['9', '11', '13', 'sus2', 'sus4'];
 function applyTension(chord){
-  const tension = TENSION_OPTIONS[Math.floor(Math.random() * TENSION_OPTIONS.length)];
+  const tension = TENSION_OPTIONS[Math.floor(rngFn() * TENSION_OPTIONS.length)];
   if(tension === 'sus2' || tension === 'sus4') return `${chord.rootName}${tension}`;
   return `${chord.label}(${tension})`;
 }
@@ -1297,7 +1315,7 @@ function harmonyRhythmForMeasure(measureTicks){
   while(remaining > 0){
     let choices = HARMONY_DURATIONS.filter(d => d.ticks <= remaining);
     if(!choices.length || remaining % 4 !== 0) choices = choices.concat(HARMONY_FALLBACK_DURATION);
-    const pick = choices[Math.floor(Math.random() * choices.length)];
+    const pick = choices[Math.floor(rngFn() * choices.length)];
     seq.push(pick);
     remaining -= pick.ticks;
   }
@@ -1322,7 +1340,7 @@ function renderHarmonyMeasure(ctx, stave, measureTicks, chords){
 
   const y = stave.getYForLine(0) - 24; // clears note stems, which stick up above the top staff line
   const labels = vfNotes.map(() => {
-    const chord = chords[Math.floor(Math.random() * chords.length)];
+    const chord = chords[Math.floor(rngFn() * chords.length)];
     return state.addTensions ? applyTension(chord) : chord.label;
   });
 
@@ -1351,7 +1369,7 @@ function renderHarmonyMeasure(ctx, stave, measureTicks, chords){
 
 let playbackSeq = []; // rebuilt each generate(): [{ticks, midi|null}] in performance order — feeds playMelody()
 
-function generate(){
+function generateCore(){
   stopMelody();
   playbackSeq = [];
   const pool = resolvePool();
@@ -1802,6 +1820,266 @@ document.getElementById('btnPlay').onclick = (e) => {
   else playMelody();
 };
 
+/* ============================= LIVE MODE (realtime sync) =============================
+   A professor shares a short code; a student enters it (or opens a
+   ?live=CODE link) to join the same Supabase Realtime broadcast channel.
+   Everything the professor changes — key, degrees, meter, difficulty, mode,
+   bpm, and the generated exercise itself — mirrors live to the student.
+   Dictation Mode is the deliberate exception: it never touches `state` or
+   calls generate() (see btnDictation above), so it already stays fully
+   local to whoever clicks it, on both sides, with no extra work needed. */
+let liveRole = null;     // null | 'host' | 'follower'
+let liveChannel = null;
+let liveCode = null;
+let liveLastSeed = null;
+
+function liveRandomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I — avoids confusion read aloud
+  let code = '';
+  for(let i=0;i<5;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+function liveChannelName(code){ return `emn-sight-melody-live-${code}`; }
+
+// Both sides can fully edit while connected (see generate()/liveBroadcastState
+// above) — Dictation Mode is the only thing excluded, and it already never
+// touches `state` or calls generate(), so it needs no special-casing here.
+// This hook is kept in case a future visual "you're live" indicator is added.
+function applyLiveRoleUI(){}
+
+function liveBroadcastState(seed){
+  if(!liveChannel) return;
+  liveLastSeed = seed;
+  liveChannel.send({ type:'broadcast', event:'state', payload:{ state, seed } });
+}
+function liveBroadcastBpm(){
+  if(!liveChannel) return;
+  liveChannel.send({ type:'broadcast', event:'bpm', payload:{ bpm: state.bpm } });
+}
+
+// Re-renders every settings control from `state` — reusing the same render
+// functions each control already calls on its own change, plus manual sync
+// for the controls that only ever set an .active class inline.
+function syncAllSettingsUI(){
+  renderTonics();
+  renderQualityRow();
+  renderDegrees();
+  document.querySelectorAll('[data-quality-mode]').forEach(c => c.classList.toggle('active', c.dataset.qualityMode === state.qualityMode));
+  lowSel.value = state.lowMidi;
+  highSel.value = state.highMidi;
+  document.querySelectorAll('#registerGrid input[type=checkbox]').forEach(cb => { cb.checked = state.registers[cb.dataset.register]; });
+  measureSel.value = state.measures;
+  document.querySelectorAll('#meterSimple .chip,#meterCompound .chip').forEach(c => c.classList.toggle('active', c.dataset.meter === state.meter));
+  document.querySelectorAll('#diffRow .chip').forEach(c => c.classList.toggle('active', c.dataset.diff === state.diff));
+  document.querySelectorAll('#populationRow .chip').forEach(c => c.classList.toggle('active', c.dataset.population === state.population));
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === state.mode));
+  document.querySelectorAll('.pitch-section').forEach(s => s.classList.toggle('locked', state.mode === 'rhythm'));
+  document.querySelectorAll('.melody-pool-section').forEach(s => s.classList.toggle('locked', state.mode !== 'melody'));
+  document.querySelectorAll('.clef-section').forEach(s => s.classList.toggle('locked', state.mode !== 'melody'));
+  document.querySelectorAll('.harmony-section').forEach(s => s.style.display = state.mode === 'harmony' ? '' : 'none');
+  document.querySelectorAll('[data-clef]').forEach(c => c.classList.toggle('active', c.dataset.clef === state.clef));
+  addTensionsChip.classList.toggle('active', state.addTensions);
+  renderBpm();
+}
+
+function liveApplyRemoteState(remoteState, seed){
+  Object.assign(state, remoteState);
+  syncAllSettingsUI();
+  rngFn = mulberry32(seed);
+  generateCore();
+}
+
+// Both sides get identical channel handlers — this is a fully two-way
+// session: whoever changes a filter (either person) broadcasts it and the
+// other side's exercise updates to match. 'host'/'follower' below only
+// distinguish who generated the code vs who typed it in (for the modal
+// copy) — once connected, both can edit everything except Dictation Mode.
+function liveSetupChannelHandlers(){
+  liveChannel.on('broadcast', { event: 'state' }, ({ payload }) => {
+    liveApplyRemoteState(payload.state, payload.seed);
+  });
+  liveChannel.on('broadcast', { event: 'bpm' }, ({ payload }) => {
+    state.bpm = payload.bpm;
+    renderBpm();
+  });
+  // Whoever's already in the room replies to a late/rejoining participant's
+  // 'hello' with whatever's currently on screen, so they don't have to wait
+  // for the next change to see anything.
+  liveChannel.on('broadcast', { event: 'hello' }, () => {
+    liveChannel.send({ type:'broadcast', event:'state', payload:{ state, seed: liveLastSeed ?? Date.now() } });
+    liveChannel.send({ type:'broadcast', event:'bpm', payload:{ bpm: state.bpm } });
+  });
+}
+
+function liveStartHost(){
+  liveCode = liveRandomCode();
+  liveRole = 'host';
+  liveChannel = emnSupabase.channel(liveChannelName(liveCode));
+  liveSetupChannelHandlers();
+  liveChannel.subscribe();
+  applyLiveRoleUI();
+  return liveCode;
+}
+
+function liveJoinAsFollower(code){
+  liveCode = code;
+  liveRole = 'follower';
+  liveChannel = emnSupabase.channel(liveChannelName(code));
+  liveSetupChannelHandlers();
+  liveChannel.subscribe((status) => {
+    if(status === 'SUBSCRIBED') liveChannel.send({ type:'broadcast', event:'hello', payload:{} });
+  });
+  applyLiveRoleUI();
+}
+
+function liveLeave(){
+  if(liveChannel){ emnSupabase.removeChannel(liveChannel); liveChannel = null; }
+  liveRole = null;
+  liveCode = null;
+  applyLiveRoleUI();
+}
+
+// Wraps generateCore(): seeds a fresh random exercise and, whenever a live
+// session is active (either side), broadcasts {state, seed} so the other
+// person's browser renders the EXACT same exercise — not just one built
+// from matching settings, which would still pick different random notes.
+function generate(){
+  const seed = Date.now() ^ Math.floor(Math.random()*1e9);
+  rngFn = mulberry32(seed);
+  generateCore();
+  liveBroadcastState(seed);
+}
+
+// bpm never calls generate() (it's playback-only — see the comment above
+// BPM_MIN), so it needs its own broadcast hook, added alongside the
+// existing .onclick handlers rather than replacing them.
+document.getElementById('bpmMinus').addEventListener('click', liveBroadcastBpm);
+document.getElementById('bpmPlus').addEventListener('click', liveBroadcastBpm);
+
+// Floating trigger + modals. Reuses the emn-modal-* styles/classes that
+// emn-auth.js already injects (emnEnsureModalStyles), so this stays a small
+// addition instead of a second modal system.
+function emnSetupLiveMode(){
+  emnEnsureModalStyles();
+  const isStaff = emnStudentProfile?.role === 'admin' || emnStudentProfile?.role === 'professor';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.style.cssText = 'position:fixed; top:14px; right:14px; z-index:500; border:none; border-radius:20px; padding:8px 16px; font-size:12.5px; font-weight:700; font-family:Inter,system-ui,sans-serif; cursor:pointer; background:#C8102E; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18);';
+  document.body.appendChild(btn);
+
+  function updateTriggerLabel(){
+    if(liveRole === 'host') btn.textContent = `🔴 En vivo · ${liveCode}`;
+    else if(liveRole === 'follower') btn.textContent = `🔴 Conectado · ${liveCode}`;
+    else btn.textContent = isStaff ? '🔴 Modo en vivo' : '🔴 Unirse en vivo';
+  }
+  updateTriggerLabel();
+
+  function openHostModal(){
+    const overlay = document.createElement('div');
+    overlay.className = 'emn-modal-overlay';
+    if(liveRole === 'host'){
+      const shareUrl = `${location.origin}${location.pathname}?live=${liveCode}`;
+      overlay.innerHTML = `
+        <div class="emn-modal-box">
+          <h3>Sesión en vivo activa</h3>
+          <p style="font-size:13px;color:#555;margin:0 0 10px;">Compartí este código con tus alumnos, o el link de abajo.</p>
+          <div style="text-align:center; font-size:32px; font-weight:800; letter-spacing:.1em; color:#C8102E; margin:12px 0;">${liveCode}</div>
+          <div class="emn-modal-field"><label>Link para compartir</label><input type="text" readonly value="${shareUrl}" onclick="this.select()"></div>
+          <div class="emn-modal-actions">
+            <button type="button" class="emn-modal-btn-ghost" id="live-end-btn">Terminar sesión</button>
+            <button type="button" class="emn-modal-btn-primary" id="live-close-btn">Cerrar</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#live-close-btn').addEventListener('click', () => document.body.removeChild(overlay));
+      overlay.querySelector('#live-end-btn').addEventListener('click', () => {
+        liveLeave();
+        updateTriggerLabel();
+        document.body.removeChild(overlay);
+      });
+    } else {
+      overlay.innerHTML = `
+        <div class="emn-modal-box">
+          <h3>Iniciar sesión en vivo</h3>
+          <p style="font-size:13px;color:#555;margin:0 0 16px;">Vos y quien se una van a ver y poder cambiar los mismos filtros y el mismo ejercicio en tiempo real, desde cualquiera de los dos lados. Dictation Mode es la única excepción — cada quien mantiene el suyo.</p>
+          <div class="emn-modal-actions">
+            <button type="button" class="emn-modal-btn-ghost" id="live-cancel-btn">Cancelar</button>
+            <button type="button" class="emn-modal-btn-primary" id="live-start-btn">Iniciar</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#live-cancel-btn').addEventListener('click', () => document.body.removeChild(overlay));
+      overlay.querySelector('#live-start-btn').addEventListener('click', () => {
+        liveStartHost();
+        updateTriggerLabel();
+        document.body.removeChild(overlay);
+        openHostModal();
+      });
+    }
+    overlay.addEventListener('click', (e) => { if(e.target === overlay) document.body.removeChild(overlay); });
+  }
+
+  function openFollowerModal(){
+    const overlay = document.createElement('div');
+    overlay.className = 'emn-modal-overlay';
+    if(liveRole === 'follower'){
+      overlay.innerHTML = `
+        <div class="emn-modal-box">
+          <h3>Conectado a la sesión ${liveCode}</h3>
+          <p style="font-size:13px;color:#555;margin:0 0 16px;">Vos y tu profesor comparten los mismos filtros y el mismo ejercicio en tiempo real — cualquiera de los dos puede cambiarlos y el otro lo ve al instante. Dictation Mode es solo tuyo.</p>
+          <div class="emn-modal-actions">
+            <button type="button" class="emn-modal-btn-primary" id="live-leave-btn">Salir de la sesión</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#live-leave-btn').addEventListener('click', () => {
+        liveLeave();
+        updateTriggerLabel();
+        document.body.removeChild(overlay);
+      });
+    } else {
+      overlay.innerHTML = `
+        <div class="emn-modal-box">
+          <h3>Unirse a una sesión en vivo</h3>
+          <div class="emn-modal-field"><label>Código</label><input type="text" id="live-code-input" maxlength="5" style="text-transform:uppercase; letter-spacing:.15em; font-weight:700;" placeholder="ABCDE"></div>
+          <p class="emn-modal-msg" id="live-join-msg"></p>
+          <div class="emn-modal-actions">
+            <button type="button" class="emn-modal-btn-ghost" id="live-cancel-btn">Cancelar</button>
+            <button type="button" class="emn-modal-btn-primary" id="live-join-btn">Unirse</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#live-cancel-btn').addEventListener('click', () => document.body.removeChild(overlay));
+      overlay.querySelector('#live-join-btn').addEventListener('click', () => {
+        const code = overlay.querySelector('#live-code-input').value.trim().toUpperCase();
+        const msg = overlay.querySelector('#live-join-msg');
+        if(!code){ msg.textContent = 'Ingresá un código.'; msg.style.display='block'; msg.style.color='#C8102E'; return; }
+        liveJoinAsFollower(code);
+        updateTriggerLabel();
+        document.body.removeChild(overlay);
+        openFollowerModal();
+      });
+    }
+    overlay.addEventListener('click', (e) => { if(e.target === overlay) document.body.removeChild(overlay); });
+  }
+
+  btn.addEventListener('click', () => {
+    if(isStaff) openHostModal(); else openFollowerModal();
+  });
+
+  // Auto-join via a shared ?live=CODE link — skips typing the code in.
+  const urlCode = new URLSearchParams(location.search).get('live');
+  if(urlCode && !isStaff && liveRole === null){
+    liveJoinAsFollower(urlCode.toUpperCase());
+    updateTriggerLabel();
+  }
+}
+
 window.addEventListener('load', generate);
 </script>
 
@@ -1809,7 +2087,10 @@ window.addEventListener('load', generate);
      exists (from signing in via the Practice Lab nav) — doesn't change
      anything about how the tool works either way. -->
 <script>
-  emnInit().then(() => { if(emnSession) emnStartHeartbeat('sight-melody'); });
+  emnInit().then(() => {
+    if(emnSession) emnStartHeartbeat('sight-melody');
+    emnSetupLiveMode();
+  });
 </script>
 </body>
 </html>

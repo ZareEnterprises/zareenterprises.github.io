@@ -164,6 +164,7 @@
       <button type="button" class="tab-btn is-active" data-view="preguntas">Preguntas</button>
       <button type="button" class="tab-btn" data-view="finales">Respuestas Finales</button>
       <button type="button" class="tab-btn" data-view="gemas">Gemas</button>
+      <a href="/interview-prep" class="tab-btn" style="text-decoration:none; display:inline-block;">Practicar</a>
     </div>
 
     <div class="view is-active" id="view-preguntas"></div>
@@ -343,9 +344,9 @@ async function requestAiSummary(mode, payload){
 
 /* ============================= TABS ============================= */
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.tab-btn[data-view]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('is-active'));
+    document.querySelectorAll('.tab-btn[data-view]').forEach(b => b.classList.remove('is-active'));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('is-active'));
     btn.classList.add('is-active');
     document.getElementById(`view-${btn.dataset.view}`).classList.add('is-active');

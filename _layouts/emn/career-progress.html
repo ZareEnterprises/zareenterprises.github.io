@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Career Progress — EMN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/emn.css?v={{ site.time | date: '%s' }}">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/emn-auth.js?v={{ site.time | date: '%s' }}"></script>
+<style>
+:root{
+  --paper:#EEF1F4; --surface:#FFFFFF; --ink:#16213E; --muted:#5B6478; --line:#D5DAE3;
+  --accent:#2F5BEA; --accent-soft:#DCE4FD; --onair:#E89A0C; --onair-soft:#FCEBC8; --danger:#B42318;
+  --head:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1424; --surface:#171D31; --ink:#E6EAF3; --muted:#99A2B8; --line:#2A3350;
+    --accent:#7C95FF; --accent-soft:#25305A; --onair:#F5B02E; --onair-soft:#3D321A; --danger:#F97066;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1424; --surface:#171D31; --ink:#E6EAF3; --muted:#99A2B8; --line:#2A3350;
+  --accent:#7C95FF; --accent-soft:#25305A; --onair:#F5B02E; --onair-soft:#3D321A; --danger:#F97066;
+}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--body)}
+.tracker-scope *,.tracker-scope *::before,.tracker-scope *::after{box-sizing:border-box}
+.tracker-scope button,.tracker-scope input,.tracker-scope select,.tracker-scope textarea{font:inherit;color:inherit}
+.tracker-scope :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tracker-scope .wrap{max-width:1280px;margin:0 auto;padding:28px clamp(14px,3vw,36px) 80px}
+
+.tracker-scope header.top{display:flex;flex-wrap:wrap;gap:18px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:26px}
+.tracker-scope h1{font:800 clamp(30px,4.6vw,52px)/1 var(--head);letter-spacing:-.02em;margin:0;color:var(--ink)}
+.tracker-scope .who{display:flex;flex-direction:column;gap:4px;min-width:min(320px,100%)}
+.tracker-scope .who label{font-size:14px;color:var(--muted)}
+.tracker-scope .who input{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:17px}
+.tracker-scope .save-state{font-size:13px;color:var(--muted);min-height:1.5em}
+
+.tracker-scope .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:28px}
+.tracker-scope .meter{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;min-height:104px}
+.tracker-scope .meter:hover{border-color:var(--accent)}
+.tracker-scope .meter[aria-current="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tracker-scope .meter:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tracker-scope .meter .name{font:600 15px/1.2 var(--head)}
+.tracker-scope .meter .count{font-size:13px;color:var(--muted);margin-top:auto}
+.tracker-scope .bars{display:flex;gap:3px;height:8px}
+.tracker-scope .bars span{flex:1;border-radius:2px;background:var(--line)}
+.tracker-scope .bars span.on{background:var(--accent)}
+.tracker-scope .bars span.done{background:var(--onair)}
+
+.tracker-scope section.cat h2{font:800 clamp(24px,3vw,34px)/1.1 var(--head);margin:0 0 4px;letter-spacing:-.01em;color:var(--ink)}
+.tracker-scope .cat-intro{color:var(--muted);margin:0 0 16px;max-width:70ch}
+.tracker-scope .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
+.tracker-scope .btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;cursor:pointer;font-weight:700}
+.tracker-scope .btn:hover{border-color:var(--accent)}
+.tracker-scope .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .tracker-scope .btn.primary{color:#0F1424}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tracker-scope .btn.primary{color:#0F1424}}
+
+.tracker-scope .table-scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.tracker-scope table{border-collapse:collapse;width:100%;min-width:900px}
+.tracker-scope th{font:600 13px/1.3 var(--head);color:var(--muted);text-align:left;padding:12px 10px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0}
+.tracker-scope td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.tracker-scope tr:last-child td{border-bottom:0}
+.tracker-scope td input,.tracker-scope td select,.tracker-scope td textarea{width:100%;background:transparent;border:1px solid transparent;border-radius:8px;padding:7px 8px;font-size:15px}
+.tracker-scope td input:hover,.tracker-scope td select:hover,.tracker-scope td textarea:hover{border-color:var(--line)}
+.tracker-scope td input:focus,.tracker-scope td select:focus,.tracker-scope td textarea:focus{border-color:var(--accent);background:var(--paper);outline:none}
+.tracker-scope td select{cursor:pointer}
+.tracker-scope td select option{background:var(--surface);color:var(--ink)}
+.tracker-scope td textarea{resize:vertical;min-height:38px;line-height:1.4}
+.tracker-scope td.num{width:36px;color:var(--muted);font-size:13px;padding-top:14px;text-align:right}
+.tracker-scope td.del{width:40px}
+.tracker-scope .x{border:0;background:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:6px 8px;border-radius:8px}
+.tracker-scope .x:hover{color:var(--danger);background:var(--paper)}
+.tracker-scope .late-count{display:block;color:var(--danger);font-weight:700}
+.tracker-scope td input.late{border-color:var(--danger);color:var(--danger);font-weight:700}
+.tracker-scope .empty{padding:32px 20px;text-align:center;color:var(--muted)}
+
+.tracker-scope .track{display:flex;flex-direction:column;gap:6px;padding:6px 4px;min-width:200px}
+.tracker-scope .steps{display:flex;gap:4px}
+.tracker-scope .steps button{flex:1;height:14px;min-width:22px;border:0;border-radius:3px;background:var(--line);cursor:pointer;padding:0}
+.tracker-scope .steps button.on{background:var(--accent)}
+.tracker-scope .steps.complete button{background:var(--onair)}
+.tracker-scope .steps button:hover{outline:2px solid var(--accent);outline-offset:1px}
+.tracker-scope .stage-name{font-size:13px;font-weight:700}
+.tracker-scope .steps.complete + .stage-name{color:var(--onair)}
+.tracker-scope .stage-name.none{color:var(--muted);font-weight:400}
+
+.tracker-scope .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 12px 10px 18px;border-radius:999px;display:flex;gap:12px;align-items:center;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:600}
+.tracker-scope .toast.show{opacity:1;pointer-events:auto}
+.tracker-scope .toast button{background:var(--paper);color:var(--ink);border:0;border-radius:999px;padding:6px 14px;font-weight:700;cursor:pointer}
+@media (prefers-reduced-motion: reduce){.tracker-scope .toast{transition:none}}
+@media (max-width:600px){.tracker-scope .board{grid-template-columns:repeat(2,1fr)}.tracker-scope .meter{min-height:92px}}
+
+#gate-msg{ text-align:center; padding:100px 20px; color:var(--gray-700); font-family:var(--font-body); }
+#gate-msg a{ color:var(--red); }
+</style>
+</head>
+<body>
+
+<header class="emn-header">
+  <div class="emn-header__inner">
+    <a href="https://zareenterprises.github.io/emn" class="emn-logo">
+      <img src="/assets/img/emn-logo.png" alt="EMN logo">
+    </a>
+    <nav class="emn-nav">
+      <a href="https://zareenterprises.github.io/emn" class="emn-nav__link">Home</a>
+      <div class="emn-nav__item">
+        <a href="https://zareenterprises.github.io/practice-lab" class="emn-nav__link">EMN Practice Lab</a>
+        <button class="emn-nav__caret" aria-label="Abrir submenú de EMN Practice Lab" aria-expanded="false">&#9662;</button>
+        <div class="emn-nav__dropdown">
+          <a href="https://zareenterprises.github.io/sight-melody" class="emn-nav__dropdown-item">Sight reading &amp; Audio Practice</a>
+          <a href="https://zareenterprises.github.io/interview-prep" class="emn-nav__dropdown-item">Berklee Interview Prep</a>
+          <span class="emn-nav__dropdown-item is-disabled">Berklee Improvisation Practice <span class="soon">Pronto</span></span>
+          <span class="emn-nav__dropdown-item is-disabled">Berklee Piece &amp; Impro <span class="soon">Pronto</span></span>
+        </div>
+      </div>
+      <a href="https://zareenterprises.github.io/feedback" class="emn-nav__link">Obtén Feedback</a>
+      <a href="https://www.instagram.com/emn.latam/" class="emn-nav__link emn-nav__link--external" target="_blank" rel="noopener">Nosotros</a>
+    </nav>
+  </div>
+</header>
+
+<div id="gate-msg" style="display:none"></div>
+
+<div class="tracker-scope" id="tracker-body" style="display:none">
+<div class="wrap">
+  <header class="top">
+    <h1>Career Progress</h1>
+    <div class="who">
+      <label for="student">Nombre del alumno</label>
+      <input id="student" type="text" placeholder="Escribe tu nombre" autocomplete="name">
+      <div class="save-state" id="saveState" aria-live="polite"></div>
+    </div>
+  </header>
+
+  <nav class="board" id="board" aria-label="Áreas"></nav>
+  <section class="cat" id="cat"></section>
+</div>
+<div class="toast" id="toast" role="status"><span id="toastMsg"></span><button id="undo" type="button">Deshacer</button></div>
+</div>
+
+<script>
+const CATS = [
+  { id:'social', name:'Contenido Social Media', intro:'Planifica cada pieza de contenido: dónde se publica, en qué formato, con qué tono y para qué etapa del embudo.',
+    fields:[
+      {k:'idea',l:'Idea / título',t:'text',w:200},
+      {k:'plataforma',l:'Plataforma',t:'select',o:['Instagram Reels','TikTok','YouTube','YouTube Shorts','LinkedIn','Facebook']},
+      {k:'formato',l:'Formato',t:'select',o:['Behind-the-scenes','Testimonio de cliente','Clip de performance','Educativo','Tendencia / challenge','Anuncio de lanzamiento']},
+      {k:'tono',l:'Tono / emoción',t:'select',o:['Energético','Moderado','Desinteresado','Emotivo','Humorístico','Inspirador']},
+      {k:'embudo',l:'Etapa del embudo',t:'select',o:['Awareness (dar a conocer)','Consideración (mostrar valor)','Conversión (cerrar cliente)']},
+      {k:'estado',l:'Progreso',t:'stage',o:['Idea','Guion','Grabado','Editado','Publicado']},
+      {k:'fecha',l:'Fecha de publicación',t:'date'},
+      {k:'link',l:'Link',t:'url',w:160},
+      {k:'notas',l:'Notas',t:'textarea',w:220}]},
+  { id:'canciones', name:'Canciones Publicadas', intro:'Cada canción, desde la primera idea hasta el lanzamiento.',
+    fields:[
+      {k:'nombre',l:'Nombre',t:'text',w:180},
+      {k:'estilo',l:'Estilo musical',t:'text',list:['Pop','Rock','Urbano / Reggaetón','Balada','Indie','Jazz','R&B / Soul','Electrónica','Folk','Salsa','Cumbia','Flamenco','Cantautor'],w:150},
+      {k:'progreso',l:'Progreso',t:'stage',o:['Idea','Maqueta','Grabación','Post producción','Publicado']},
+      {k:'release',l:'Fecha de release',t:'date'},
+      {k:'visuales',l:'Visuales (idea)',t:'textarea',w:200},
+      {k:'distribuidora',l:'Distribuidora',t:'text',list:['DistroKid','CD Baby','TuneCore','Amuse','Ditto','ONErpm','AWAL','Sello discográfico'],w:150},
+      {k:'portada',l:'Portada (idea)',t:'textarea',w:200},
+      {k:'notas',l:'Notas',t:'textarea',w:220}]},
+  { id:'tv', name:'TV', intro:'Programas y canales a los que quieres llegar, y en qué punto está cada contacto.',
+    fields:[
+      {k:'programa',l:'Programa / canal',t:'text',w:180},
+      {k:'tipo',l:'Tipo de aparición',t:'select',o:['Entrevista','Actuación en vivo','Reportaje','Mención','Concurso televisado']},
+      {k:'contacto',l:'Contacto',t:'text',w:170},
+      {k:'estado',l:'Estado',t:'stage',o:['Por contactar','Contactado','En conversación','Confirmado','Emitido']},
+      {k:'fecha',l:'Fecha de emisión',t:'date'},
+      {k:'link',l:'Link',t:'url',w:160},
+      {k:'notas',l:'Notas',t:'textarea',w:220}]},
+  { id:'diarios', name:'Diarios', intro:'Prensa escrita y digital: medios, periodistas y publicaciones conseguidas.',
+    fields:[
+      {k:'medio',l:'Medio',t:'text',w:170},
+      {k:'tipomedio',l:'Tipo de medio',t:'select',o:['Diario impreso','Diario digital','Revista','Blog','Fanzine']},
+      {k:'formato',l:'Formato',t:'select',o:['Entrevista','Reseña','Nota de prensa','Mención','Artículo de opinión']},
+      {k:'periodista',l:'Periodista / contacto',t:'text',w:170},
+      {k:'estado',l:'Estado',t:'stage',o:['Por contactar','Nota enviada','En conversación','Confirmado','Publicado']},
+      {k:'fecha',l:'Fecha de publicación',t:'date'},
+      {k:'link',l:'Link',t:'url',w:160},
+      {k:'notas',l:'Notas',t:'textarea',w:220}]},
+  { id:'presskit', name:'PressKit', intro:'Las piezas que necesita tu press kit. Marca cada una a medida que la tengas lista.',
+    seed:['Bio corta','Bio larga','Fotos profesionales','Logo','Música (links de streaming)','Videos en vivo','Prensa y citas destacadas','Rider técnico','Stage plot','Contacto y redes'].map(e=>({elemento:e})),
+    fields:[
+      {k:'elemento',l:'Elemento',t:'text',w:220},
+      {k:'estado',l:'Estado',t:'stage',o:['Pendiente','En progreso','En revisión','Listo']},
+      {k:'link',l:'Link / archivo',t:'url',w:200},
+      {k:'notas',l:'Notas',t:'textarea',w:260}]},
+  { id:'portfolio', name:'Portfolio/Website', intro:'Secciones de tu web o portfolio y su estado.',
+    seed:['Home','Bio','Música','Videos','Conciertos / fechas','Galería de fotos','Press kit (EPK)','Contacto','Tienda / merch'].map(e=>({seccion:e})),
+    fields:[
+      {k:'seccion',l:'Sección',t:'text',w:200},
+      {k:'plataforma',l:'Plataforma',t:'text',list:['Wix','Squarespace','WordPress','Linktree','Bandcamp','Carrd','Webflow'],w:150},
+      {k:'estado',l:'Estado',t:'stage',o:['Pendiente','Contenido listo','Diseñado','Publicado']},
+      {k:'url',l:'URL',t:'url',w:200},
+      {k:'notas',l:'Notas',t:'textarea',w:240}]},
+  { id:'concursos', name:'Concursos Musicales', intro:'Convocatorias que estás siguiendo, plazos y resultados.',
+    fields:[
+      {k:'nombre',l:'Concurso',t:'text',w:180},
+      {k:'organizador',l:'Organizador',t:'text',w:160},
+      {k:'categoria',l:'Categoría',t:'text',w:140},
+      {k:'cancion',l:'Canción presentada',t:'text',w:160},
+      {k:'limite',l:'Fecha límite',t:'date'},
+      {k:'estado',l:'Estado',t:'stage',o:['Investigando','Preparando material','Inscrito','Resultado recibido']},
+      {k:'resultado',l:'Resultado',t:'select',o:['No seleccionado','Seleccionado','Finalista','Mención','Ganador']},
+      {k:'premio',l:'Premio',t:'text',w:140},
+      {k:'notas',l:'Notas',t:'textarea',w:220}]},
+  { id:'voluntariado', name:'Voluntariado', intro:'Actividades solidarias y comunitarias donde aportas tu música.',
+    fields:[
+      {k:'organizacion',l:'Organización / causa',t:'text',w:190},
+      {k:'actividad',l:'Actividad',t:'select',o:['Concierto benéfico','Taller / clase','Evento comunitario','Mentoría','Hospital / residencia']},
+      {k:'rol',l:'Tu rol',t:'text',w:150},
+      {k:'fecha',l:'Fecha',t:'date'},
+      {k:'horas',l:'Horas',t:'number',w:80},
+      {k:'estado',l:'Estado',t:'stage',o:['Planificado','Confirmado','En curso','Completado']},
+      {k:'contacto',l:'Contacto',t:'text',w:160},
+      {k:'notas',l:'Notas',t:'textarea',w:220}]}
+];
+
+CATS.forEach(c=>{
+  const i = c.fields.findIndex(f=>f.t==='stage');
+  c.fields.splice(i+1,0,
+    {k:'siguiente',l:'Siguiente paso',t:'textarea',w:200},
+    {k:'objetivo',l:'Fecha objetivo',t:'date'});
+});
+
+const LS_KEY = 'emn-career-progress-v1';
+let state = { student:'', current:'social', rows:{} };
+let saveTimer = null, writing = Promise.resolve();
+const uid = () => Math.random().toString(36).slice(2,10);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function ensureRows(){
+  CATS.forEach(c=>{
+    if(!Array.isArray(state.rows[c.id])){
+      state.rows[c.id] = c.seed ? c.seed.map(s=>({id:uid(),...s})) : [];
+    }
+  });
+}
+const stageField = c => c.fields.find(f=>f.t==='stage');
+
+/* ---------- saving (EMN Supabase, per student_id) ---------- */
+function setSaveState(t){ $('#saveState').textContent = t; }
+function scheduleSave(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+  clearTimeout(saveTimer);
+  if(!emnSession){ setSaveState('Guardado en este navegador'); return; }
+  setSaveState('Guardando…');
+  saveTimer = setTimeout(()=>{
+    const snapshot = JSON.parse(JSON.stringify(state));
+    writing = writing.then(() => emnSupabase.from('career_progress')
+      .upsert({ student_id: emnSession.user.id, data: snapshot, updated_at: new Date().toISOString() }, { onConflict: 'student_id' }))
+      .then(({error}) => { if(error) throw error; setSaveState('Guardado'); })
+      .catch((e)=>{ console.error(e); setSaveState('Sin conexión: guardado en este navegador'); });
+  }, 700);
+}
+
+/* ---------- rendering ---------- */
+function renderBoard(){
+  $('#board').innerHTML = CATS.map(c=>{
+    const rows = state.rows[c.id], sf = stageField(c), n = sf.o.length;
+    const done = rows.filter(r=>r[sf.k]===sf.o[n-1]).length;
+    const total = rows.length;
+    const segs = 10;
+    const filled = total ? Math.round(done/total*segs) : 0;
+    const bars = Array.from({length:segs},(_,i)=>`<span class="${i<filled ? (done===total?'done':'on') : ''}"></span>`).join('');
+    const late = rows.filter(r=>isOverdue(c,r)).length;
+    const count = total ? `${done} de ${total} · ${sf.o[n-1].toLowerCase()}` : 'Sin elementos';
+    const lateTxt = late ? `<span class="late-count">${late} ${late===1?'fecha vencida':'fechas vencidas'}</span>` : '';
+    return `<button class="meter" data-cat="${c.id}" aria-current="${state.current===c.id}"><span class="name">${esc(c.name)}</span><span class="bars" aria-hidden="true">${bars}</span><span class="count">${esc(count)}${lateTxt}</span></button>`;
+  }).join('');
+}
+
+function cellHTML(f,row){
+  const v = row[f.k] ?? '';
+  const a = `data-k="${f.k}" aria-label="${esc(f.l)}"`;
+  const mw = f.w ? ` style="min-width:${f.w}px"` : '';
+  switch(f.t){
+    case 'select': return `<select ${a} style="min-width:170px"><option value="">—</option>${f.o.map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select>`;
+    case 'textarea': return `<textarea ${a} rows="1"${mw}>${esc(v)}</textarea>`;
+    case 'date': return `<input type="date" ${a} value="${esc(v)}" style="min-width:140px">`;
+    case 'number': return `<input type="number" min="0" step="0.5" ${a} value="${esc(v)}"${mw}>`;
+    case 'url': return `<input type="url" ${a} value="${esc(v)}" placeholder="https://"${mw}>`;
+    case 'stage': return trackHTML(f,v);
+    default: return `<input type="text" ${a} value="${esc(v)}"${f.list?` list="dl-${f.k}"`:''}${mw}>`;
+  }
+}
+function trackHTML(f,v){
+  const idx = f.o.indexOf(v), last = f.o.length-1;
+  const btns = f.o.map((o,i)=>`<button type="button" class="${i<=idx?'on':''}" data-stage="${i}" aria-label="${esc(f.l)}: ${esc(o)}" aria-pressed="${i===idx}" title="${esc(o)}"></button>`).join('');
+  return `<div class="track" data-k="${f.k}"><div class="steps${idx===last?' complete':''}">${btns}</div><span class="stage-name${idx<0?' none':''}">${idx<0?'Sin empezar':esc(v)}</span></div>`;
+}
+
+function renderCat(){
+  const c = CATS.find(x=>x.id===state.current);
+  const rows = state.rows[c.id];
+  const lists = c.fields.filter(f=>f.list).map(f=>`<datalist id="dl-${f.k}">${f.list.map(o=>`<option value="${esc(o)}">`).join('')}</datalist>`).join('');
+  const head = `<tr><th></th>${c.fields.map(f=>`<th>${esc(f.l)}</th>`).join('')}<th><span class="sr" style="position:absolute;left:-9999px">Eliminar</span></th></tr>`;
+  const body = rows.length
+    ? rows.map((r,i)=>`<tr data-id="${r.id}"><td class="num">${i+1}</td>${c.fields.map(f=>`<td>${cellHTML(f,r)}</td>`).join('')}<td class="del"><button class="x" data-del aria-label="Eliminar fila ${i+1}" title="Eliminar fila">×</button></td></tr>`).join('')
+    : `<tr><td colspan="${c.fields.length+2}" class="empty">Todavía no hay nada aquí. Añade tu primera fila para empezar.</td></tr>`;
+  $('#cat').innerHTML = `
+    <h2>${esc(c.name)}</h2>
+    <p class="cat-intro">${esc(c.intro)}</p>
+    <div class="toolbar">
+      <button class="btn primary" id="add" type="button">Añadir fila</button>
+      <button class="btn" id="csv" type="button">Descargar CSV</button>
+    </div>
+    ${lists}
+    <div class="table-scroll"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  document.querySelectorAll('#cat textarea').forEach(autoGrow);
+  markOverdue();
+}
+const today = () => new Date().toISOString().slice(0,10);
+function isOverdue(c,r){
+  const sf = stageField(c);
+  return r.objetivo && r.objetivo < today() && r[sf.k] !== sf.o[sf.o.length-1];
+}
+function markOverdue(){
+  const c = CATS.find(x=>x.id===state.current);
+  document.querySelectorAll('#cat tbody tr[data-id]').forEach(tr=>{
+    const r = curRows().find(x=>x.id===tr.dataset.id), inp = tr.querySelector('[data-k="objetivo"]');
+    if(!r || !inp) return;
+    const late = isOverdue(c,r);
+    inp.classList.toggle('late', late);
+    inp.title = late ? 'Fecha objetivo vencida' : '';
+  });
+}
+function render(){ renderBoard(); renderCat(); }
+function autoGrow(t){ t.style.height='auto'; t.style.height = t.scrollHeight+2+'px'; }
+
+/* ---------- interactions ---------- */
+const curRows = () => state.rows[state.current];
+const rowOf = el => curRows().find(r=>r.id===el.closest('tr')?.dataset.id);
+
+$('#board').addEventListener('click', e=>{
+  const b = e.target.closest('.meter'); if(!b) return;
+  state.current = b.dataset.cat; render(); scheduleSave();
+  $('#cat').scrollIntoView({block:'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+});
+$('#cat').addEventListener('input', e=>{
+  const el = e.target, row = rowOf(el); if(!row || !el.dataset.k) return;
+  row[el.dataset.k] = el.value;
+  if(el.tagName==='TEXTAREA') autoGrow(el);
+  if(el.dataset.k==='objetivo'){ markOverdue(); renderBoard(); }
+  scheduleSave();
+});
+$('#cat').addEventListener('change', e=>{ if(e.target.tagName==='SELECT') renderBoard(); });
+$('#cat').addEventListener('click', e=>{
+  if(e.target.id==='add'){
+    curRows().push({id:uid()}); renderCat(); renderBoard(); scheduleSave();
+    const trs = document.querySelectorAll('#cat tbody tr'); trs[trs.length-1]?.querySelector('input,select,textarea')?.focus();
+    return;
+  }
+  if(e.target.id==='csv'){ exportCSV(); return; }
+  const stepBtn = e.target.closest('[data-stage]');
+  if(stepBtn){
+    const track = stepBtn.closest('.track'), row = rowOf(track);
+    const c = CATS.find(x=>x.id===state.current), f = c.fields.find(x=>x.k===track.dataset.k);
+    const i = +stepBtn.dataset.stage;
+    row[f.k] = (row[f.k]===f.o[i] && i===0) ? '' : f.o[i]; // click first step again to reset
+    track.outerHTML = trackHTML(f,row[f.k]);
+    markOverdue(); renderBoard(); scheduleSave();
+    return;
+  }
+  if(e.target.closest('[data-del]')){
+    const rows = curRows(), row = rowOf(e.target), idx = rows.indexOf(row);
+    rows.splice(idx,1); lastDeleted = {cat:state.current, row, idx};
+    renderCat(); renderBoard(); scheduleSave(); showToast('Fila eliminada');
+  }
+});
+$('#student').addEventListener('input', e=>{ state.student = e.target.value; scheduleSave(); });
+
+let lastDeleted = null, toastTimer = null;
+function showToast(msg){
+  $('#toastMsg').textContent = msg; $('#toast').classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>$('#toast').classList.remove('show'), 6000);
+}
+$('#undo').addEventListener('click', ()=>{
+  if(!lastDeleted) return;
+  state.rows[lastDeleted.cat].splice(lastDeleted.idx,0,lastDeleted.row);
+  state.current = lastDeleted.cat; lastDeleted = null;
+  $('#toast').classList.remove('show'); render(); scheduleSave();
+});
+
+/* ---------- CSV ---------- */
+function exportCSV(){
+  const c = CATS.find(x=>x.id===state.current);
+  const q = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+  const lines = [c.fields.map(f=>q(f.l)).join(',')].concat(state.rows[c.id].map(r=>c.fields.map(f=>q(r[f.k])).join(',')));
+  const name = (state.student ? state.student.trim().replace(/\s+/g,'-')+'-' : '') + c.name.replace(/[^\wÀ-ÿ]+/g,'-') + '.csv';
+  const data = '﻿'+lines.join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- boot ---------- */
+async function emnBootTracker(){
+  const gate = document.getElementById('gate-msg');
+  if(!emnSession){
+    gate.innerHTML = 'Inicia sesión para llevar tu Career Progress. <a href="/emn-login">Inicia sesión</a> para continuar.';
+    gate.style.display = 'block';
+    return;
+  }
+
+  try{ const saved = JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(saved && saved.rows) state = {...state, ...saved}; }catch(e){}
+  ensureRows();
+  if(!state.student && emnStudentProfile?.full_name) state.student = emnStudentProfile.full_name;
+  $('#student').value = state.student || '';
+  render();
+  setSaveState('Guardado en este navegador');
+  document.getElementById('tracker-body').style.display = 'block';
+
+  try{
+    const { data, error } = await emnSupabase.from('career_progress').select('data').eq('student_id', emnSession.user.id).maybeSingle();
+    if(error) throw error;
+    if(data && data.data && data.data.rows){
+      state = {...state, ...data.data};
+      ensureRows();
+      $('#student').value = state.student || '';
+      render();
+    }
+    setSaveState('Guardado');
+  }catch(e){ console.error(e); }
+}
+</script>
+
+<script>
+  emnInit().then(emnBootTracker);
+</script>
+
+</body>
+</html>

@@ -37,28 +37,210 @@ emnSupabase.auth.onAuthStateChange((_event, session) => {
   if(!session) emnStudentProfile = null;
 });
 
-// Drops a "Log in" (or, once signed in, the person's name) link into the
-// shared `.emn-nav` header — only present on the marketing pages (Home,
-// Practice Lab, Feedback), not the `.emn-tool` pages.
+// Drops a "Log in" link (signed out) or a "Mi cuenta / Cerrar sesión"
+// dropdown (signed in) into the shared `.emn-nav` header — only present on
+// the marketing pages (Home, Practice Lab, Feedback, etc.), not the
+// `.emn-tool` pages. Built by hand for the same reason as the other
+// dropdowns in this file: it's injected after the shared caret-toggle
+// script has already wired up whatever `.emn-nav__item`s existed at load.
 function emnInjectAuthLink(){
   const nav = document.querySelector('.emn-nav');
   if(!nav) return;
 
-  const authLink = document.createElement('a');
-  authLink.className = 'emn-nav__link';
-  if(emnSession){
-    authLink.classList.add('emn-nav__link--user');
-    authLink.href = '#';
-    authLink.textContent = emnStudentProfile?.full_name || emnSession.user.email;
-    authLink.onclick = async (e) => {
-      e.preventDefault();
-      if(confirm('Log out?')){ await emnSupabase.auth.signOut(); location.reload(); }
-    };
-  } else {
+  if(!emnSession){
+    const authLink = document.createElement('a');
+    authLink.className = 'emn-nav__link';
     authLink.href = '/emn-login';
     authLink.textContent = 'Log in';
+    nav.appendChild(authLink);
+    return;
   }
-  nav.appendChild(authLink);
+
+  const item = document.createElement('div');
+  item.className = 'emn-nav__item';
+  const displayName = emnStudentProfile?.full_name || emnSession.user.email;
+  item.innerHTML = `
+    <a href="#" class="emn-nav__link emn-nav__link--user">${displayName}</a>
+    <button class="emn-nav__caret" aria-label="Abrir menú de cuenta" aria-expanded="false">&#9662;</button>
+    <div class="emn-nav__dropdown">
+      <a href="#" class="emn-nav__dropdown-item" id="emn-my-account-link">Mi cuenta</a>
+      <a href="#" class="emn-nav__dropdown-item" id="emn-logout-link">Cerrar sesión</a>
+    </div>
+  `;
+  nav.appendChild(item);
+
+  const caret = item.querySelector('.emn-nav__caret');
+  const label = item.querySelector('.emn-nav__link');
+  const toggle = (e) => {
+    e.preventDefault();
+    const isOpen = item.classList.contains('is-open');
+    document.querySelectorAll('.emn-nav__item').forEach((i) => i.classList.remove('is-open'));
+    item.classList.toggle('is-open', !isOpen);
+    caret.setAttribute('aria-expanded', String(!isOpen));
+  };
+  caret.addEventListener('click', toggle);
+  label.addEventListener('click', toggle);
+  document.addEventListener('click', (e) => {
+    if(!item.contains(e.target)) item.classList.remove('is-open');
+  });
+
+  item.querySelector('#emn-my-account-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    item.classList.remove('is-open');
+    emnOpenAccountModal();
+  });
+  item.querySelector('#emn-logout-link').addEventListener('click', async (e) => {
+    e.preventDefault();
+    item.classList.remove('is-open');
+    const ok = await emnConfirm('¿Cerrar sesión?');
+    if(ok){ await emnSupabase.auth.signOut(); location.reload(); }
+  });
+}
+
+/* ============================= IN-PAGE MODALS =============================
+   Self-contained (styles + markup injected via JS) so every EMN page gets
+   these for free just by loading this file — no per-layout CSS/HTML needed. */
+
+function emnEnsureModalStyles(){
+  if(document.getElementById('emn-modal-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'emn-modal-styles';
+  style.textContent = `
+    .emn-modal-overlay{ position:fixed; inset:0; background:rgba(20,18,16,.45); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; }
+    .emn-modal-box{ background:#fff; border-radius:14px; padding:24px 26px; width:100%; max-width:380px; box-shadow:0 24px 60px rgba(0,0,0,.25); font-family:'Inter', system-ui, sans-serif; }
+    .emn-modal-box h3{ font-size:17px; margin:0 0 16px; color:#1A1A1A; }
+    .emn-modal-field{ margin-bottom:12px; }
+    .emn-modal-field label{ display:block; font-size:11px; font-weight:600; color:#666; margin-bottom:4px; }
+    .emn-modal-field input{ width:100%; padding:9px 10px; border:1px solid #D9D6D1; border-radius:7px; font-size:13.5px; box-sizing:border-box; font-family:inherit; }
+    .emn-modal-field input:disabled{ color:#999; background:#F5F4F2; }
+    .emn-modal-avatar-row{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .emn-modal-avatar{ width:52px; height:52px; border-radius:50%; background:#C8102E; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; overflow:hidden; flex-shrink:0; }
+    .emn-modal-avatar img{ width:100%; height:100%; object-fit:cover; }
+    .emn-modal-msg{ font-size:12px; margin:8px 0 0; display:none; }
+    .emn-modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+    .emn-modal-btn-primary{ border:none; background:#C8102E; color:#fff; font-weight:600; font-size:13px; padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit; }
+    .emn-modal-btn-primary:hover{ background:#9C0C24; }
+    .emn-modal-btn-primary:disabled{ opacity:.6; cursor:default; }
+    .emn-modal-btn-ghost{ border:1px solid #D9D6D1; background:none; color:#555; font-weight:600; font-size:13px; padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit; }
+    .emn-modal-btn-ghost:hover{ border-color:#C8102E; color:#C8102E; }
+    .emn-modal-sep{ border:none; border-top:1px solid #EEE; margin:16px 0; }
+  `;
+  document.head.appendChild(style);
+}
+
+// In-page replacement for window.confirm() — returns a Promise<boolean>.
+function emnConfirm(message, { yesLabel = 'Sí', noLabel = 'Cancelar' } = {}){
+  emnEnsureModalStyles();
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'emn-modal-overlay';
+    overlay.innerHTML = `
+      <div class="emn-modal-box">
+        <h3>${message}</h3>
+        <div class="emn-modal-actions">
+          <button type="button" class="emn-modal-btn-ghost" id="emn-confirm-no">${noLabel}</button>
+          <button type="button" class="emn-modal-btn-primary" id="emn-confirm-yes">${yesLabel}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const cleanup = (result) => { document.body.removeChild(overlay); resolve(result); };
+    overlay.querySelector('#emn-confirm-yes').addEventListener('click', () => cleanup(true));
+    overlay.querySelector('#emn-confirm-no').addEventListener('click', () => cleanup(false));
+    overlay.addEventListener('click', (e) => { if(e.target === overlay) cleanup(false); });
+  });
+}
+
+// "Mi cuenta" modal — change display name, upload a profile photo (stored
+// in the `avatars` Storage bucket), and set a new password. Needs
+// `students.avatar_url` (text column) and a public `avatars` bucket to
+// exist — see the SQL given alongside this feature.
+function emnOpenAccountModal(){
+  emnEnsureModalStyles();
+  const profile = emnStudentProfile || {};
+  const overlay = document.createElement('div');
+  overlay.className = 'emn-modal-overlay';
+  const initials = (profile.full_name || emnSession.user.email || '?').trim().charAt(0).toUpperCase();
+  overlay.innerHTML = `
+    <div class="emn-modal-box">
+      <h3>Mi cuenta</h3>
+      <div class="emn-modal-avatar-row">
+        <div class="emn-modal-avatar" id="emn-account-avatar">${profile.avatar_url ? `<img src="${profile.avatar_url}">` : initials}</div>
+        <input type="file" accept="image/*" id="emn-account-photo-input">
+      </div>
+      <div class="emn-modal-field"><label>Nombre</label><input type="text" id="emn-account-name" value="${(profile.full_name || '').replace(/"/g, '&quot;')}"></div>
+      <div class="emn-modal-field"><label>Correo</label><input type="email" value="${emnSession.user.email}" disabled></div>
+      <div class="emn-modal-field"><label>Nueva contraseña</label><input type="password" id="emn-account-password" placeholder="Dejar en blanco para no cambiar" autocomplete="new-password" minlength="6"></div>
+      <p class="emn-modal-msg" id="emn-account-msg"></p>
+      <hr class="emn-modal-sep">
+      <div class="emn-modal-actions">
+        <button type="button" class="emn-modal-btn-ghost" id="emn-account-cancel">Cerrar</button>
+        <button type="button" class="emn-modal-btn-primary" id="emn-account-save">Guardar cambios</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => document.body.removeChild(overlay);
+  overlay.querySelector('#emn-account-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) close(); });
+
+  let pendingFile = null;
+  overlay.querySelector('#emn-account-photo-input').addEventListener('change', (e) => {
+    pendingFile = e.target.files[0] || null;
+    if(pendingFile){
+      const reader = new FileReader();
+      reader.onload = () => { overlay.querySelector('#emn-account-avatar').innerHTML = `<img src="${reader.result}">`; };
+      reader.readAsDataURL(pendingFile);
+    }
+  });
+
+  overlay.querySelector('#emn-account-save').addEventListener('click', async () => {
+    const btn = overlay.querySelector('#emn-account-save');
+    const msg = overlay.querySelector('#emn-account-msg');
+    const newName = overlay.querySelector('#emn-account-name').value.trim();
+    const newPassword = overlay.querySelector('#emn-account-password').value;
+    msg.style.display = 'none';
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    try {
+      let avatarUrl = profile.avatar_url || null;
+      if(pendingFile){
+        const ext = pendingFile.name.split('.').pop();
+        const path = `${emnSession.user.id}/avatar.${ext}`;
+        const { error: uploadError } = await emnSupabase.storage.from('avatars').upload(path, pendingFile, { upsert: true });
+        if(uploadError) throw uploadError;
+        const { data: pub } = emnSupabase.storage.from('avatars').getPublicUrl(path);
+        avatarUrl = pub.publicUrl + '?t=' + Date.now();
+      }
+
+      const { error: updateError } = await emnSupabase.from('students')
+        .update({ full_name: newName, avatar_url: avatarUrl })
+        .eq('id', emnSession.user.id);
+      if(updateError) throw updateError;
+
+      if(newPassword){
+        if(newPassword.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
+        const { error: pwError } = await emnSupabase.auth.updateUser({ password: newPassword });
+        if(pwError) throw pwError;
+      }
+
+      emnStudentProfile = { ...profile, full_name: newName, avatar_url: avatarUrl };
+      msg.textContent = 'Cambios guardados ✓';
+      msg.style.color = '#1E8E5A';
+      msg.style.display = 'block';
+      setTimeout(() => { close(); location.reload(); }, 900);
+    } catch(err){
+      console.error(err);
+      msg.textContent = err.message || 'No se pudo guardar.';
+      msg.style.color = '#C8102E';
+      msg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
+    }
+  });
 }
 
 // "Administrar" dropdown (Usuarios / Actividad / Calendar) — Admin and Professor only.
@@ -121,6 +303,7 @@ function emnInjectCareerMenu(){
     <div class="emn-nav__dropdown">
       <a href="https://zareenterprises.github.io/career" class="emn-nav__dropdown-item ${path === '/career' ? 'is-active' : ''}">Calendar</a>
       <a href="https://zareenterprises.github.io/clases-interview-prep" class="emn-nav__dropdown-item ${path === '/clases-interview-prep' ? 'is-active' : ''}">Interview Prep</a>
+      <a href="https://zareenterprises.github.io/career-progress" class="emn-nav__dropdown-item ${path === '/career-progress' ? 'is-active' : ''}">Career Progress</a>
     </div>
   `;
   nav.appendChild(item);

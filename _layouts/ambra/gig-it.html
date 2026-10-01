@@ -10,9 +10,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --bg:#161F1A; --panel:#1E2A22; --panel-2:#23301F; --line:#30412F;
-    --gold:#D98A3D; --gold-dark:#B06F2C; --ink:#EDEFE9; --muted:#9BA896;
-    --danger:#D9573D; --ok:#5FA868;
+    --bg:#FFFFFF; --panel:#FFFFFF; --panel-2:#F7F7F7; --line:#E0E0E0;
+    --gold:#F2711C; --gold-dark:#C65A14; --ink:#1A1A1A; --muted:#767676;
+    --danger:#D9342B; --ok:#1E8E5A;
     --font-display:'Fraunces', serif; --font-body:'Inter', -apple-system, sans-serif; --font-mono:'IBM Plex Mono', monospace;
   }
   *{ box-sizing:border-box; }
@@ -39,6 +39,15 @@
   .card h2{ font-family:var(--font-display); font-size:19px; margin:0 0 4px; }
   .card .sub{ font-size:12.5px; color:var(--muted); margin:0 0 16px; }
 
+  .card summary{ cursor:pointer; list-style:none; }
+  .card summary::-webkit-details-marker{ display:none; }
+  .card summary h2{ display:inline-flex; align-items:center; gap:8px; }
+  .card summary h2::before{ content:'▸'; font-size:14px; color:var(--gold); transition:transform .15s; display:inline-block; }
+  .card details[open] summary h2::before{ content:'▾'; }
+  .card details > *:not(summary){ margin-top:14px; }
+  .roster-actions{ display:flex; align-items:center; gap:10px; }
+  summary .title-row{ display:flex; justify-content:space-between; align-items:center; width:100%; }
+
   .field{ margin-bottom:14px; }
   .field label{ display:block; font-size:11.5px; font-weight:600; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; }
   .field input, .field select, .field textarea{
@@ -52,7 +61,7 @@
   .hm-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 
   .btn{ border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; }
-  .btn-gold{ background:var(--gold); color:#1A1206; }
+  .btn-gold{ background:var(--gold); color:#fff; }
   .btn-gold:hover{ background:var(--gold-dark); }
   .btn-ghost{ background:none; border:1px solid var(--line); color:var(--ink); }
   .btn-ghost:hover{ border-color:var(--gold); color:var(--gold); }
@@ -61,7 +70,7 @@
 
   .mode-toggle{ display:flex; gap:8px; margin-bottom:16px; }
   .mode-chip{ flex:1; text-align:center; border:1px solid var(--line); border-radius:8px; padding:10px; cursor:pointer; font-size:13px; font-weight:600; color:var(--muted); }
-  .mode-chip.active{ border-color:var(--gold); color:var(--gold); background:rgba(217,138,61,.08); }
+  .mode-chip.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,113,28,.08); }
 
   table{ width:100%; border-collapse:collapse; font-size:13.5px; }
   th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); padding:8px 8px; border-bottom:1px solid var(--line); }
@@ -71,11 +80,11 @@
 
   .role-filter{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
   .role-filter-chip{ border:1px solid var(--line); border-radius:999px; padding:5px 12px; font-size:11.5px; font-weight:600; cursor:pointer; color:var(--muted); }
-  .role-filter-chip.active{ border-color:var(--gold); color:var(--gold); background:rgba(217,138,61,.1); }
+  .role-filter-chip.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,113,28,.1); }
 
   .musician-pick{ display:flex; flex-wrap:wrap; gap:8px; max-height:280px; overflow-y:auto; padding:8px; border:1px solid var(--line); border-radius:8px; }
   .pick-chip{ border:1px solid var(--line); border-radius:10px; padding:8px 13px; font-size:13px; cursor:pointer; color:var(--ink); max-width:220px; }
-  .pick-chip.selected{ border-color:var(--gold); background:rgba(217,138,61,.1); }
+  .pick-chip.selected{ border-color:var(--gold); background:rgba(242,113,28,.1); }
   .pick-chip .pick-name{ font-weight:600; }
   .pick-chip.selected .pick-name{ color:var(--gold); }
   .pick-chip .pick-sub{ font-size:10.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
@@ -87,10 +96,10 @@
   .empty{ text-align:center; padding:30px; color:var(--muted); font-size:13px; }
 
   .status-pill{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.02em; }
-  .status-pending{ background:rgba(155,168,150,.15); color:var(--muted); }
-  .status-yes{ background:rgba(95,168,104,.18); color:var(--ok); }
-  .status-no{ background:rgba(217,87,61,.18); color:var(--danger); }
-  .status-filled{ background:rgba(217,138,61,.18); color:var(--gold); }
+  .status-pending{ background:rgba(118,118,118,.12); color:var(--muted); }
+  .status-yes{ background:rgba(30,142,90,.14); color:var(--ok); }
+  .status-no{ background:rgba(217,52,43,.12); color:var(--danger); }
+  .status-filled{ background:rgba(242,113,28,.14); color:var(--gold); }
 
   .event-card{ cursor:pointer; }
   .event-card:hover{ border-color:var(--gold); }
@@ -240,26 +249,32 @@
       </div>
 
       <div class="card">
-        <h2>Import from Band</h2>
-        <p class="sub">Pull in names already in your project bands — fill in phone/email here since Band doesn't have those.</p>
-        <div id="import-list"></div>
+        <details id="import-details">
+          <summary><h2>Import from Band</h2></summary>
+          <p class="sub">Pull in names already in your project bands — fill in phone/email here since Band doesn't have those.</p>
+          <div id="import-list"></div>
+        </details>
       </div>
 
       <div class="card">
-        <div class="title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div>
-            <h2 style="margin:0;">Roster</h2>
-            <p class="sub" style="margin:4px 0 0;">Synced from Airtable's Musicians Database.</p>
-          </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span class="mono" id="sync-status"></span>
-            <button type="button" class="btn btn-gold btn-sm" id="btn-sync-airtable">Sync from Airtable</button>
-          </div>
-        </div>
-        <table>
-          <thead><tr><th>Name</th><th>Role</th><th>Type</th><th>Country</th><th>Genres</th><th>Phone</th><th>Email</th><th>Payment</th><th></th></tr></thead>
-          <tbody id="musicians-tbody"></tbody>
-        </table>
+        <details id="roster-details" open>
+          <summary>
+            <div class="title-row">
+              <div>
+                <h2>Roster</h2>
+                <p class="sub" style="margin:4px 0 0;">Synced from Airtable's Musicians Database.</p>
+              </div>
+              <div class="roster-actions">
+                <span class="mono" id="sync-status"></span>
+                <button type="button" class="btn btn-gold btn-sm" id="btn-sync-airtable">Sync from Airtable</button>
+              </div>
+            </div>
+          </summary>
+          <table>
+            <thead><tr><th>Name</th><th>Role</th><th>Type</th><th>Country</th><th>Genres</th><th>Phone</th><th>Email</th><th>Payment</th><th></th></tr></thead>
+            <tbody id="musicians-tbody"></tbody>
+          </table>
+        </details>
       </div>
     </div>
   </div>
@@ -418,7 +433,9 @@ function renderMusiciansTable(){
   });
 }
 
-$('#btn-sync-airtable').addEventListener('click', async () => {
+$('#btn-sync-airtable').addEventListener('click', async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
   const btn = $('#btn-sync-airtable');
   const status = $('#sync-status');
   btn.disabled = true;

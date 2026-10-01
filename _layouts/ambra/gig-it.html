@@ -249,10 +249,34 @@ async function loadMusicians(){
 
 let pickerRoleFilters = new Set();
 
+// Matches the exact order of Role choices in Airtable's Musicians Database,
+// grouped the way the admin thinks about them: instruments first, then
+// ensembles, then directors, then engineers/crew last. Anything not listed
+// here (a new Airtable choice we don't know about yet) just sorts after
+// these, alphabetically.
+const ROLE_CATEGORY_ORDER = [
+  // Instruments
+  'Female Singer','Male Singer','Percussion','Drums','Guitar','DJ','Piano','Violin',
+  'Bass Guitar','Clarinet','Trombone','Trumpet','Alto Saxophone','Tenor Sahophone',
+  'Baritone Saxophone','Viola','Cello',
+  // Ensembles
+  'Ensemble',
+  // Directors
+  'Music Director',
+  // Engineers & stage crew
+  'Sound Engineer','Stage Crew','Transportation'
+];
+
 function allRoles(){
   const roles = new Set();
   MUSICIANS.forEach(m => (m.instruments || []).forEach(i => roles.add(i)));
-  return Array.from(roles).sort();
+  return Array.from(roles).sort((a, b) => {
+    const ia = ROLE_CATEGORY_ORDER.indexOf(a), ib = ROLE_CATEGORY_ORDER.indexOf(b);
+    if(ia === -1 && ib === -1) return a.localeCompare(b);
+    if(ia === -1) return 1;
+    if(ib === -1) return -1;
+    return ia - ib;
+  });
 }
 
 function renderRoleFilter(){

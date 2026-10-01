@@ -319,6 +319,7 @@
 const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (s) => document.querySelector(s);
 
 let MUSICIANS = [];
 let EVENTS = [];
@@ -347,8 +348,6 @@ function addExtraRow(type){
   $('#extras-rows').appendChild(row);
 }
 $('#btn-add-extra').addEventListener('click', () => addExtraRow($('#extras-type-picker').value));
-
-const $ = (s) => document.querySelector(s);
 
 /* ---------------- Auth gate (admin only) ---------------- */
 async function gate(){

@@ -247,7 +247,7 @@ async function loadMusicians(){
   MUSICIANS = data || [];
 }
 
-let pickerRoleFilters = new Set();
+let pickerRoleFilter = null; // null (nothing picked yet), 'all', or one role name — single-select
 
 // Matches the exact order of Role choices in Airtable's Musicians Database,
 // grouped the way the admin thinks about them: instruments first, then
@@ -281,14 +281,16 @@ function allRoles(){
 
 function renderRoleFilter(){
   const roles = allRoles();
-  $('#role-filter').innerHTML = roles.length
-    ? roles.map(r => `<div class="role-filter-chip ${pickerRoleFilters.has(r) ? 'active' : ''}" data-role="${esc(r)}">${esc(r)}</div>`).join('')
-    : '';
+  const allChip = `<div class="role-filter-chip ${pickerRoleFilter === 'all' ? 'active' : ''}" data-role="all">All</div>`;
+  $('#role-filter').innerHTML = allChip + roles.map(r =>
+    `<div class="role-filter-chip ${pickerRoleFilter === r ? 'active' : ''}" data-role="${esc(r)}">${esc(r)}</div>`
+  ).join('');
+
   document.querySelectorAll('#role-filter .role-filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      const role = chip.dataset.role;
-      pickerRoleFilters.has(role) ? pickerRoleFilters.delete(role) : pickerRoleFilters.add(role);
-      chip.classList.toggle('active');
+      pickerRoleFilter = chip.dataset.role;
+      document.querySelectorAll('#role-filter .role-filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
       renderMusicianPicker();
     });
   });
@@ -304,9 +306,13 @@ function subInfo(m){
 }
 
 function renderMusicianPicker(){
-  const filtered = pickerRoleFilters.size
-    ? MUSICIANS.filter(m => (m.instruments || []).some(i => pickerRoleFilters.has(i)))
-    : MUSICIANS;
+  if(!pickerRoleFilter){
+    $('#musician-pick').innerHTML = '<p class="empty">Pick a role above to see who\'s available.</p>';
+    return;
+  }
+  const filtered = pickerRoleFilter === 'all'
+    ? MUSICIANS
+    : MUSICIANS.filter(m => (m.instruments || []).includes(pickerRoleFilter));
 
   $('#musician-pick').innerHTML = filtered.length
     ? filtered.map(m => `

@@ -37,9 +37,11 @@ function json(body: unknown, status = 200) {
   });
 }
 
-// Airtable returns singleSelect as {id,name,color} and multipleSelects as an
-// array of those — we only ever want the plain name(s).
+// Airtable's real REST API returns singleSelect/multipleSelects as plain
+// strings (just the option name) — handle an {id,name,color} object too in
+// case that ever changes, but plain strings are the actual live format.
 function selectName(v: unknown): string | null {
+  if (typeof v === 'string') return v;
   if (v && typeof v === 'object' && 'name' in (v as Record<string, unknown>)) {
     return (v as { name: string }).name;
   }

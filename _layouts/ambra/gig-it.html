@@ -48,6 +48,8 @@
   .field textarea{ resize:vertical; min-height:60px; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  .section-divider{ height:1px; background:var(--line); margin:4px 0 18px; }
+  .hm-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 
   .btn{ border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:inherit; }
   .btn-gold{ background:var(--gold); color:#1A1206; }
@@ -133,10 +135,59 @@
         <div class="row3">
           <div class="field"><label>Date</label><input type="date" id="ev-date"></div>
           <div class="field"><label>Start time</label><input type="time" id="ev-time"></div>
+          <div class="field"><label>End time</label><input type="time" id="ev-end-time"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Location</label><input type="text" id="ev-location" placeholder="Venue / address"></div>
           <div class="field"><label>Pay</label><input type="text" id="ev-pay" placeholder="e.g. $150"></div>
         </div>
-        <div class="field"><label>Location</label><input type="text" id="ev-location" placeholder="Venue / address"></div>
-        <div class="field"><label>Notes</label><textarea id="ev-notes" placeholder="Dress code, arrival time, anything else..."></textarea></div>
+
+        <div class="section-divider"></div>
+
+        <div class="row2">
+          <div class="field"><label>Pick up point</label><input type="text" id="ev-pickup" placeholder="Where musicians get picked up"></div>
+          <div class="field"><label>Attire</label><input type="text" id="ev-attire" placeholder="e.g. All black, formal"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Departs (before event)</label>
+            <div class="hm-row">
+              <select id="ev-depart-hours">
+                <option value="0">0 h</option>
+                <option value="1" selected>1 h</option>
+                <option value="2">2 h</option>
+                <option value="3">3 h</option>
+                <option value="4">4 h</option>
+              </select>
+              <select id="ev-depart-minutes">
+                <option value="0" selected>00 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Returns (after event ends)</label>
+            <div class="hm-row">
+              <select id="ev-return-hours">
+                <option value="0">0 h</option>
+                <option value="1" selected>1 h</option>
+                <option value="2">2 h</option>
+                <option value="3">3 h</option>
+                <option value="4">4 h</option>
+              </select>
+              <select id="ev-return-minutes">
+                <option value="0" selected>00 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field"><label>Notes</label><textarea id="ev-notes" placeholder="Anything else the musicians should know..."></textarea></div>
 
         <div class="field">
           <label>Send mode</label>
@@ -500,10 +551,15 @@ $('#btn-send-event').addEventListener('click', async () => {
       title,
       event_date,
       start_time: $('#ev-time').value || null,
+      end_time: $('#ev-end-time').value || null,
       pay: $('#ev-pay').value.trim() || null,
       location: $('#ev-location').value.trim() || null,
       music_style: $('#ev-style').value.trim() || null,
       notes: $('#ev-notes').value.trim() || null,
+      pickup_point: $('#ev-pickup').value.trim() || null,
+      attire: $('#ev-attire').value.trim() || null,
+      depart_offset_minutes: parseInt($('#ev-depart-hours').value, 10) * 60 + parseInt($('#ev-depart-minutes').value, 10),
+      return_offset_minutes: parseInt($('#ev-return-hours').value, 10) * 60 + parseInt($('#ev-return-minutes').value, 10),
       mode: currentMode
     }).select().single();
     if(evErr) throw evErr;
@@ -532,8 +588,8 @@ $('#btn-send-event').addEventListener('click', async () => {
 
     status.textContent = 'Sent ✓ (push notifications not wired up yet — invites are saved)';
     selectedMusicianIds.clear();
-    $('#ev-title').value = ''; $('#ev-date').value = ''; $('#ev-time').value = '';
-    $('#ev-pay').value = ''; $('#ev-location').value = ''; $('#ev-style').value = ''; $('#ev-notes').value = '';
+    $('#ev-title').value = ''; $('#ev-date').value = ''; $('#ev-time').value = ''; $('#ev-end-time').value = '';
+    $('#ev-pay').value = ''; $('#ev-location').value = ''; $('#ev-style').value = ''; $('#ev-notes').value = ''; $('#ev-pickup').value = ''; $('#ev-attire').value = '';
     $('#role-rows').innerHTML = '';
     renderMusicianPicker();
     await loadEvents();
@@ -562,15 +618,48 @@ function formatTimeAdmin(t){
   const hour = parseInt(h, 10);
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const hour12 = ((hour + 11) % 12) + 1;
-  return `${hour12}:${m} ${ampm}`;
+  return `${hour12}:${m}${ampm}`;
+}
+
+// Shifts a "HH:MM" time by +/- minutes, wrapping across midnight — used to
+// turn "1 hour before the event" into an actual clock time to show.
+function shiftTime(t, deltaMinutes){
+  if(!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  let total = (h * 60 + m + deltaMinutes) % 1440;
+  if(total < 0) total += 1440;
+  const hh = String(Math.floor(total / 60)).padStart(2, '0');
+  const mm = String(total % 60).padStart(2, '0');
+  return formatTimeAdmin(`${hh}:${mm}`);
 }
 
 function buildWaMessage(ev, link){
   const date = new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
-  const time = formatTimeAdmin(ev.start_time);
-  return `Hi! AMBRA has a gig for you: "${ev.title}" on ${date}${time ? ' at ' + time : ''}${ev.location ? ' @ ' + ev.location : ''}${ev.pay ? ' — pay: ' + ev.pay : ''}.\n\n` +
-    `Tap here to confirm: ${link}\n\n` +
-    `First time? Open the link, tap Share > Add to Home Screen, and you'll have the app right on your phone.`;
+  const start = formatTimeAdmin(ev.start_time);
+  const end = formatTimeAdmin(ev.end_time);
+  const showTime = start && end ? `${start}-${end}` : (start || '—');
+  const departAt = ev.start_time && ev.depart_offset_minutes != null ? shiftTime(ev.start_time, -ev.depart_offset_minutes) : null;
+  const returnAt = ev.end_time && ev.return_offset_minutes != null ? shiftTime(ev.end_time, ev.return_offset_minutes) : null;
+
+  const lines = [
+    'Hi! AMBRA chosen you for a gig!',
+    '',
+    `Event: "${ev.title}"`,
+    `Date: ${date}`,
+    `Show Time: ${showTime}`,
+    ''
+  ];
+  if(ev.pickup_point) lines.push(`Pick up point: ${ev.pickup_point}`);
+  if(departAt) lines.push(`Depart at: ${departAt}`);
+  if(returnAt) lines.push(`Regresas al punto de partida a las: ${returnAt}`);
+  if(ev.attire) lines.push(`Attire: ${ev.attire}`);
+  if(ev.pickup_point || departAt || returnAt || ev.attire) lines.push('');
+
+  lines.push(`Payment: ${ev.pay || '—'}.`, '');
+  lines.push("To confirm and get more gigs, please open the link, tap Share > Add to Home Screen, and you'll have the app right on your phone.", '');
+  lines.push(link);
+
+  return lines.join('\n');
 }
 
 function waLinkFor(musician, ev){

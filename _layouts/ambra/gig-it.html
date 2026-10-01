@@ -93,6 +93,12 @@
   .role-row .field{ margin-bottom:0; flex:1; }
   .role-row .field.spots{ max-width:110px; }
 
+  .extra-row{ display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .extra-row .extra-label{ flex-shrink:0; width:130px; font-size:12.5px; font-weight:600; }
+  .extra-row input{ flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:7px; color:var(--ink); padding:8px 10px; font-size:13px; font-family:inherit; }
+  .extras-add-row{ display:flex; gap:8px; margin-top:4px; }
+  .extras-add-row select{ background:var(--panel-2); border:1px solid var(--line); border-radius:7px; color:var(--ink); padding:8px 10px; font-size:13px; font-family:inherit; }
+
   .empty{ text-align:center; padding:30px; color:var(--muted); font-size:13px; }
 
   .status-pill{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.02em; }
@@ -198,6 +204,25 @@
 
         <div class="field"><label>Notes</label><textarea id="ev-notes" placeholder="Anything else the musicians should know..."></textarea></div>
 
+        <div class="section-divider"></div>
+
+        <div class="field">
+          <label>Crew &amp; equipment needed (optional — feeds the invoice later)</label>
+          <div id="extras-rows"></div>
+          <div class="extras-add-row">
+            <select id="extras-type-picker">
+              <option value="engineer">Engineer</option>
+              <option value="stage_crew">Stage Crew</option>
+              <option value="sound_equipment">Sound Equipment</option>
+              <option value="stage_rental">Stage Rental</option>
+              <option value="lights_rental">Lights Rental</option>
+            </select>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-add-extra">+ Add</button>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
         <div class="field">
           <label>Send mode</label>
           <div class="mode-toggle">
@@ -223,7 +248,7 @@
         </div>
 
         <div style="margin-top:18px; display:flex; align-items:center; gap:12px;">
-          <button type="button" class="btn btn-gold" id="btn-send-event">Send gig call</button>
+          <button type="button" class="btn btn-gold" id="btn-send-event">Save gig plan</button>
           <span class="mono" id="send-status"></span>
         </div>
       </div>
@@ -290,6 +315,28 @@ let EVENTS = [];
 let currentMode = 'selected';
 let selectedMusicianIds = new Set();
 let roleRowCount = 0;
+
+const EXTRA_LABELS = {
+  engineer: 'Engineer',
+  stage_crew: 'Stage Crew',
+  sound_equipment: 'Sound Equipment',
+  stage_rental: 'Stage Rental',
+  lights_rental: 'Lights Rental'
+};
+
+function addExtraRow(type){
+  const row = document.createElement('div');
+  row.className = 'extra-row';
+  row.dataset.type = type;
+  row.innerHTML = `
+    <span class="extra-label">${EXTRA_LABELS[type]}</span>
+    <input type="text" class="extra-notes" placeholder="Notes (optional)">
+    <button type="button" class="btn btn-ghost btn-sm extra-remove">×</button>
+  `;
+  row.querySelector('.extra-remove').addEventListener('click', () => row.remove());
+  $('#extras-rows').appendChild(row);
+}
+$('#btn-add-extra').addEventListener('click', () => addExtraRow($('#extras-type-picker').value));
 
 const $ = (s) => document.querySelector(s);
 
@@ -577,9 +624,20 @@ $('#btn-send-event').addEventListener('click', async () => {
       attire: $('#ev-attire').value.trim() || null,
       depart_offset_minutes: parseInt($('#ev-depart-hours').value, 10) * 60 + parseInt($('#ev-depart-minutes').value, 10),
       return_offset_minutes: parseInt($('#ev-return-hours').value, 10) * 60 + parseInt($('#ev-return-minutes').value, 10),
-      mode: currentMode
+      mode: currentMode,
+      status: 'planning'
     }).select().single();
     if(evErr) throw evErr;
+
+    const extraRows = Array.from(document.querySelectorAll('#extras-rows .extra-row')).map(row => ({
+      event_id: event.id,
+      type: row.dataset.type,
+      notes: row.querySelector('.extra-notes').value.trim() || null
+    }));
+    if(extraRows.length){
+      const { error: extraErr } = await supabaseClient.from('event_extras').insert(extraRows);
+      if(extraErr) throw extraErr;
+    }
 
     if(currentMode === 'selected'){
       const invites = Array.from(selectedMusicianIds).map(musician_id => ({ event_id: event.id, musician_id }));
@@ -603,11 +661,12 @@ $('#btn-send-event').addEventListener('click', async () => {
       }
     }
 
-    status.textContent = 'Sent ✓ (push notifications not wired up yet — invites are saved)';
+    status.textContent = 'Saved ✓ — musicians are NOT notified yet. Generate and get the invoice paid first.';
     selectedMusicianIds.clear();
     $('#ev-title').value = ''; $('#ev-date').value = ''; $('#ev-time').value = ''; $('#ev-end-time').value = '';
     $('#ev-pay').value = ''; $('#ev-location').value = ''; $('#ev-style').value = ''; $('#ev-notes').value = ''; $('#ev-pickup').value = ''; $('#ev-attire').value = '';
     $('#role-rows').innerHTML = '';
+    $('#extras-rows').innerHTML = '';
     renderMusicianPicker();
     await loadEvents();
     renderEvents();
@@ -686,6 +745,29 @@ function waLinkFor(musician, ev){
   return `https://wa.me/${digits}?text=${encodeURIComponent(buildWaMessage(ev, link))}`;
 }
 
+const EVENT_STATUS_LABEL = { planning: 'Planning', invoiced: 'Invoiced', paid: 'Paid' };
+
+function slugify(text){
+  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).slice(2, 7);
+}
+
+// Quick Gig events aren't "real" Projects until the first invoice is
+// generated from them — only then do they need to show up in Projects /
+// carry invoices the way a Full Production does.
+async function ensureProjectForEvent(ev){
+  if(ev.project_id) return ev.project_id;
+  const { data: project, error } = await supabaseClient.from('projects').insert({
+    slug: slugify(ev.title),
+    name: ev.title,
+    project_type: 'quick_gig'
+  }).select().single();
+  if(error) throw error;
+  const { error: updErr } = await supabaseClient.from('events').update({ project_id: project.id }).eq('id', ev.id);
+  if(updErr) throw updErr;
+  ev.project_id = project.id;
+  return project.id;
+}
+
 function renderEvents(){
   $('#events-list').innerHTML = EVENTS.length
     ? EVENTS.map(ev => {
@@ -699,12 +781,16 @@ function renderEvents(){
               <h3>${esc(ev.title)}</h3>
               <span class="mono">${esc(ev.event_date)}</span>
             </div>
-            <p class="meta">${esc(ev.location || 'No location set')} · ${ev.mode === 'broadcast' ? 'Instrument broadcast' : 'Selected musicians'}</p>
+            <p class="meta">
+              ${esc(ev.location || 'No location set')} · ${ev.mode === 'broadcast' ? 'Instrument broadcast' : 'Selected musicians'}
+              · <span class="status-pill status-${ev.status === 'paid' ? 'yes' : ev.status === 'invoiced' ? 'filled' : 'pending'}">${EVENT_STATUS_LABEL[ev.status] || ev.status}</span>
+            </p>
             <div class="roster-summary">
               <span class="status-pill status-yes">Yes <b>${counts.yes}</b></span>
               <span class="status-pill status-no">No <b>${counts.no}</b></span>
               <span class="status-pill status-pending">Pending <b>${counts.pending}</b></span>
               ${counts.filled ? `<span class="status-pill status-filled">Filled <b>${counts.filled}</b></span>` : ''}
+              <button type="button" class="btn btn-ghost btn-sm btn-generate-invoice" data-id="${ev.id}" style="margin-left:auto;">Generate Invoice</button>
             </div>
           </div>
           <div class="event-roster" id="roster-${ev.id}" style="display:none"></div>
@@ -712,6 +798,27 @@ function renderEvents(){
       `;
     }).join('')
     : '<p class="empty">No gig calls sent yet.</p>';
+
+  document.querySelectorAll('.btn-generate-invoice').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.disabled = true;
+      try {
+        const ev = EVENTS.find(x => x.id === btn.dataset.id);
+        const projectId = await ensureProjectForEvent(ev);
+        if(ev.status === 'planning'){
+          await supabaseClient.from('events').update({ status: 'invoiced' }).eq('id', ev.id);
+          ev.status = 'invoiced';
+          renderEvents();
+        }
+        window.open(`/invoice/?project_id=${projectId}&from_event=${ev.id}`, '_blank', 'noopener');
+      } catch(err){
+        alert(err.message || 'Could not start the invoice.');
+      }
+      btn.disabled = false;
+    });
+  });
 
   document.querySelectorAll('.event-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -721,19 +828,21 @@ function renderEvents(){
       if(wasOpen) return;
 
       const ev = EVENTS.find(e => e.id === card.dataset.id);
-      panel.innerHTML = (ev.event_invites || []).map(i => {
-        const m = i.musicians || {};
-        const waHref = waLinkFor(m, ev);
-        return `
-          <div class="roster-row">
-            <span class="roster-name">${esc(m.full_name || 'Unknown')}</span>
-            <span class="status-pill status-${i.response}">${i.response}</span>
-            ${waHref
-              ? `<a class="btn btn-gold btn-sm" href="${waHref}" target="_blank" rel="noopener">Send WhatsApp</a>`
-              : '<span class="mono">No phone on file</span>'}
-          </div>
-        `;
-      }).join('');
+      const canAlert = ev.status === 'paid';
+      panel.innerHTML = (!canAlert ? `<p class="empty">Musicians aren't notified until this event's invoice is marked "Paid in full".</p>` : '') +
+        (ev.event_invites || []).map(i => {
+          const m = i.musicians || {};
+          const waHref = canAlert ? waLinkFor(m, ev) : null;
+          return `
+            <div class="roster-row">
+              <span class="roster-name">${esc(m.full_name || 'Unknown')}</span>
+              <span class="status-pill status-${i.response}">${i.response}</span>
+              ${!canAlert ? '<span class="mono">Waiting for payment</span>'
+                : waHref ? `<a class="btn btn-gold btn-sm" href="${waHref}" target="_blank" rel="noopener">Send WhatsApp</a>`
+                : '<span class="mono">No phone on file</span>'}
+            </div>
+          `;
+        }).join('');
       panel.style.display = 'block';
     });
   });

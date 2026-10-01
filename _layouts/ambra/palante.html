@@ -28,6 +28,7 @@
   <button class="tab-btn primary tab-band" data-tab="band">Band</button>
   <button class="tab-btn primary tab-technical" data-tab="technical">Technical</button>
   <button class="tab-btn primary tab-showcase" data-tab="showcase" id="tab-btn-showcase" style="display:none">Showcase</button>
+  <a class="tab-btn primary" id="invoice-link" href="/invoice/" target="_blank" rel="noopener" style="text-decoration:none; display:inline-flex; align-items:center;">Invoice</a>
   <span class="tab-divider"></span>
   <span class="pin-tab-anchor">
     <button class="pill" id="pin-tab-btn">＋ Pin a view</button>
@@ -664,6 +665,8 @@ async function loadSessionAndPermissions(){
   PERMS = Object.assign({}, PERMS, mine.permissions || {});
   currentProjectId = mine.project_id;
   currentProjectName = mine.projects.name;
+  const invoiceLink = document.getElementById('invoice-link');
+  if(invoiceLink) invoiceLink.href = `/invoice/?project_id=${currentProjectId}`;
   return true;
 }
 

@@ -703,6 +703,7 @@
     if(!ok) return;
     DATA = blankInvoiceData();
     currentInvoiceId = null;
+    currentEventId = null;
     invoiceNumberTouched = false;
     writeDataIntoForm();
     updatePreview();
@@ -809,6 +810,92 @@
 
   let currentInvoiceId = null; // set once loaded/saved — makes "Save" update that same row instead of creating a new one
 
+  // Arriving from a project's own "Invoice" button (e.g. /invoice/?project_id=xxx)
+  // means this invoice is already meant for that project — skip the "create a
+  // linked project?" prompt entirely and just attach straight to it. This is
+  // also how a big project ends up with more than one invoice (partial
+  // payments): each visit creates a new invoice row sharing the same project_id.
+  const linkedProjectId = new URLSearchParams(location.search).get('project_id') || null;
+
+  // Arriving from Gig-It's "Generate Invoice" button — pre-fills this
+  // invoice's event info and Musicians/equipment line items from that
+  // Quick Gig event instead of starting blank. Saving this invoice records
+  // event_id so marking it "Paid in full" later can flip that event to
+  // paid and unlock the Gig-It alert.
+  const prefillEventId = new URLSearchParams(location.search).get('from_event') || null;
+  let currentEventId = prefillEventId;
+
+  // The one moment musicians actually get notified: this invoice's event
+  // flips to 'paid', which is what un-gates the "Send WhatsApp" buttons
+  // back in Gig-It. Safe to call on every save — it's a no-op unless the
+  // status just became "Paid in full".
+  async function syncEventPaidStatus(){
+    if(!currentEventId || DATA.invoice.status !== 'Paid in full') return;
+    const { error } = await supabaseClient.from('events').update({ status: 'paid' }).eq('id', currentEventId);
+    if(error) console.error('syncEventPaidStatus', error);
+  }
+
+  const EXTRA_LABELS = {
+    engineer: 'Engineer', stage_crew: 'Stage Crew', sound_equipment: 'Sound Equipment',
+    stage_rental: 'Stage Rental', lights_rental: 'Lights Rental'
+  };
+
+  async function prefillFromEvent(eventId){
+    const { data: ev, error: evErr } = await supabaseClient.from('events').select('*').eq('id', eventId).maybeSingle();
+    if(evErr || !ev) { console.error('prefillFromEvent', evErr); return; }
+
+    const [{ data: roles }, { data: invites }, { data: extras }] = await Promise.all([
+      supabaseClient.from('event_roles').select('id, instrument, spots_needed').eq('event_id', eventId),
+      supabaseClient.from('event_invites').select('role_id, musicians(full_name, instruments)').eq('event_id', eventId),
+      supabaseClient.from('event_extras').select('type, notes').eq('event_id', eventId)
+    ]);
+
+    DATA.event = {
+      name: ev.title || '', date: ev.event_date || '',
+      startTime: ev.start_time || '', endTime: ev.end_time || '',
+      schedule: computeScheduleLabel(ev.start_time, ev.end_time),
+      venue: ev.location || '', program: ev.music_style || ''
+    };
+
+    const musicians = [];
+    if((roles || []).length){
+      // Broadcast mode: one role can have more spots than confirmed names —
+      // fill the gap with "TBD", same convention the invoice already uses.
+      roles.forEach(role => {
+        const namedForRole = (invites || []).filter(i => i.role_id === role.id);
+        for(let i = 0; i < role.spots_needed; i++){
+          const name = namedForRole[i]?.musicians?.full_name || 'TBD';
+          musicians.push({ name, instrument: role.instrument, pay: 0 });
+        }
+      });
+    } else {
+      // Selected mode: no roles, just named invites directly.
+      (invites || []).forEach(i => {
+        musicians.push({
+          name: i.musicians?.full_name || 'TBD',
+          instrument: (i.musicians?.instruments || [])[0] || '',
+          pay: 0
+        });
+      });
+    }
+
+    const items = [];
+    if(musicians.length){
+      items.push({
+        qty: 1, rate: 0, unit: '', title: 'Musicians', included: false,
+        description: musicians.map(m => `${m.instrument || 'Musician'}${m.name !== 'TBD' ? ' — ' + m.name : ''}`).join(', '),
+        internal: { musicians, transportCost: 0, profit: 0 }
+      });
+    }
+    (extras || []).forEach(ex => {
+      items.push({
+        qty: 1, rate: 0, unit: '', title: `${EXTRA_LABELS[ex.type] || ex.type} (TBD)`,
+        included: false, description: ex.notes || ''
+      });
+    });
+    if(items.length) DATA.items = items;
+  }
+
   document.getElementById('btn-save-invoice').addEventListener('click', async () => {
     readFormIntoData();
     const errors = validationErrors();
@@ -830,33 +917,38 @@
           .update({ number: DATA.invoice.number || null, data: DATA })
           .eq('id', currentInvoiceId);
         if(error){ alert('Could not save the invoice:\n' + error.message); return; }
-        alert('Invoice updated.');
+        await syncEventPaidStatus();
+        alert('Invoice updated.' + (currentEventId && DATA.invoice.status === 'Paid in full' ? ' Gig-It alert unlocked for this event.' : ''));
         return;
       }
 
-      let projectId = null;
-      const wantsProject = await showConfirmModal(
-        '¿Crear un proyecto vinculado?',
-        'Se arma también su hoja de Finance con estos mismos datos, lista en Projects.',
-        'Sí, crear proyecto', 'No, solo guardar'
-      );
-      if(wantsProject){
-        const project = await createLinkedProject();
-        if(project){
-          projectId = project.id;
-          window.open(project.href, '_blank', 'noopener');
+      let projectId = linkedProjectId;
+      if(!projectId){
+        const wantsProject = await showConfirmModal(
+          '¿Crear un proyecto vinculado?',
+          'Se arma también su hoja de Finance con estos mismos datos, lista en Projects.',
+          'Sí, crear proyecto', 'No, solo guardar'
+        );
+        if(wantsProject){
+          const project = await createLinkedProject();
+          if(project){
+            projectId = project.id;
+            window.open(project.href, '_blank', 'noopener');
+          }
         }
       }
 
       const { data: rows, error } = await supabaseClient.from('invoices').insert({
         number: DATA.invoice.number || null,
         project_id: projectId,
+        event_id: prefillEventId,
         data: DATA
       }).select();
       if(error){ alert('Could not save the invoice:\n' + error.message); return; }
 
       const invoice = rows[0];
       currentInvoiceId = invoice.id;
+      await syncEventPaidStatus();
       const shareUrl = `${location.origin}/invoice-view/?id=${invoice.id}`;
       showShareModal(shareUrl);
     } finally {
@@ -874,12 +966,15 @@
     dropdown.innerHTML = '<p class="hint">Loading…</p>';
     dropdown.style.display = 'block';
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/invoices?select=id,number,created_at,data&order=created_at.desc`, {
+    // Arrived from a project's "Invoice" button — only show that project's
+    // own invoices (there can be several, e.g. a deposit + balance invoice).
+    const filterQs = linkedProjectId ? `&project_id=eq.${linkedProjectId}` : '';
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/invoices?select=id,number,created_at,data,event_id&order=created_at.desc${filterQs}`, {
       headers: { 'Authorization': `Bearer ${currentSession.access_token}`, 'apikey': SUPABASE_ANON_KEY }
     });
     if(!res.ok){ dropdown.innerHTML = '<p class="hint">Could not load invoices.</p>'; return; }
     const rows = await res.json();
-    if(!rows.length){ dropdown.innerHTML = '<p class="hint">No saved invoices yet.</p>'; return; }
+    if(!rows.length){ dropdown.innerHTML = `<p class="hint">${linkedProjectId ? 'No invoices for this project yet.' : 'No saved invoices yet.'}</p>`; return; }
 
     dropdown.innerHTML = rows.map(r => {
       const org = r.data?.client?.organization || 'Untitled';
@@ -896,6 +991,7 @@
         if(row){
           DATA = Object.assign(blankInvoiceData(), row.data);
           currentInvoiceId = row.id;
+          currentEventId = row.event_id || null;
           invoiceNumberTouched = true;
           writeDataIntoForm();
           updatePreview();
@@ -910,11 +1006,13 @@
   });
 
   /* ───────── Boot — always starts from a blank invoice ───────── */
-  function boot(){
+  async function boot(){
     DATA = blankInvoiceData();
     currentInvoiceId = null;
     invoiceNumberTouched = false;
+    if(prefillEventId) await prefillFromEvent(prefillEventId);
     writeDataIntoForm();
+    updatePreview();
     document.getElementById('app-body').style.display = 'grid';
     loadAirtableClients();
   }

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Gig Call — AMBRA</title>
+<link rel="manifest" href="/assets/gig-manifest.json">
+<meta name="theme-color" content="#161F1A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gig Call">
+<link rel="apple-touch-icon" href="/assets/img/ambraSubmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#161F1A; --panel:#1E2A22; --panel-2:#23301F; --line:#30412F;
+    --gold:#D98A3D; --gold-dark:#B06F2C; --ink:#EDEFE9; --muted:#9BA896;
+    --danger:#D9573D; --ok:#5FA868;
+    --font-display:'Fraunces', serif; --font-body:'Inter', -apple-system, sans-serif; --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); padding-bottom:env(safe-area-inset-bottom,0); }
+  .wrap{ max-width:480px; margin:0 auto; padding:24px 18px 60px; }
+  h1{ font-family:var(--font-display); font-size:24px; margin:0 0 4px; }
+  h1 span{ color:var(--gold); }
+  .hello{ font-size:13.5px; color:var(--muted); margin:0 0 24px; }
+
+  #loading, #error{ text-align:center; padding:80px 20px; color:var(--muted); font-size:14px; }
+
+  .install-card{ background:var(--panel); border:1px solid var(--gold); border-radius:12px; padding:16px 18px; margin-bottom:20px; }
+  .install-card h3{ font-family:var(--font-display); font-size:15px; margin:0 0 8px; color:var(--gold); }
+  .install-card ol{ margin:0; padding-left:18px; font-size:13px; color:var(--ink); line-height:1.7; }
+  .install-card .dismiss{ display:block; margin-top:10px; font-size:11.5px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; }
+
+  .empty{ text-align:center; padding:60px 20px; color:var(--muted); font-size:13.5px; }
+
+  .event-card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  .event-card h2{ font-family:var(--font-display); font-size:19px; margin:0 0 2px; }
+  .event-card .role-tag{ display:inline-block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--gold); background:rgba(217,138,61,.12); border-radius:5px; padding:2px 8px; margin-bottom:8px; }
+  .meta-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; font-size:13px; margin:10px 0 14px; }
+  .meta-grid div b{ display:block; font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); font-weight:600; margin-bottom:2px; }
+  .notes{ font-size:13px; color:var(--muted); margin:0 0 14px; white-space:pre-wrap; }
+
+  .answer-row{ display:flex; gap:10px; }
+  .btn-yes, .btn-no{ flex:1; border:none; border-radius:8px; padding:12px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; }
+  .btn-yes{ background:var(--ok); color:#0E1A10; }
+  .btn-no{ background:var(--panel-2); color:var(--ink); border:1px solid var(--line); }
+  .btn-yes.active{ outline:2px solid var(--ok); }
+  .btn-no.active{ outline:2px solid var(--danger); }
+  .btn-yes:disabled, .btn-no:disabled{ opacity:.5; cursor:default; }
+
+  .status-note{ text-align:center; font-size:12.5px; color:var(--muted); margin-top:10px; }
+  .status-note.filled{ color:var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Gig <span>Call</span></h1>
+  <p class="hello" id="hello-line">AMBRA Live Productions</p>
+
+  <div class="install-card" id="install-card" style="display:none">
+    <h3>Add this to your Home Screen</h3>
+    <ol id="install-steps"></ol>
+    <button type="button" class="dismiss" id="dismiss-install">Got it, hide this</button>
+  </div>
+
+  <div id="loading">Loading your invites…</div>
+  <div id="error" style="display:none"></div>
+  <div id="invites-list"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lnodvezexfsmeasfndys.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub2R2ZXpleGZzbWVhc2ZuZHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NDc5ODQsImV4cCI6MjEwMjUyMzk4NH0.8fF47-kQchYwyP4__atvO9VEO_huAKXRsIADbsdRHfE';
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// The token is the musician's whole "login" — carried in the link they were
+// sent. Remember it locally so re-opening from the Home Screen icon (no
+// query string) still works.
+const LS_TOKEN_KEY = 'gigcall-token';
+const urlToken = new URLSearchParams(location.search).get('token');
+if(urlToken) localStorage.setItem(LS_TOKEN_KEY, urlToken);
+const token = urlToken || localStorage.getItem(LS_TOKEN_KEY);
+
+let INVITES = [];
+
+function formatDate(d){
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+}
+function formatTime(t){
+  if(!t) return null;
+  const [h, m] = t.split(':');
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = ((hour + 11) % 12) + 1;
+  return `${hour12}:${m} ${ampm}`;
+}
+
+function renderInvites(){
+  $('#invites-list').innerHTML = INVITES.length
+    ? INVITES.map(inv => {
+      const ev = inv.events;
+      const role = inv.event_roles?.instrument;
+      const isFilled = inv.response === 'filled';
+      const isYes = inv.response === 'yes';
+      const isNo = inv.response === 'no';
+      return `
+        <div class="event-card" data-id="${inv.id}">
+          ${role ? `<span class="role-tag">${esc(role)}</span>` : ''}
+          <h2>${esc(ev.title)}</h2>
+          <div class="meta-grid">
+            <div><b>Date</b>${esc(formatDate(ev.event_date))}</div>
+            <div><b>Time</b>${ev.start_time ? esc(formatTime(ev.start_time)) : '—'}</div>
+            <div><b>Pay</b>${esc(ev.pay || '—')}</div>
+            <div><b>Style</b>${esc(ev.music_style || '—')}</div>
+          </div>
+          ${ev.location ? `<div class="meta-grid" style="grid-template-columns:1fr;"><div><b>Location</b>${esc(ev.location)}</div></div>` : ''}
+          ${ev.notes ? `<p class="notes">${esc(ev.notes)}</p>` : ''}
+          ${isFilled
+            ? '<p class="status-note filled">This position has already been filled.</p>'
+            : `<div class="answer-row">
+                <button type="button" class="btn-yes ${isYes ? 'active' : ''}" data-answer="yes">YES</button>
+                <button type="button" class="btn-no ${isNo ? 'active' : ''}" data-answer="no">NO</button>
+              </div>`
+          }
+        </div>
+      `;
+    }).join('')
+    : '<p class="empty">No gig calls yet — check back soon.</p>';
+
+  document.querySelectorAll('.event-card [data-answer]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.event-card');
+      const inviteId = card.dataset.id;
+      const response = btn.dataset.answer;
+      card.querySelectorAll('[data-answer]').forEach(b => b.disabled = true);
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/gigit-musician-respond`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+          body: JSON.stringify({ token, invite_id: inviteId, response })
+        });
+        const result = await res.json();
+        if(!res.ok) throw new Error(result.error || 'Could not save your answer.');
+        const inv = INVITES.find(i => i.id === inviteId);
+        if(inv) inv.response = result.response;
+        renderInvites();
+      } catch(err){
+        alert(err.message);
+        card.querySelectorAll('[data-answer]').forEach(b => b.disabled = false);
+      }
+    });
+  });
+}
+
+const IOS_STEPS = [
+  'Tap the <b>Share</b> button in Safari',
+  'Tap <b>Add to Home Screen</b>',
+  "Open it from your Home Screen next time — your invites are always one tap away"
+];
+const ANDROID_STEPS = [
+  'Tap the <b>⋮</b> menu in Chrome (top right)',
+  'Tap <b>Add to Home screen</b> (or <b>Install app</b> if Chrome already offered it)',
+  "Open it from your Home Screen next time — your invites are always one tap away"
+];
+
+function maybeShowInstallGuide(){
+  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const dismissed = localStorage.getItem('gigcall-install-dismissed');
+  if(isStandalone || dismissed) return;
+
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const steps = isAndroid ? ANDROID_STEPS : IOS_STEPS;
+  $('#install-steps').innerHTML = steps.map(s => `<li>${s}</li>`).join('');
+  $('#install-card').style.display = 'block';
+}
+$('#dismiss-install').addEventListener('click', () => {
+  localStorage.setItem('gigcall-install-dismissed', '1');
+  $('#install-card').style.display = 'none';
+});
+
+async function boot(){
+  if(!token){
+    $('#loading').style.display = 'none';
+    $('#error').textContent = 'This link is missing your invite code. Ask AMBRA to resend it.';
+    $('#error').style.display = 'block';
+    return;
+  }
+
+  maybeShowInstallGuide();
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/gigit-musician-invites`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ token })
+    });
+    const result = await res.json();
+    if(!res.ok) throw new Error(result.error || 'Could not load your invites.');
+
+    $('#hello-line').textContent = `Hi ${result.musician.full_name} — here's what's up`;
+    INVITES = result.invites || [];
+    renderInvites();
+  } catch(err){
+    $('#error').textContent = err.message;
+    $('#error').style.display = 'block';
+  }
+  $('#loading').style.display = 'none';
+}
+boot();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/assets/js/gig-sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>

@@ -97,6 +97,11 @@
   .event-card .meta{ font-size:12.5px; color:var(--muted); margin-top:4px; }
   .roster-summary{ display:flex; gap:14px; margin-top:10px; font-size:12.5px; }
   .roster-summary b{ font-family:var(--font-mono); }
+
+  .event-roster{ border-top:1px solid var(--line); margin-top:14px; padding-top:14px; }
+  .roster-row{ display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .roster-row:last-child{ border-bottom:0; }
+  .roster-row .roster-name{ flex:1; font-size:13.5px; }
 </style>
 </head>
 <body style="visibility:hidden">
@@ -545,10 +550,34 @@ $('#btn-send-event').addEventListener('click', async () => {
 async function loadEvents(){
   const { data, error } = await supabaseClient
     .from('events')
-    .select('*, event_invites(id, response, musicians(full_name)), event_roles(instrument, spots_needed, spots_filled)')
+    .select('*, event_invites(id, response, musicians(full_name, phone, access_token)), event_roles(instrument, spots_needed, spots_filled)')
     .order('event_date', { ascending: false });
   if(error){ console.error('loadEvents', error); return; }
   EVENTS = data || [];
+}
+
+function formatTimeAdmin(t){
+  if(!t) return null;
+  const [h, m] = t.split(':');
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = ((hour + 11) % 12) + 1;
+  return `${hour12}:${m} ${ampm}`;
+}
+
+function buildWaMessage(ev, link){
+  const date = new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  const time = formatTimeAdmin(ev.start_time);
+  return `Hi! AMBRA has a gig for you: "${ev.title}" on ${date}${time ? ' at ' + time : ''}${ev.location ? ' @ ' + ev.location : ''}${ev.pay ? ' — pay: ' + ev.pay : ''}.\n\n` +
+    `Tap here to confirm: ${link}\n\n` +
+    `First time? Open the link, tap Share > Add to Home Screen, and you'll have the app right on your phone.`;
+}
+
+function waLinkFor(musician, ev){
+  if(!musician.phone) return null;
+  const link = `${location.origin}/gig/?token=${musician.access_token}`;
+  const digits = musician.phone.replace(/[^\d+]/g, '').replace(/^\+/, '');
+  return `https://wa.me/${digits}?text=${encodeURIComponent(buildWaMessage(ev, link))}`;
 }
 
 function renderEvents(){
@@ -558,18 +587,21 @@ function renderEvents(){
       const counts = { pending: 0, yes: 0, no: 0, filled: 0 };
       invites.forEach(i => { counts[i.response] = (counts[i.response] || 0) + 1; });
       return `
-        <div class="card event-card" data-id="${ev.id}">
-          <div class="title-row">
-            <h3>${esc(ev.title)}</h3>
-            <span class="mono">${esc(ev.event_date)}</span>
+        <div class="card">
+          <div class="event-card" data-id="${ev.id}">
+            <div class="title-row">
+              <h3>${esc(ev.title)}</h3>
+              <span class="mono">${esc(ev.event_date)}</span>
+            </div>
+            <p class="meta">${esc(ev.location || 'No location set')} · ${ev.mode === 'broadcast' ? 'Instrument broadcast' : 'Selected musicians'}</p>
+            <div class="roster-summary">
+              <span class="status-pill status-yes">Yes <b>${counts.yes}</b></span>
+              <span class="status-pill status-no">No <b>${counts.no}</b></span>
+              <span class="status-pill status-pending">Pending <b>${counts.pending}</b></span>
+              ${counts.filled ? `<span class="status-pill status-filled">Filled <b>${counts.filled}</b></span>` : ''}
+            </div>
           </div>
-          <p class="meta">${esc(ev.location || 'No location set')} · ${ev.mode === 'broadcast' ? 'Instrument broadcast' : 'Selected musicians'}</p>
-          <div class="roster-summary">
-            <span class="status-pill status-yes">Yes <b>${counts.yes}</b></span>
-            <span class="status-pill status-no">No <b>${counts.no}</b></span>
-            <span class="status-pill status-pending">Pending <b>${counts.pending}</b></span>
-            ${counts.filled ? `<span class="status-pill status-filled">Filled <b>${counts.filled}</b></span>` : ''}
-          </div>
+          <div class="event-roster" id="roster-${ev.id}" style="display:none"></div>
         </div>
       `;
     }).join('')
@@ -577,13 +609,26 @@ function renderEvents(){
 
   document.querySelectorAll('.event-card').forEach(card => {
     card.addEventListener('click', () => {
+      const panel = document.getElementById('roster-' + card.dataset.id);
+      const wasOpen = panel.style.display !== 'none';
+      document.querySelectorAll('.event-roster').forEach(p => p.style.display = 'none');
+      if(wasOpen) return;
+
       const ev = EVENTS.find(e => e.id === card.dataset.id);
-      if(!ev) return;
-      const rows = (ev.event_invites || []).map(i => `
-        <tr><td>${esc(i.musicians?.full_name || 'Unknown')}</td><td><span class="status-pill status-${i.response}">${i.response}</span></td></tr>
-      `).join('');
-      alert(`${ev.title} — ${ev.event_invites.length} invited\n\n` +
-        (ev.event_invites || []).map(i => `${i.musicians?.full_name || 'Unknown'}: ${i.response}`).join('\n'));
+      panel.innerHTML = (ev.event_invites || []).map(i => {
+        const m = i.musicians || {};
+        const waHref = waLinkFor(m, ev);
+        return `
+          <div class="roster-row">
+            <span class="roster-name">${esc(m.full_name || 'Unknown')}</span>
+            <span class="status-pill status-${i.response}">${i.response}</span>
+            ${waHref
+              ? `<a class="btn btn-gold btn-sm" href="${waHref}" target="_blank" rel="noopener">Send WhatsApp</a>`
+              : '<span class="mono">No phone on file</span>'}
+          </div>
+        `;
+      }).join('');
+      panel.style.display = 'block';
     });
   });
 }

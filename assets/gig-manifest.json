@@ -1,0 +1,13 @@
+{
+  "name": "AMBRA Gig Call",
+  "short_name": "Gig Call",
+  "start_url": "/gig/",
+  "scope": "/gig/",
+  "display": "standalone",
+  "background_color": "#161F1A",
+  "theme_color": "#161F1A",
+  "icons": [
+    { "src": "/assets/img/ambraSubmark.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/img/ambraSubmark.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

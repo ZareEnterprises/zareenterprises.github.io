@@ -134,6 +134,7 @@
   <div id="app-body" style="display:none">
     <div class="tabs">
       <button type="button" class="tab-btn active" data-view="events">Events</button>
+      <button type="button" class="tab-btn" data-view="archive">Archive</button>
       <button type="button" class="tab-btn" data-view="musicians">Musicians</button>
     </div>
 
@@ -254,9 +255,18 @@
       </div>
 
       <div class="card">
-        <h2>Your events</h2>
-        <p class="sub">Click one to see who's in.</p>
+        <h2>Upcoming</h2>
+        <p class="sub">Click one to see who's in. Past events move to Archive automatically.</p>
         <div id="events-list"></div>
+      </div>
+    </div>
+
+    <!-- ARCHIVE VIEW -->
+    <div class="view" id="view-archive">
+      <div class="card">
+        <h2>Archive</h2>
+        <p class="sub">Gigs whose date has already passed.</p>
+        <div id="archive-list"></div>
       </div>
     </div>
 
@@ -768,36 +778,43 @@ async function ensureProjectForEvent(ev){
   return project.id;
 }
 
-function renderEvents(){
-  $('#events-list').innerHTML = EVENTS.length
-    ? EVENTS.map(ev => {
-      const invites = ev.event_invites || [];
-      const counts = { pending: 0, yes: 0, no: 0, filled: 0 };
-      invites.forEach(i => { counts[i.response] = (counts[i.response] || 0) + 1; });
-      return `
-        <div class="card">
-          <div class="event-card" data-id="${ev.id}">
-            <div class="title-row">
-              <h3>${esc(ev.title)}</h3>
-              <span class="mono">${esc(ev.event_date)}</span>
-            </div>
-            <p class="meta">
-              ${esc(ev.location || 'No location set')} · ${ev.mode === 'broadcast' ? 'Instrument broadcast' : 'Selected musicians'}
-              · <span class="status-pill status-${ev.status === 'paid' ? 'yes' : ev.status === 'invoiced' ? 'filled' : 'pending'}">${EVENT_STATUS_LABEL[ev.status] || ev.status}</span>
-            </p>
-            <div class="roster-summary">
-              <span class="status-pill status-yes">Yes <b>${counts.yes}</b></span>
-              <span class="status-pill status-no">No <b>${counts.no}</b></span>
-              <span class="status-pill status-pending">Pending <b>${counts.pending}</b></span>
-              ${counts.filled ? `<span class="status-pill status-filled">Filled <b>${counts.filled}</b></span>` : ''}
-              <button type="button" class="btn btn-ghost btn-sm btn-generate-invoice" data-id="${ev.id}" style="margin-left:auto;">Generate Invoice</button>
-            </div>
-          </div>
-          <div class="event-roster" id="roster-${ev.id}" style="display:none"></div>
+function todayStr(){ return new Date().toISOString().slice(0, 10); }
+
+function eventCardHtml(ev){
+  const invites = ev.event_invites || [];
+  const counts = { pending: 0, yes: 0, no: 0, filled: 0 };
+  invites.forEach(i => { counts[i.response] = (counts[i.response] || 0) + 1; });
+  return `
+    <div class="card">
+      <div class="event-card" data-id="${ev.id}">
+        <div class="title-row">
+          <h3>${esc(ev.title)}</h3>
+          <span class="mono">${esc(ev.event_date)}</span>
         </div>
-      `;
-    }).join('')
-    : '<p class="empty">No gig calls sent yet.</p>';
+        <p class="meta">
+          ${esc(ev.location || 'No location set')} · ${ev.mode === 'broadcast' ? 'Instrument broadcast' : 'Selected musicians'}
+          · <span class="status-pill status-${ev.status === 'paid' ? 'yes' : ev.status === 'invoiced' ? 'filled' : 'pending'}">${EVENT_STATUS_LABEL[ev.status] || ev.status}</span>
+        </p>
+        <div class="roster-summary">
+          <span class="status-pill status-yes">Yes <b>${counts.yes}</b></span>
+          <span class="status-pill status-no">No <b>${counts.no}</b></span>
+          <span class="status-pill status-pending">Pending <b>${counts.pending}</b></span>
+          ${counts.filled ? `<span class="status-pill status-filled">Filled <b>${counts.filled}</b></span>` : ''}
+          <button type="button" class="btn btn-ghost btn-sm btn-generate-invoice" data-id="${ev.id}" style="margin-left:auto;">Generate Invoice</button>
+        </div>
+      </div>
+      <div class="event-roster" id="roster-${ev.id}" style="display:none"></div>
+    </div>
+  `;
+}
+
+function renderEvents(){
+  const today = todayStr();
+  const upcoming = EVENTS.filter(ev => ev.event_date >= today);
+  const past = EVENTS.filter(ev => ev.event_date < today);
+
+  $('#events-list').innerHTML = upcoming.length ? upcoming.map(eventCardHtml).join('') : '<p class="empty">No upcoming gigs.</p>';
+  $('#archive-list').innerHTML = past.length ? past.map(eventCardHtml).join('') : '<p class="empty">Nothing in the archive yet.</p>';
 
   document.querySelectorAll('.btn-generate-invoice').forEach(btn => {
     btn.addEventListener('click', async (e) => {

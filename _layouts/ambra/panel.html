@@ -243,7 +243,15 @@
 <div class="overlay" id="overlay-new-project">
   <div class="modal">
     <h2>New project</h2>
-    <div class="field"><label>Project name</label><input type="text" id="new-project-name" placeholder="e.g. Barrio Latino 2027"></div>
+    <div class="field">
+      <label>Project size</label>
+      <div class="role-btns" id="new-project-type-btns">
+        <button type="button" class="role-btn selected" data-type="full_production">Full Production</button>
+        <button type="button" class="role-btn" data-type="quick_gig">Quick Gig</button>
+      </div>
+    </div>
+    <div class="field" id="new-project-name-field"><label>Project name</label><input type="text" id="new-project-name" placeholder="e.g. Barrio Latino 2027"></div>
+    <p id="new-project-type-hint" style="font-size:12.5px; color:var(--muted); margin:-6px 0 14px;">Full setlist, lineup, rehearsals, sound and stage planning.</p>
     <button class="btn-primary" id="btn-create-project" type="button">Create</button>
 
     <div class="modal-actions">
@@ -714,7 +722,28 @@
     return project;
   }
 
+  let newProjectType = 'full_production';
+  const QUICK_GIG_HINT = "Just the event: musicians, crew, equipment and an invoice — built in Gig It, no full panel setup.";
+  const FULL_PRODUCTION_HINT = "Full setlist, lineup, rehearsals, sound and stage planning.";
+
+  document.querySelectorAll('#new-project-type-btns .role-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#new-project-type-btns .role-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      newProjectType = btn.dataset.type;
+      const isQuickGig = newProjectType === 'quick_gig';
+      document.getElementById('new-project-name-field').style.display = isQuickGig ? 'none' : '';
+      document.getElementById('new-project-type-hint').textContent = isQuickGig ? QUICK_GIG_HINT : FULL_PRODUCTION_HINT;
+      document.getElementById('btn-create-project').textContent = isQuickGig ? 'Go to Gig It' : 'Create';
+    });
+  });
+
   async function startNewProject(){
+    if(newProjectType === 'quick_gig'){
+      closeModal('overlay-new-project');
+      window.open('/gig-it/', '_blank', 'noopener');
+      return;
+    }
     const nameField = document.getElementById('new-project-name');
     const name = nameField.value;
     if(!name.trim()){ alert("Give the project a name first."); nameField.focus(); return; }
@@ -728,6 +757,11 @@
   }
   function openNewProjectModal(){
     document.getElementById('new-project-name').value = '';
+    newProjectType = 'full_production';
+    document.querySelectorAll('#new-project-type-btns .role-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === 'full_production'));
+    document.getElementById('new-project-name-field').style.display = '';
+    document.getElementById('new-project-type-hint').textContent = FULL_PRODUCTION_HINT;
+    document.getElementById('btn-create-project').textContent = 'Create';
     openModal('overlay-new-project');
   }
   document.getElementById('btn-create-project').addEventListener('click', startNewProject);

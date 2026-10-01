@@ -67,9 +67,16 @@
   tr:last-child td{ border-bottom:0; }
   .mono{ font-family:var(--font-mono); font-size:12.5px; color:var(--muted); }
 
-  .musician-pick{ display:flex; flex-wrap:wrap; gap:8px; max-height:220px; overflow-y:auto; padding:4px; border:1px solid var(--line); border-radius:8px; }
-  .pick-chip{ border:1px solid var(--line); border-radius:999px; padding:6px 13px; font-size:12.5px; cursor:pointer; color:var(--muted); }
-  .pick-chip.selected{ border-color:var(--gold); color:var(--gold); background:rgba(217,138,61,.1); }
+  .role-filter{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .role-filter-chip{ border:1px solid var(--line); border-radius:999px; padding:5px 12px; font-size:11.5px; font-weight:600; cursor:pointer; color:var(--muted); }
+  .role-filter-chip.active{ border-color:var(--gold); color:var(--gold); background:rgba(217,138,61,.1); }
+
+  .musician-pick{ display:flex; flex-wrap:wrap; gap:8px; max-height:280px; overflow-y:auto; padding:8px; border:1px solid var(--line); border-radius:8px; }
+  .pick-chip{ border:1px solid var(--line); border-radius:10px; padding:8px 13px; font-size:13px; cursor:pointer; color:var(--ink); max-width:220px; }
+  .pick-chip.selected{ border-color:var(--gold); background:rgba(217,138,61,.1); }
+  .pick-chip .pick-name{ font-weight:600; }
+  .pick-chip.selected .pick-name{ color:var(--gold); }
+  .pick-chip .pick-sub{ font-size:10.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
 
   .role-row{ display:flex; gap:10px; align-items:flex-end; margin-bottom:10px; }
   .role-row .field{ margin-bottom:0; flex:1; }
@@ -137,6 +144,7 @@
         <div id="mode-selected-panel">
           <div class="field">
             <label>Pick musicians</label>
+            <div class="role-filter" id="role-filter"></div>
             <div class="musician-pick" id="musician-pick"></div>
           </div>
         </div>
@@ -182,9 +190,18 @@
       </div>
 
       <div class="card">
-        <h2>Roster</h2>
+        <div class="title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div>
+            <h2 style="margin:0;">Roster</h2>
+            <p class="sub" style="margin:4px 0 0;">Synced from Airtable's Musicians Database.</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="mono" id="sync-status"></span>
+            <button type="button" class="btn btn-gold btn-sm" id="btn-sync-airtable">Sync from Airtable</button>
+          </div>
+        </div>
         <table>
-          <thead><tr><th>Name</th><th>Instruments</th><th>Phone</th><th>Email</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Role</th><th>Type</th><th>Country</th><th>Genres</th><th>Phone</th><th>Email</th><th>Payment</th><th></th></tr></thead>
           <tbody id="musicians-tbody"></tbody>
         </table>
       </div>
@@ -230,10 +247,52 @@ async function loadMusicians(){
   MUSICIANS = data || [];
 }
 
+let pickerRoleFilters = new Set();
+
+function allRoles(){
+  const roles = new Set();
+  MUSICIANS.forEach(m => (m.instruments || []).forEach(i => roles.add(i)));
+  return Array.from(roles).sort();
+}
+
+function renderRoleFilter(){
+  const roles = allRoles();
+  $('#role-filter').innerHTML = roles.length
+    ? roles.map(r => `<div class="role-filter-chip ${pickerRoleFilters.has(r) ? 'active' : ''}" data-role="${esc(r)}">${esc(r)}</div>`).join('')
+    : '';
+  document.querySelectorAll('#role-filter .role-filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const role = chip.dataset.role;
+      pickerRoleFilters.has(role) ? pickerRoleFilters.delete(role) : pickerRoleFilters.add(role);
+      chip.classList.toggle('active');
+      renderMusicianPicker();
+    });
+  });
+}
+
+function subInfo(m){
+  return [
+    (m.instruments || []).join(', '),
+    m.type,
+    m.country,
+    m.main_genres
+  ].filter(Boolean).join(' · ');
+}
+
 function renderMusicianPicker(){
-  $('#musician-pick').innerHTML = MUSICIANS.length
-    ? MUSICIANS.map(m => `<div class="pick-chip ${selectedMusicianIds.has(m.id) ? 'selected' : ''}" data-id="${m.id}">${esc(m.full_name)}</div>`).join('')
-    : '<p class="empty">No musicians yet — add some in the Musicians tab.</p>';
+  const filtered = pickerRoleFilters.size
+    ? MUSICIANS.filter(m => (m.instruments || []).some(i => pickerRoleFilters.has(i)))
+    : MUSICIANS;
+
+  $('#musician-pick').innerHTML = filtered.length
+    ? filtered.map(m => `
+      <div class="pick-chip ${selectedMusicianIds.has(m.id) ? 'selected' : ''}" data-id="${m.id}">
+        <div class="pick-name">${esc(m.full_name)}</div>
+        ${subInfo(m) ? `<div class="pick-sub">${esc(subInfo(m))}</div>` : ''}
+      </div>
+    `).join('')
+    : '<p class="empty">No musicians match this filter.</p>';
+
   document.querySelectorAll('#musician-pick .pick-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const id = chip.dataset.id;
@@ -248,13 +307,17 @@ function renderMusiciansTable(){
     ? MUSICIANS.map(m => `
       <tr data-id="${m.id}">
         <td>${esc(m.full_name)}</td>
-        <td>${(m.instruments || []).map(esc).join(', ')}</td>
+        <td>${(m.instruments || []).map(esc).join(', ') || '—'}</td>
+        <td>${esc(m.type || '—')}</td>
+        <td>${esc(m.country || '—')}</td>
+        <td>${esc(m.main_genres || '—')}</td>
         <td class="mono">${esc(m.phone || '—')}</td>
         <td class="mono">${esc(m.email || '—')}</td>
+        <td>${esc(m.payment || '—')}</td>
         <td><button type="button" class="btn btn-ghost btn-sm" data-del>Delete</button></td>
       </tr>
     `).join('')
-    : '<tr><td colspan="5" class="empty">No musicians yet.</td></tr>';
+    : '<tr><td colspan="9" class="empty">No musicians yet.</td></tr>';
 
   document.querySelectorAll('#musicians-tbody [data-del]').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -263,10 +326,38 @@ function renderMusiciansTable(){
       await supabaseClient.from('musicians').delete().eq('id', id);
       await loadMusicians();
       renderMusiciansTable();
+      renderRoleFilter();
       renderMusicianPicker();
     });
   });
 }
+
+$('#btn-sync-airtable').addEventListener('click', async () => {
+  const btn = $('#btn-sync-airtable');
+  const status = $('#sync-status');
+  btn.disabled = true;
+  status.textContent = 'Syncing…';
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/gigit-sync-musicians`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'apikey': SUPABASE_ANON_KEY }
+    });
+    const result = await res.json();
+    if(!res.ok) throw new Error(result.error || 'Sync failed');
+    status.textContent = `Synced ${result.synced} musicians ✓`;
+    await loadMusicians();
+    renderMusiciansTable();
+    renderRoleFilter();
+    renderMusicianPicker();
+    renderImportList();
+  } catch(err){
+    status.textContent = '';
+    alert(err.message || 'Could not sync from Airtable.');
+  }
+  btn.disabled = false;
+  setTimeout(() => { status.textContent = ''; }, 4000);
+});
 
 $('#btn-add-musician').addEventListener('click', async () => {
   const full_name = $('#mus-name').value.trim();
@@ -280,6 +371,7 @@ $('#btn-add-musician').addEventListener('click', async () => {
   $('#mus-name').value = ''; $('#mus-phone').value = ''; $('#mus-email').value = ''; $('#mus-instruments').value = '';
   await loadMusicians();
   renderMusiciansTable();
+  renderRoleFilter();
   renderMusicianPicker();
 });
 
@@ -321,6 +413,7 @@ async function renderImportList(){
       if(error){ alert(error.message); return; }
       await loadMusicians();
       renderMusiciansTable();
+      renderRoleFilter();
       renderMusicianPicker();
       renderImportList();
     });
@@ -482,6 +575,7 @@ function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','
   const ok = await gate();
   if(!ok) return;
   await Promise.all([loadMusicians(), loadEvents()]);
+  renderRoleFilter();
   renderMusicianPicker();
   renderMusiciansTable();
   renderImportList();

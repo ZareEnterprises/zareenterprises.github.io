@@ -36,12 +36,32 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (musErr || !musician) return json({ error: 'Invalid link' }, 404);
 
-    const { data: invites, error: invErr } = await adminClient
-      .from('event_invites')
-      .select('id, response, responded_at, events(title, event_date, start_time, pay, location, music_style, notes), event_roles(instrument)')
-      .eq('musician_id', musician.id)
-      .order('created_at', { ascending: false });
+    // Querying from `events` (not `event_invites`) so the date filter drops
+    // the whole event — filtering on a joined column from event_invites
+    // only hides the nested row, not the parent, which would leave past
+    // events showing up empty instead of disappearing.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const { data: eventsData, error: invErr } = await adminClient
+      .from('events')
+      .select('title, event_date, start_time, pay, location, music_style, notes, event_invites!inner(id, response, responded_at, musician_id, event_roles(instrument))')
+      .eq('event_invites.musician_id', musician.id)
+      .gte('event_date', todayStr)
+      .order('event_date', { ascending: true });
     if (invErr) return json({ error: invErr.message }, 500);
+
+    // Flatten back to the shape the app already expects: one row per invite.
+    const invites = (eventsData || []).flatMap((ev: any) =>
+      (ev.event_invites || []).map((inv: any) => ({
+        id: inv.id,
+        response: inv.response,
+        responded_at: inv.responded_at,
+        events: {
+          title: ev.title, event_date: ev.event_date, start_time: ev.start_time,
+          pay: ev.pay, location: ev.location, music_style: ev.music_style, notes: ev.notes,
+        },
+        event_roles: inv.event_roles,
+      }))
+    );
 
     return json({ musician, invites });
   } catch (err) {

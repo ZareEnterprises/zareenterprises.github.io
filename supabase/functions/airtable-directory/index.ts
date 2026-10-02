@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
   const records = allRecords.map((r) => {
     const f = r.fields || {};
     if (type === 'musicians') {
-      const fullName = (f['Resource Name'] || '').trim();
+      const fullName = (f['Musicians Name'] || '').trim();
       // "Socials/Videos" mixes Instagram and YouTube links in the same
       // field — the public showcase only ever wants the YouTube ones, so
       // contact/social info never reaches a client viewing that page.

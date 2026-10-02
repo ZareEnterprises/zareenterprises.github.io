@@ -301,12 +301,12 @@ main{ position:relative; }
 
 .drag-handle{
   color:var(--text-faint); cursor:grab; font-size:15px; letter-spacing:-2px;
-  padding:4px 6px; user-select:none; align-self:center;
+  padding:4px 6px; user-select:none; align-self:center; touch-action:none;
 }
 .drag-handle:hover{ color:var(--gold-bright); }
 .drag-handle:active{ cursor:grabbing; }
 
-.dimmer{ border-radius:3px; background:var(--line); position:relative; overflow:visible; cursor:pointer; }
+.dimmer{ border-radius:3px; background:var(--line); position:relative; overflow:visible; cursor:pointer; touch-action:none; }
 .dimmer i{ position:absolute; left:0; right:0; bottom:0; display:block; border-radius:3px; overflow:hidden; }
 .dimmer.baja i{ height:33%; background:var(--therm-baja); }
 .dimmer.media i{ height:66%; background:var(--therm-media); }

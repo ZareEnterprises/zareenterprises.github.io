@@ -2080,6 +2080,13 @@ function wireInlineGenreCombo(input, panel){
   });
 }
 
+// Pointer Events (not mouse-only) so this works identically with a mouse,
+// a finger on iPad, or a pen — one event model instead of separate
+// mouse/touch handlers. setPointerCapture keeps move/up events targeted at
+// this exact dimmer even if the finger drifts outside its bounding box
+// mid-drag, which also means each dimmer's "up" handler lives on itself
+// instead of a new document-level mouseup listener stacking up on every
+// wireEmotionFaders() call.
 function wireEmotionFaders(){
   document.querySelectorAll('.dimmer').forEach(dimmer => {
     let dragging = false;
@@ -2094,15 +2101,7 @@ function wireEmotionFaders(){
       if(dot) dot.className = 'fader-dot ' + tier;
       dimmer.dataset.pendingTier = tier;
     }
-    dimmer.addEventListener('mousedown', (e) => {
-      dragging = true;
-      applyTier(tierFromEvent(e));
-      e.preventDefault();
-    });
-    dimmer.addEventListener('mousemove', (e) => { if(dragging) applyTier(tierFromEvent(e)); });
-    document.addEventListener('mouseup', async () => {
-      if(!dragging) return;
-      dragging = false;
+    async function commitTier(){
       const tier = dimmer.dataset.pendingTier;
       if(!tier) return;
       if(dimmer.dataset.interludeId){
@@ -2112,7 +2111,21 @@ function wireEmotionFaders(){
         await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${dimmer.dataset.songId}`, { method:'PATCH', headers, body: JSON.stringify({ emotion_level: tier }) });
         await fetchSongs();
       }
+    }
+    dimmer.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      dimmer.setPointerCapture(e.pointerId);
+      applyTier(tierFromEvent(e));
+      e.preventDefault();
     });
+    dimmer.addEventListener('pointermove', (e) => { if(dragging) applyTier(tierFromEvent(e)); });
+    dimmer.addEventListener('pointerup', async (e) => {
+      if(!dragging) return;
+      dragging = false;
+      dimmer.releasePointerCapture(e.pointerId);
+      await commitTier();
+    });
+    dimmer.addEventListener('pointercancel', () => { dragging = false; });
   });
 }
 
@@ -2190,6 +2203,12 @@ async function saveSetField(setName, field, value){
 
 /* Drag and drop: songs can now move freely between any set or the unassigned pool */
 let dragState = null;
+// Parallel touch/pen drag path — native HTML5 DnD below only responds to a
+// real mouse, so iPad (and any touchscreen) needs its own pointer-based
+// implementation. It calls the exact same handleDrop() the mouse path
+// calls, so both paths persist identically; they just differ in how the
+// user signals "I'm dragging this" and "drop it here."
+let touchDragState = null;
 
 function wireDragAndDrop(){
   document.querySelectorAll('.song-row').forEach(row => {
@@ -2226,6 +2245,52 @@ function wireDragAndDrop(){
       const rect = row.getBoundingClientRect();
       const before = (e.clientY - rect.top) < rect.height/2;
       await handleDrop(dragState.songId, containerSet, row.dataset.songId, before);
+    });
+
+    if(handle){
+      handle.addEventListener('pointerdown', (e) => {
+        if(e.pointerType === 'mouse') return; // native DnD above already owns real mice
+        e.preventDefault();
+        touchDragState = { songId: row.dataset.songId, origin: row.dataset.origin, pointerId: e.pointerId, target: null, before: false };
+        row.classList.add('dragging');
+        document.querySelectorAll('.set-block.pool.empty-hidden').forEach(p => p.classList.add('reveal-while-dragging'));
+        row.setPointerCapture(e.pointerId);
+      });
+    }
+    row.addEventListener('pointermove', (e) => {
+      if(!touchDragState || e.pointerId !== touchDragState.pointerId) return;
+      document.querySelectorAll('.song-row').forEach(r => r.classList.remove('drop-before','drop-after'));
+      const hovered = document.elementFromPoint(e.clientX, e.clientY)?.closest('.song-row');
+      if(!hovered){ touchDragState.target = null; return; }
+      const rect = hovered.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      hovered.classList.add(before ? 'drop-before' : 'drop-after');
+      touchDragState.target = hovered;
+      touchDragState.before = before;
+    });
+    row.addEventListener('pointerup', async (e) => {
+      if(!touchDragState || e.pointerId !== touchDragState.pointerId) return;
+      const state = touchDragState;
+      touchDragState = null;
+      row.classList.remove('dragging');
+      document.querySelectorAll('.song-row').forEach(r => r.classList.remove('drop-before','drop-after'));
+      document.querySelectorAll('.set-block.pool.empty-hidden').forEach(p => p.classList.remove('reveal-while-dragging'));
+      if(state.target){
+        const containerSet = state.target.closest('.rows').dataset.set;
+        await handleDrop(state.songId, containerSet, state.target.dataset.songId, state.before);
+      } else {
+        const container = document.elementFromPoint(e.clientX, e.clientY)?.closest('.rows');
+        if(container && container.dataset.type !== 'interlude'){
+          await handleDrop(state.songId, container.dataset.set, null, false);
+        }
+      }
+    });
+    row.addEventListener('pointercancel', () => {
+      if(!touchDragState) return;
+      row.classList.remove('dragging');
+      document.querySelectorAll('.song-row').forEach(r => r.classList.remove('drop-before','drop-after'));
+      document.querySelectorAll('.set-block.pool.empty-hidden').forEach(p => p.classList.remove('reveal-while-dragging'));
+      touchDragState = null;
     });
   });
 

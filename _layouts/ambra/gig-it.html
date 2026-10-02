@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#FFFFFF; --panel:#FFFFFF; --panel-2:#F7F7F7; --line:#E0E0E0;
@@ -297,7 +298,7 @@
             <div class="title-row">
               <div>
                 <h2>Roster</h2>
-                <p class="sub" style="margin:4px 0 0;">Synced from Airtable's Musicians Database.</p>
+                <p class="sub" style="margin:4px 0 0;">Where the musicians roster lives outside Gig-It — only your browser remembers this choice.</p>
               </div>
               <div class="roster-actions">
                 <span class="mono" id="sync-status"></span>
@@ -305,6 +306,17 @@
               </div>
             </div>
           </summary>
+          <div class="data-source-row" style="display:flex; gap:8px; margin:0 0 14px;">
+            <div class="mode-chip" data-source="airtable" style="flex:none; padding:7px 14px;">Airtable</div>
+            <div class="mode-chip" data-source="excel" style="flex:none; padding:7px 14px;">Excel file</div>
+            <div class="mode-chip" data-source="none" style="flex:none; padding:7px 14px;">None</div>
+          </div>
+          <div id="excel-source-controls" style="display:none; margin:0 0 14px;">
+            <input type="file" id="excel-roster-input" accept=".xlsx,.xls" style="display:none">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-upload-excel">Upload roster file</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-download-excel" style="display:none">Download latest roster file</button>
+            <span class="mono" id="excel-status"></span>
+          </div>
           <table>
             <thead><tr><th>Name</th><th>Role</th><th>Type</th><th>Country</th><th>Genres</th><th>Phone</th><th>Email</th><th>Payment</th><th></th></tr></thead>
             <tbody id="musicians-tbody"></tbody>
@@ -570,6 +582,10 @@ async function renderImportList(){
         full_name, phone, email, instruments: instrument ? [instrument] : []
       });
       if(error){ alert(error.message); return; }
+      if(getDataSource() !== 'none'){
+        try { await pushMusicianToDataSource({ full_name, instrument, phone, email }); }
+        catch(err){ console.error('push to data source', err); alert(`Imported locally, but could not push to ${getDataSource()}: ${err.message}`); }
+      }
       await loadMusicians();
       renderMusiciansTable();
       renderRoleFilter();
@@ -578,6 +594,195 @@ async function renderImportList(){
     });
   });
 }
+
+/* ---------------- Data source (Airtable / Excel / none) ---------------- */
+// Which external roster this admin has connected — a per-browser choice
+// (localStorage), not shared across admins. "Import from Band" above only
+// pushes up to it when it isn't 'none'.
+const DATA_SOURCE_KEY = 'gigit_data_source';
+function getDataSource(){ return localStorage.getItem(DATA_SOURCE_KEY) || 'airtable'; }
+function setDataSource(src){ localStorage.setItem(DATA_SOURCE_KEY, src); applyDataSourceUI(); }
+
+function applyDataSourceUI(){
+  const src = getDataSource();
+  document.querySelectorAll('.data-source-row .mode-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.source === src);
+  });
+  $('#btn-sync-airtable').style.display = src === 'airtable' ? '' : 'none';
+  $('#excel-source-controls').style.display = src === 'excel' ? 'block' : 'none';
+  if(src === 'excel') refreshExcelDownloadButton();
+}
+document.querySelectorAll('.data-source-row .mode-chip').forEach(chip => {
+  chip.addEventListener('click', () => setDataSource(chip.dataset.source));
+});
+
+async function pushMusicianToDataSource(m){
+  const src = getDataSource();
+  if(src === 'airtable') return pushToAirtable([m]);
+  if(src === 'excel') return pushToExcelRoster([m]);
+}
+
+async function pushToAirtable(musicians){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/gigit-push-musicians`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${session.access_token}`, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ musicians })
+  });
+  const result = await res.json();
+  if(!res.ok) throw new Error(result.error || 'Push to Airtable failed');
+  return result;
+}
+
+/* ---------------- Excel roster (alternative to Airtable) ---------------- */
+async function loadExcelRosterRow(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const { data, error } = await supabaseClient.from('gigit_excel_rosters').select('*').eq('admin_id', session.user.id).maybeSingle();
+  if(error) throw error;
+  return data;
+}
+
+async function saveExcelRosterRow(file_name, file_base64){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const { error } = await supabaseClient.from('gigit_excel_rosters').upsert({
+    admin_id: session.user.id, file_name, file_base64, updated_at: new Date().toISOString()
+  });
+  if(error) throw error;
+}
+
+function workbookToBase64(wb){
+  const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+  return wbout;
+}
+
+// Flexible header matching so the uploaded sheet doesn't have to use exactly
+// Airtable's column names — just something close enough to recognize.
+const EXCEL_HEADER_MAP = {
+  full_name: ['name', 'full name', 'musician name', 'musicians name'],
+  instrument: ['role', 'instrument', 'instruments'],
+  type: ['type'],
+  country: ['country'],
+  main_genres: ['genres', 'main genres', 'main genres (3 max)'],
+  email: ['email'],
+  phone: ['phone', 'cellphone'],
+  payment: ['payment'],
+};
+function matchHeader(headerRow){
+  const lower = headerRow.map(h => String(h || '').trim().toLowerCase());
+  const map = {};
+  for(const [field, aliases] of Object.entries(EXCEL_HEADER_MAP)){
+    const idx = lower.findIndex(h => aliases.includes(h));
+    if(idx !== -1) map[field] = idx;
+  }
+  return map;
+}
+
+async function importRowsFromWorkbook(wb){
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  if(rows.length < 2) return 0;
+  const headerMap = matchHeader(rows[0]);
+  if(headerMap.full_name === undefined){ throw new Error('Could not find a Name column in that file.'); }
+
+  const existingNames = new Set(MUSICIANS.map(m => m.full_name.toLowerCase()));
+  const toInsert = [];
+  for(const row of rows.slice(1)){
+    const full_name = String(row[headerMap.full_name] || '').trim();
+    if(!full_name || existingNames.has(full_name.toLowerCase())) continue;
+    existingNames.add(full_name.toLowerCase());
+    toInsert.push({
+      full_name,
+      instruments: headerMap.instrument !== undefined && row[headerMap.instrument]
+        ? String(row[headerMap.instrument]).split(',').map(s => s.trim()).filter(Boolean) : [],
+      type: headerMap.type !== undefined ? (row[headerMap.type] || null) : null,
+      country: headerMap.country !== undefined ? (row[headerMap.country] || null) : null,
+      main_genres: headerMap.main_genres !== undefined ? (row[headerMap.main_genres] || null) : null,
+      email: headerMap.email !== undefined ? (row[headerMap.email] || null) : null,
+      phone: headerMap.phone !== undefined ? (row[headerMap.phone] || null) : null,
+      payment: headerMap.payment !== undefined ? (row[headerMap.payment] || null) : null,
+    });
+  }
+  if(toInsert.length === 0) return 0;
+  const { error } = await supabaseClient.from('musicians').insert(toInsert);
+  if(error) throw error;
+  return toInsert.length;
+}
+
+// Appends new rows to whatever roster file this admin already has stored
+// (or starts a fresh one), re-saves it, and keeps the local `musicians`
+// table in sync the same way an Airtable push would.
+async function pushToExcelRoster(musicians){
+  const existing = await loadExcelRosterRow();
+  let wb;
+  if(existing?.file_base64){
+    wb = XLSX.read(existing.file_base64, { type: 'base64' });
+  } else {
+    wb = XLSX.utils.book_new();
+    const header = ['Name', 'Role', 'Type', 'Country', 'Genres', 'Email', 'Phone', 'Payment'];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header]), 'Musicians');
+  }
+  const sheetName = wb.SheetNames[0];
+  const sheet = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  for(const m of musicians){
+    rows.push([m.full_name, m.instrument || '', '', '', '', m.email || '', m.phone || '', '']);
+  }
+  wb.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(rows);
+  const file_name = existing?.file_name || 'roster.xlsx';
+  await saveExcelRosterRow(file_name, workbookToBase64(wb));
+  refreshExcelDownloadButton();
+}
+
+async function refreshExcelDownloadButton(){
+  const btn = $('#btn-download-excel');
+  try {
+    const row = await loadExcelRosterRow();
+    btn.style.display = row?.file_base64 ? '' : 'none';
+  } catch(err){ console.error('refreshExcelDownloadButton', err); }
+}
+
+$('#btn-upload-excel').addEventListener('click', () => $('#excel-roster-input').click());
+$('#excel-roster-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const status = $('#excel-status');
+  status.textContent = 'Reading file…';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const imported = await importRowsFromWorkbook(wb);
+    const base64 = workbookToBase64(wb);
+    await saveExcelRosterRow(file.name, base64);
+    await loadMusicians();
+    renderMusiciansTable();
+    renderRoleFilter();
+    renderMusicianPicker();
+    renderImportList();
+    refreshExcelDownloadButton();
+    status.textContent = `Imported ${imported} new musician(s) ✓`;
+  } catch(err){
+    status.textContent = '';
+    alert(err.message || 'Could not read that file.');
+  }
+  e.target.value = '';
+  setTimeout(() => { status.textContent = ''; }, 4000);
+});
+
+$('#btn-download-excel').addEventListener('click', async () => {
+  try {
+    const row = await loadExcelRosterRow();
+    if(!row?.file_base64) return;
+    const bin = atob(row.file_base64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = row.file_name || 'roster.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch(err){ alert(err.message || 'Could not download that file.'); }
+});
 
 /* ---------------- Event creation ---------------- */
 document.querySelectorAll('.mode-chip').forEach(chip => {
@@ -880,6 +1085,7 @@ function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','
 (async function boot(){
   const ok = await gate();
   if(!ok) return;
+  applyDataSourceUI();
   await Promise.all([loadMusicians(), loadEvents()]);
   renderRoleFilter();
   renderMusicianPicker();

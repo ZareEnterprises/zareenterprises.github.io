@@ -27,7 +27,6 @@
   <button class="tab-btn primary tab-instrumentation" data-tab="instrumentation">Lineup</button>
   <button class="tab-btn primary tab-band" data-tab="band">Band</button>
   <button class="tab-btn primary tab-technical" data-tab="technical">Technical</button>
-  <button class="tab-btn primary tab-showcase" data-tab="showcase" id="tab-btn-showcase" style="display:none">Showcase</button>
   <a class="tab-btn primary" id="invoice-link" href="/invoice/" target="_blank" rel="noopener" style="text-decoration:none; display:inline-flex; align-items:center;">Invoice</a>
   <span class="tab-divider"></span>
   <span class="pin-tab-anchor">
@@ -420,25 +419,6 @@
     </div>
   </div>
 
-  <div id="view-showcase" style="display:none">
-    <div class="toolbar">
-      <span class="mono-label">Pick who's playing this event — the public link only ever shows their name, bio, photo, a short audio clip and YouTube links. No contact info, no socials.</span>
-    </div>
-    <div id="showcase-picker">
-      <div class="showcase-controls">
-        <button class="btn ghost small" id="btn-refresh-musicians" type="button">↻ Refresh from Airtable</button>
-        <button class="btn small" id="btn-save-showcase" type="button">Save selection</button>
-      </div>
-      <div id="showcase-musician-list"><p class="hint">Loading musicians from Airtable…</p></div>
-    </div>
-    <div class="showcase-share" id="showcase-share" style="display:none">
-      <p class="hint" style="margin-top:0">Public link — no login needed, safe to send to the client:</p>
-      <div class="showcase-share-row">
-        <input type="text" id="showcase-share-link" readonly>
-        <button class="btn ghost small" id="btn-copy-showcase-link" type="button">Copy</button>
-      </div>
-    </div>
-  </div>
 
 </main>
 
@@ -611,9 +591,9 @@ const headers = {
 // ============================================================
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PERM_KEYS = ['setlist','lineup','band','members','rehearsals','technical','sound','stage','lightning','directory'];
-// Every section defaults to viewable until permissions load — except
-// Directory, which stays hidden by default so a project member doesn't see
-// the musician showcase tab until an admin explicitly grants it.
+// Every section defaults to viewable until permissions load. 'directory'
+// is unused now that the Musician Showcase tab is gone, kept only so
+// existing per-member permission rows elsewhere don't need a migration.
 let PERMS = Object.fromEntries(PERM_KEYS.map(k => [k, k === 'directory' ? 'none' : 'view']));
 let currentSession = null;
 let currentProjectId = null;
@@ -691,161 +671,7 @@ function applyPermissionLocks(){
   });
   const newSetBtn = document.getElementById('btn-new-set');
   if(newSetBtn) newSetBtn.disabled = !canEdit('setlist');
-
-  const showcaseTabBtn = document.getElementById('tab-btn-showcase');
-  if(showcaseTabBtn) showcaseTabBtn.style.display = canView('directory') ? '' : 'none';
-  const showcasePicker = document.getElementById('showcase-picker');
-  if(showcasePicker){
-    const locked = !canEdit('directory');
-    showcasePicker.classList.toggle('perm-locked', locked);
-    showcasePicker.title = locked ? "View-only — you don't have edit access to this section" : '';
-  }
 }
-
-/* ============================================================
-   MUSICIAN SHOWCASE — a client-facing, no-login page listing whichever
-   musicians (from AMBRA's live Airtable base) are playing this event. Only
-   name/bio/photo/YouTube links ever leave Airtable for this — no contact
-   info, no socials, so a client can't hire someone directly and cut AMBRA
-   out. The picker itself is admin/edit-permission only (see the Directory
-   permission above); "musicians" is the one Airtable type the Edge
-   Function also serves with no session at all, for the public page.
-   ============================================================ */
-let AIRTABLE_MUSICIANS = null; // cached after first fetch this session
-let showcaseSelectedIds = [];
-let currentShowcaseRow = null; // existing `showcases` row for this project, if any
-
-async function fetchAirtableMusicians(){
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/airtable-directory?type=musicians`, { headers });
-  if(!res.ok){
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Airtable request failed (${res.status})`);
-  }
-  const body = await res.json();
-  return body.records || [];
-}
-
-async function fetchExistingShowcase(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/showcases?select=*&project_id=eq.${currentProjectId}&order=created_at.desc&limit=1`, { headers });
-  const arr = res.ok ? await res.json() : [];
-  return arr[0] || null;
-}
-
-function renderShowcaseShareBox(){
-  const box = document.getElementById('showcase-share');
-  if(!currentShowcaseRow){ box.style.display = 'none'; return; }
-  document.getElementById('showcase-share-link').value = `${location.origin}/showcase-view/?id=${currentShowcaseRow.id}`;
-  box.style.display = 'block';
-}
-
-function renderMusicianList(){
-  const list = document.getElementById('showcase-musician-list');
-  if(!AIRTABLE_MUSICIANS){ list.innerHTML = '<p class="hint">Loading musicians from Airtable…</p>'; return; }
-  if(!AIRTABLE_MUSICIANS.length){ list.innerHTML = '<p class="hint">No musicians found in Airtable.</p>'; return; }
-
-  // Selected ones first (in showcase order), then everyone else alphabetically.
-  const byId = Object.fromEntries(AIRTABLE_MUSICIANS.map(m => [m.id, m]));
-  const rest = AIRTABLE_MUSICIANS.filter(m => !showcaseSelectedIds.includes(m.id))
-    .sort((a,b) => a.firstName.localeCompare(b.firstName));
-  const ordered = showcaseSelectedIds.map(id => byId[id]).filter(Boolean).concat(rest);
-
-  list.innerHTML = ordered.map(m => {
-    const checked = showcaseSelectedIds.includes(m.id);
-    const idx = showcaseSelectedIds.indexOf(m.id);
-    const photo = m.photoUrl ? `<img src="${escapeAttr(m.photoUrl)}" alt="">` : `<div class="no-photo"></div>`;
-    const orderBtns = checked ? `
-      <div class="showcase-order-btns">
-        <button type="button" data-move-up="${m.id}" ${idx === 0 ? 'disabled' : ''}>↑</button>
-        <button type="button" data-move-down="${m.id}" ${idx === showcaseSelectedIds.length-1 ? 'disabled' : ''}>↓</button>
-      </div>` : '<span></span>';
-    return `
-      <div class="showcase-musician-item">
-        <input type="checkbox" data-musician-id="${m.id}" ${checked ? 'checked' : ''}>
-        ${photo}
-        <span class="name">${escapeHtml(m.firstName)}</span>
-        ${orderBtns}
-      </div>`;
-  }).join('');
-
-  list.querySelectorAll('[data-musician-id]').forEach(chk => {
-    chk.addEventListener('change', () => {
-      const id = chk.dataset.musicianId;
-      if(chk.checked) showcaseSelectedIds.push(id);
-      else showcaseSelectedIds = showcaseSelectedIds.filter(x => x !== id);
-      renderMusicianList();
-    });
-  });
-  list.querySelectorAll('[data-move-up]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const i = showcaseSelectedIds.indexOf(btn.dataset.moveUp);
-      [showcaseSelectedIds[i-1], showcaseSelectedIds[i]] = [showcaseSelectedIds[i], showcaseSelectedIds[i-1]];
-      renderMusicianList();
-    });
-  });
-  list.querySelectorAll('[data-move-down]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const i = showcaseSelectedIds.indexOf(btn.dataset.moveDown);
-      [showcaseSelectedIds[i+1], showcaseSelectedIds[i]] = [showcaseSelectedIds[i], showcaseSelectedIds[i+1]];
-      renderMusicianList();
-    });
-  });
-}
-
-async function renderShowcaseTab(){
-  if(!currentShowcaseRow){
-    currentShowcaseRow = await fetchExistingShowcase();
-    showcaseSelectedIds = currentShowcaseRow?.musician_ids || [];
-    renderShowcaseShareBox();
-  }
-  if(!AIRTABLE_MUSICIANS){
-    try {
-      AIRTABLE_MUSICIANS = await fetchAirtableMusicians();
-    } catch(err){
-      document.getElementById('showcase-musician-list').innerHTML = `<p class="hint">Could not load Airtable:<br>${escapeHtml(err.message)}</p>`;
-      return;
-    }
-  }
-  renderMusicianList();
-}
-
-document.getElementById('btn-refresh-musicians').addEventListener('click', async () => {
-  AIRTABLE_MUSICIANS = null;
-  renderMusicianList();
-  try {
-    AIRTABLE_MUSICIANS = await fetchAirtableMusicians();
-  } catch(err){
-    document.getElementById('showcase-musician-list').innerHTML = `<p class="hint">Could not load Airtable:<br>${escapeHtml(err.message)}</p>`;
-    return;
-  }
-  renderMusicianList();
-});
-
-document.getElementById('btn-save-showcase').addEventListener('click', async () => {
-  const payload = { project_id: currentProjectId, event_name: currentProjectName, musician_ids: showcaseSelectedIds };
-  let res;
-  if(currentShowcaseRow?.id){
-    res = await fetch(`${SUPABASE_URL}/rest/v1/showcases?id=eq.${currentShowcaseRow.id}`, { method:'PATCH', headers, body: JSON.stringify(payload) });
-  } else {
-    res = await fetch(`${SUPABASE_URL}/rest/v1/showcases`, { method:'POST', headers, body: JSON.stringify(payload) });
-  }
-  if(!res.ok){ alert('Could not save the showcase:\n' + await res.text()); return; }
-  const rows = await res.json();
-  currentShowcaseRow = rows[0];
-  renderShowcaseShareBox();
-});
-
-document.getElementById('btn-copy-showcase-link').addEventListener('click', async () => {
-  const input = document.getElementById('showcase-share-link');
-  try {
-    await navigator.clipboard.writeText(input.value);
-    const btn = document.getElementById('btn-copy-showcase-link');
-    const original = btn.textContent;
-    btn.textContent = '✓ Copied';
-    setTimeout(() => { btn.textContent = original; }, 1200);
-  } catch(err){
-    input.select();
-  }
-});
 
 /* ============================================================
    SETLIST NOTES — Adobe-Acrobat-style sticky comments.
@@ -1469,6 +1295,7 @@ let lightCues = [];
 let spotifyEmbed = null;
 let genres = [];
 let instrumentCatalog = [];
+let MUSICIANS = []; // global roster — whoever's in it either way (Airtable sync, Excel import, or added by hand in Gig-It)
 let charts = {};
 let visibleFields = { song:true, genre:true, country:true, duration:true, arranger:false, version:false, guests:false, comments:false, band:false };
 let openPanel = null;
@@ -1489,6 +1316,10 @@ async function fetchBand(){
   if(!activeBandId){ band = []; return; }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/band?select=*&group_id=eq.${activeBandId}&order=artist_name.asc`, { headers });
   band = res.ok ? await res.json() : [];
+}
+async function fetchMusicians(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians?select=*&order=full_name.asc`, { headers });
+  MUSICIANS = res.ok ? await res.json() : [];
 }
 async function fetchSongInstruments(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/song_instruments?select=*`, { headers });
@@ -3538,6 +3369,100 @@ async function fetchRoleOptions(){
   roleOptions = res.ok ? await res.json() : [];
 }
 
+/* ---------------- Band chair → roster dropdown ----------------
+   Each chair (instrument_catalog row) gets a dropdown of musicians whose
+   roster "instruments" include that chair's instrument, instead of a free-
+   text name — pulled from the same `musicians` table Gig-It's Roster uses
+   (synced from Airtable or Excel, or added there by hand). Picking "Add
+   new name" creates the roster row on the spot and, if this browser has a
+   data source connected (same gigit_data_source choice as Gig-It), pushes
+   it there too — the exact mechanism built for Gig-It's Import-from-Band. */
+function musiciansForRole(roleName){
+  const needle = (roleName || '').trim().toLowerCase();
+  return MUSICIANS.filter(m => (m.instruments || []).some(i => (i || '').trim().toLowerCase() === needle));
+}
+
+function artistOptionsHtml(roleName, currentName){
+  const matches = musiciansForRole(roleName);
+  const names = matches.map(m => m.full_name);
+  // An already-assigned name that isn't a roster match for this role (a
+  // one-off sub, or set before this dropdown existed) stays selectable
+  // instead of silently disappearing.
+  if(currentName && !names.includes(currentName)) names.unshift(currentName);
+  const options = names.map(n => `<option value="${escapeAttr(n)}" ${n === currentName ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
+  return `<option value="" ${!currentName ? 'selected' : ''}>— Select —</option>${options}<option value="__new__">+ Add new name…</option>`;
+}
+
+const DATA_SOURCE_KEY = 'gigit_data_source'; // shared with gig-it.html — same browser, same admin's choice
+function getDataSource(){ return localStorage.getItem(DATA_SOURCE_KEY) || 'airtable'; }
+
+async function pushMusicianToDataSource(m){
+  const src = getDataSource();
+  if(src === 'airtable') return pushToAirtable([m]);
+  if(src === 'excel') return pushToExcelRoster([m]);
+}
+
+async function pushToAirtable(musicians){
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/gigit-push-musicians`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${currentSession.access_token}`, 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ musicians })
+  });
+  const result = await res.json();
+  if(!res.ok) throw new Error(result.error || 'Push to Airtable failed');
+  return result;
+}
+
+async function loadExcelRosterRow(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/gigit_excel_rosters?admin_id=eq.${currentSession.user.id}&select=*`, { headers: authedHeaders() });
+  const rows = res.ok ? await res.json() : [];
+  return rows[0] || null;
+}
+async function saveExcelRosterRow(file_name, file_base64){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/gigit_excel_rosters`, {
+    method: 'POST',
+    headers: { ...authedHeaders(), 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify({ admin_id: currentSession.user.id, file_name, file_base64, updated_at: new Date().toISOString() })
+  });
+  if(!res.ok) throw new Error(await res.text());
+}
+function workbookToBase64(wb){ return XLSX.write(wb, { type: 'base64', bookType: 'xlsx' }); }
+
+async function pushToExcelRoster(musicians){
+  const existing = await loadExcelRosterRow();
+  let wb;
+  if(existing?.file_base64){
+    wb = XLSX.read(existing.file_base64, { type: 'base64' });
+  } else {
+    wb = XLSX.utils.book_new();
+    const header = ['Name', 'Role', 'Type', 'Country', 'Genres', 'Email', 'Phone', 'Payment'];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header]), 'Musicians');
+  }
+  const sheetName = wb.SheetNames[0];
+  const sheet = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  for(const m of musicians){
+    rows.push([m.full_name, m.instrument || '', '', '', '', m.email || '', m.phone || '', '']);
+  }
+  wb.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(rows);
+  const file_name = existing?.file_name || 'roster.xlsx';
+  await saveExcelRosterRow(file_name, workbookToBase64(wb));
+}
+
+async function addNewMusicianForRole(instrumentName){
+  const name = prompt(`Name for this ${instrumentName}:`);
+  if(!name || !name.trim()) return null;
+  const full_name = name.trim();
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians`, { method: 'POST', headers, body: JSON.stringify({ full_name, instruments: [instrumentName] }) });
+  if(!res.ok){ alert('Could not add that musician: ' + await res.text()); return null; }
+  await fetchMusicians();
+  if(getDataSource() !== 'none'){
+    try { await pushMusicianToDataSource({ full_name, instrument: instrumentName, phone: null, email: null }); }
+    catch(err){ console.error('push to data source', err); alert(`Added locally, but could not push to ${getDataSource()}: ${err.message}`); }
+  }
+  return full_name;
+}
+
 function renderMemberList(){
   const container = document.getElementById('member-list');
   document.getElementById('band-count').textContent = `${instrumentCatalog.length} INSTRUMENTS`;
@@ -3558,11 +3483,12 @@ function renderMemberList(){
     row.className = 'member-row';
     row.dataset.instrument = cat.name;
     row.dataset.bandId = existing?.id || '';
+    row.dataset.prevArtist = existing?.artist_name || '';
     const secondLine = existing?.second_instrument ? `<small class="second-instrument-tag">+ ${escapeHtml(existing.second_instrument)}</small>` : '';
     row.innerHTML = `
       <div class="member-row-main">
         <span class="member-instrument">${escapeHtml(cat.name)}${secondLine}</span>
-        <input type="text" class="member-artist-input" data-field="artist_name" value="${escapeAttr(existing?.artist_name || '')}" placeholder="Type artist name…">
+        <select class="member-artist-select">${artistOptionsHtml(cat.name, existing?.artist_name)}</select>
         <input type="text" class="member-outfit-input" data-field="outfit_size" value="${escapeAttr(existing?.outfit_size || '')}" placeholder="Size">
         <select class="member-role-select">
           ${roleOptions.map(r => `<option value="${escapeAttr(r.name)}" ${r.name === currentRole ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
@@ -3635,8 +3561,20 @@ function renderMemberList(){
     await fetchBand();
   }
 
-  container.querySelectorAll('.member-artist-input').forEach(inp => {
-    inp.addEventListener('change', () => upsertMember(inp.closest('.member-row'), 'artist_name', inp.value));
+  container.querySelectorAll('.member-artist-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const row = sel.closest('.member-row');
+      if(sel.value === '__new__'){
+        const fallback = row.dataset.prevArtist || '';
+        const full_name = await addNewMusicianForRole(row.dataset.instrument);
+        if(!full_name){ sel.value = fallback; return; }
+        await upsertMember(row, 'artist_name', full_name);
+        renderMemberList();
+        return;
+      }
+      row.dataset.prevArtist = sel.value;
+      await upsertMember(row, 'artist_name', sel.value);
+    });
   });
   container.querySelectorAll('.member-second-input').forEach(inp => {
     inp.addEventListener('change', () => upsertMember(inp.closest('.member-row'), 'second_instrument', inp.value));
@@ -4118,15 +4056,14 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['table','instrumentation','band','technical','showcase'].forEach(v => {
+    ['table','instrumentation','band','technical'].forEach(v => {
       document.getElementById('view-'+v).style.display = (v === btn.dataset.tab) ? 'block' : 'none';
     });
-    document.body.classList.remove('theme-table','theme-instrumentation','theme-band','theme-technical','theme-showcase');
+    document.body.classList.remove('theme-table','theme-instrumentation','theme-band','theme-technical');
     document.body.classList.add('theme-' + btn.dataset.tab);
     if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
     else if(btn.dataset.tab === 'band') renderBand();
     else if(btn.dataset.tab === 'technical') renderAudioRequirements();
-    else if(btn.dataset.tab === 'showcase') renderShowcaseTab();
     updateNotesModeBarVisibility();
   });
 });
@@ -5248,7 +5185,7 @@ Duración: ${duracion}`;
 
 async function reload(){
   await fetchBands();
-  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchEventInfo(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchRehearsalDateSongs(), fetchTransportationRows(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues()]);
+  await Promise.all([fetchSongs(), fetchSets(), fetchBand(), fetchSongInstruments(), fetchGenres(), fetchInstrumentCatalog(), fetchInterludeItems(), fetchAudioRequirements(), fetchInputList(), fetchSpeakerTables(), fetchSpeakerItems(), fetchStageRectangles(), fetchStageSettings(), fetchEventInfo(), fetchRehearsalSettings(), fetchRehearsalAvailability(), fetchRehearsalDates(), fetchRehearsalDateSongs(), fetchTransportationRows(), fetchBandProfile(), fetchRoleOptions(), fetchMusicSheets(), fetchStageEquipment(), fetchSpotifyEmbed(), fetchLightCues(), fetchMusicians()]);
   renderEventInfoHeader();
   renderTable();
   renderSpotifyEmbedBox();

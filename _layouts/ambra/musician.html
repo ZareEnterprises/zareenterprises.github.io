@@ -9,13 +9,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/ambra-app.css?v={{ site.time | date: '%s' }}">
 </head>
-<body class="theme-table">
+<body class="musician-portal">
 
 <header class="top">
   <img class="top-logo" src="/assets/img/ambrawSubmark.png" alt="AMBRA Submark">
   <p class="eyebrow">AMBRA Live Productions · The Boston Foundation</p>
   <h1>PA'LANTE 2026</h1>
   <span class="mv-band-pill" id="mv-band-pill" style="display:none"></span>
+  <p class="mv-welcome">Everything you need for the show, in one place — day &amp; time, rehearsals, your setlist, attire and transportation.</p>
 </header>
 
 <nav class="tabs" id="mv-tabs">
@@ -31,9 +32,9 @@
 
   <div class="mv-tab-panel" data-tab="daytime">
     <div class="mv-card">
-      <div class="mv-daytime-row"><span class="mv-daytime-label">Venue</span><span id="mv-venue">Henri A. Termeer Square</span></div>
-      <div class="mv-daytime-row"><span class="mv-daytime-label">Date</span><span id="mv-date">Sept 10, 2026</span></div>
-      <div class="mv-daytime-row"><span class="mv-daytime-label">Show time</span><span id="mv-showtime">6:30pm – 10:30pm</span></div>
+      <div class="mv-daytime-row"><span class="mv-daytime-label">📍 Venue</span><span id="mv-venue">Henri A. Termeer Square</span></div>
+      <div class="mv-daytime-row"><span class="mv-daytime-label">🗓️ Date</span><span id="mv-date">Sept 10, 2026</span></div>
+      <div class="mv-daytime-row"><span class="mv-daytime-label">🕕 Show time</span><span id="mv-showtime">6:30pm – 10:30pm</span></div>
     </div>
   </div>
 
@@ -97,7 +98,7 @@ document.querySelectorAll('#mv-tabs .tab-btn').forEach(btn => {
 
 function renderRehearsals(rehearsals, rdSongs, songs){
   if(!rehearsals.length){
-    return `<div class="mv-card mv-empty">No rehearsals scheduled yet — check back later.</div>`;
+    return `<div class="mv-card mv-empty">🗓️ No rehearsals scheduled yet — check back later.</div>`;
   }
   return rehearsals.map((r, i) => {
     const assigned = rdSongs.filter(rs => rs.rehearsal_date_id === r.id).sort((a,b)=>(a.item_order||0)-(b.item_order||0));
@@ -148,7 +149,7 @@ function renderSetlist(sets, songs, spotifyLink){
     </div>`;
   }).filter(Boolean).join('');
 
-  return spotifyButton + (cards || `<div class="mv-card mv-empty">No setlist for your band yet.</div>`);
+  return spotifyButton + (cards || `<div class="mv-card mv-empty">🎶 No setlist for your band yet.</div>`);
 }
 
 function orderMembersByInstrument(members, catalog){
@@ -164,7 +165,7 @@ function orderMembersByInstrument(members, catalog){
 function renderAttire(members, catalog){
   const withArtists = orderMembersByInstrument(members, catalog).filter(m => m.artist_name);
   if(!withArtists.length){
-    return `<div class="mv-card mv-empty">No outfit info yet.</div>`;
+    return `<div class="mv-card mv-empty">👔 No outfit info yet.</div>`;
   }
   const rows = withArtists.map(m => {
     const colors = (m.outfit_color || '').split(',').map(c => c.trim()).filter(Boolean);
@@ -209,24 +210,26 @@ function renderTransportation(rows, members, bandInfo){
 
   const groups = renderTransportGroup(rows, members, 'to_event', 'To the Event') + renderTransportGroup(rows, members, 'back_home', 'Back to Home');
 
-  if(!infoCard && !groups) return `<div class="mv-card mv-empty">No transportation set up yet.</div>`;
+  if(!infoCard && !groups) return `<div class="mv-card mv-empty">🚐 No transportation set up yet.</div>`;
   return infoCard + groups;
 }
 
 async function boot(){
   const bandId = new URLSearchParams(location.search).get('b');
   const statusEl = document.getElementById('mv-status');
-  if(!bandId){
-    statusEl.textContent = "This link is missing its band — ask whoever runs your project for the correct link.";
+  function showStatus(icon, title, text){
+    statusEl.innerHTML = `<div class="mv-state"><div class="mv-state-icon">${icon}</div><div class="mv-state-title">${escapeHtml(title)}</div><div class="mv-state-text">${escapeHtml(text)}</div></div>`;
     statusEl.style.display = 'block';
+  }
+  if(!bandId){
+    showStatus('🎻', 'Link incomplete', "This link is missing its band — ask whoever runs your project for the correct link.");
     return;
   }
 
   const bands = await getJson(`bands?id=eq.${bandId}&select=*`);
   const bandInfo = bands[0];
   if(!bandInfo){
-    statusEl.textContent = "This link isn't valid anymore — ask whoever runs your project for a new one.";
-    statusEl.style.display = 'block';
+    showStatus('🎻', 'Link no longer valid', "This link isn't valid anymore — ask whoever runs your project for a new one.");
     return;
   }
   window.__mvBandName = bandInfo.name;

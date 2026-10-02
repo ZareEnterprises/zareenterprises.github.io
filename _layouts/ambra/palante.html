@@ -1945,6 +1945,7 @@ function clampPopoverToViewport(pop, anchorEl){
   pop.style.top = Math.max(10, top) + 'px';
 }
 let setDragState = null;
+let setTouchDragState = null; // touch/pen path alongside the native-DnD mouse path below
 function wireSetDragAndDrop(){
   document.querySelectorAll('#sets-container .set-block:not(.pool)').forEach(block => {
     const head = block.querySelector('.set-head');
@@ -1965,6 +1966,34 @@ function wireSetDragAndDrop(){
       const before = (e.clientY - rect.top) < rect.height / 2;
       await reorderSets(setDragState, block.dataset.setNumber, before);
       setDragState = null;
+    });
+
+    head.addEventListener('pointerdown', (e) => {
+      if(e.pointerType === 'mouse') return; // native DnD above already owns real mice
+      e.preventDefault();
+      setTouchDragState = { setNumber: block.dataset.setNumber, pointerId: e.pointerId, target: null, before: false };
+      block.classList.add('dragging');
+      head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener('pointermove', (e) => {
+      if(!setTouchDragState || e.pointerId !== setTouchDragState.pointerId) return;
+      const hovered = document.elementFromPoint(e.clientX, e.clientY)?.closest('#sets-container .set-block:not(.pool)');
+      if(!hovered || hovered.dataset.setNumber === setTouchDragState.setNumber){ setTouchDragState.target = null; return; }
+      const rect = hovered.getBoundingClientRect();
+      setTouchDragState.target = hovered.dataset.setNumber;
+      setTouchDragState.before = (e.clientY - rect.top) < rect.height / 2;
+    });
+    head.addEventListener('pointerup', async (e) => {
+      if(!setTouchDragState || e.pointerId !== setTouchDragState.pointerId) return;
+      const state = setTouchDragState;
+      setTouchDragState = null;
+      block.classList.remove('dragging');
+      if(state.target) await reorderSets(state.setNumber, state.target, state.before);
+    });
+    head.addEventListener('pointercancel', () => {
+      if(!setTouchDragState) return;
+      block.classList.remove('dragging');
+      setTouchDragState = null;
     });
   });
 }
@@ -2706,6 +2735,24 @@ function renderInterludeRows(container, setInfo){
 }
 
 let interludeDragState = null;
+let interludeTouchDragState = null; // touch/pen path alongside the native-DnD mouse path below
+
+async function reorderInterludeItems(draggedId, targetId, before, setInfo, container){
+  if(draggedId === targetId) return;
+  let list = interludeItems.filter(it => it.set_id === setInfo.id && it.id !== draggedId).sort((a,b) => (a.item_order||0) - (b.item_order||0));
+  const dragged = interludeItems.find(it => it.id === draggedId);
+  if(!dragged) return;
+  const idx = list.findIndex(it => it.id === targetId);
+  const insertIndex = idx === -1 ? list.length : (before ? idx : idx + 1);
+  list.splice(insertIndex, 0, dragged);
+  await Promise.all(list.map((it, i) =>
+    fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${it.id}`, { method:'PATCH', headers, body: JSON.stringify({ item_order: i + 1 }) })
+  ));
+  await fetchInterludeItems();
+  renderInterludeRows(container, setInfo);
+  wireEmotionFaders();
+}
+
 function wireInterludeDragAndDrop(rowsDiv, setInfo, container){
   rowsDiv.querySelectorAll('.interlude-row').forEach(row => {
     let handleActive = false;
@@ -2725,18 +2772,37 @@ function wireInterludeDragAndDrop(rowsDiv, setInfo, container){
       e.preventDefault();
       const rect = row.getBoundingClientRect();
       const before = (e.clientY - rect.top) < rect.height / 2;
-      let list = interludeItems.filter(it => it.set_id === setInfo.id && it.id !== interludeDragState).sort((a,b) => (a.item_order||0) - (b.item_order||0));
-      const dragged = interludeItems.find(it => it.id === interludeDragState);
-      const idx = list.findIndex(it => it.id === row.dataset.itemId);
-      const insertIndex = idx === -1 ? list.length : (before ? idx : idx + 1);
-      list.splice(insertIndex, 0, dragged);
-      await Promise.all(list.map((it, i) =>
-        fetch(`${SUPABASE_URL}/rest/v1/interlude_items?id=eq.${it.id}`, { method:'PATCH', headers, body: JSON.stringify({ item_order: i + 1 }) })
-      ));
+      const draggedId = interludeDragState;
       interludeDragState = null;
-      await fetchInterludeItems();
-      renderInterludeRows(container, setInfo);
-      wireEmotionFaders();
+      await reorderInterludeItems(draggedId, row.dataset.itemId, before, setInfo, container);
+    });
+
+    handle.addEventListener('pointerdown', (e) => {
+      if(e.pointerType === 'mouse') return; // native DnD above already owns real mice
+      e.preventDefault();
+      interludeTouchDragState = { itemId: row.dataset.itemId, pointerId: e.pointerId, target: null, before: false };
+      row.classList.add('dragging');
+      row.setPointerCapture(e.pointerId);
+    });
+    row.addEventListener('pointermove', (e) => {
+      if(!interludeTouchDragState || e.pointerId !== interludeTouchDragState.pointerId) return;
+      const hovered = document.elementFromPoint(e.clientX, e.clientY)?.closest('.interlude-row');
+      if(!hovered || hovered.dataset.itemId === interludeTouchDragState.itemId){ interludeTouchDragState.target = null; return; }
+      const rect = hovered.getBoundingClientRect();
+      interludeTouchDragState.target = hovered.dataset.itemId;
+      interludeTouchDragState.before = (e.clientY - rect.top) < rect.height / 2;
+    });
+    row.addEventListener('pointerup', async (e) => {
+      if(!interludeTouchDragState || e.pointerId !== interludeTouchDragState.pointerId) return;
+      const state = interludeTouchDragState;
+      interludeTouchDragState = null;
+      row.classList.remove('dragging');
+      if(state.target) await reorderInterludeItems(state.itemId, state.target, state.before, setInfo, container);
+    });
+    row.addEventListener('pointercancel', () => {
+      if(!interludeTouchDragState) return;
+      row.classList.remove('dragging');
+      interludeTouchDragState = null;
     });
   });
 }
@@ -3975,14 +4041,8 @@ function renderRehearsalDatesBox(){
     zone.addEventListener('drop', async (e) => {
       if(!draggedSongForRehearsal) return;
       e.preventDefault();
-      const rehearsalId = zone.dataset.rehearsalId;
-      const existingCount = rehearsalDateSongs.filter(rs => rs.rehearsal_date_id === rehearsalId).length;
-      await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_date_songs`, {
-        method:'POST', headers, body: JSON.stringify({ rehearsal_date_id: rehearsalId, song_id: draggedSongForRehearsal, item_order: existingCount + 1 })
-      });
+      await addSongToRehearsalDate(draggedSongForRehearsal, zone.dataset.rehearsalId);
       draggedSongForRehearsal = null;
-      await fetchRehearsalDateSongs();
-      renderRehearsalDatesBox();
     });
   });
 
@@ -3993,6 +4053,15 @@ function renderRehearsalDatesBox(){
 }
 
 let draggedSongForRehearsal = null;
+async function addSongToRehearsalDate(songId, rehearsalId){
+  const existingCount = rehearsalDateSongs.filter(rs => rs.rehearsal_date_id === rehearsalId).length;
+  await fetch(`${SUPABASE_URL}/rest/v1/rehearsal_date_songs`, {
+    method:'POST', headers, body: JSON.stringify({ rehearsal_date_id: rehearsalId, song_id: songId, item_order: existingCount + 1 })
+  });
+  await fetchRehearsalDateSongs();
+  renderRehearsalDatesBox();
+}
+let rehearsalTouchDragState = null;
 function renderRehearsalSongPicker(){
   const picker = document.getElementById('rehearsal-song-picker-list');
   if(songs.length === 0){
@@ -4008,6 +4077,34 @@ function renderRehearsalSongPicker(){
   picker.querySelectorAll('.rd-picker-song').forEach(el => {
     el.addEventListener('dragstart', () => { draggedSongForRehearsal = el.dataset.songId; });
     el.addEventListener('dragend', () => { draggedSongForRehearsal = null; });
+
+    el.addEventListener('pointerdown', (e) => {
+      if(e.pointerType === 'mouse') return;
+      rehearsalTouchDragState = { songId: el.dataset.songId };
+      el.setPointerCapture(e.pointerId);
+      el.classList.add('dragging');
+    });
+    el.addEventListener('pointermove', (e) => {
+      if(!rehearsalTouchDragState) return;
+      document.querySelectorAll('.rd-song-dropzone.drag-over').forEach(z => z.classList.remove('drag-over'));
+      const zone = document.elementFromPoint(e.clientX, e.clientY)?.closest('.rd-song-dropzone');
+      if(zone) zone.classList.add('drag-over');
+    });
+    el.addEventListener('pointerup', async (e) => {
+      if(!rehearsalTouchDragState) return;
+      const { songId } = rehearsalTouchDragState;
+      rehearsalTouchDragState = null;
+      el.classList.remove('dragging');
+      el.releasePointerCapture(e.pointerId);
+      const zone = document.elementFromPoint(e.clientX, e.clientY)?.closest('.rd-song-dropzone');
+      document.querySelectorAll('.rd-song-dropzone.drag-over').forEach(z => z.classList.remove('drag-over'));
+      if(zone) await addSongToRehearsalDate(songId, zone.dataset.rehearsalId);
+    });
+    el.addEventListener('pointercancel', () => {
+      rehearsalTouchDragState = null;
+      el.classList.remove('dragging');
+      document.querySelectorAll('.rd-song-dropzone.drag-over').forEach(z => z.classList.remove('drag-over'));
+    });
   });
 }
 document.getElementById('btn-add-rehearsal-date').addEventListener('click', async () => {

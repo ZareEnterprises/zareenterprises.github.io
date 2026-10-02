@@ -814,7 +814,17 @@ body.app{ zoom:1.2; min-height:calc(100vh / 1.2); }
 @media (max-width:760px){
   .utable-head, .utable-row{ grid-template-columns:1.8fr 1fr 70px 34px; }
   .utable-head span:nth-child(3), .utable-row .ustatus{ display:none; }
-  .topbar-row{ flex-wrap:wrap; row-gap:12px; }
+}
+
+/* Phones in landscape (roughly 570-930px wide) still hit this width range,
+   not just portrait phones <=760px. The 1.2 zoom that makes the panel feel
+   right on desktop just eats into that already-tight space, so it's turned
+   back off here, and the 3-column topbar grid (brand/tabs/actions) is
+   switched to stacking instead of staying side-by-side and squeezing. */
+@media (max-width:930px){
+  body.app{ zoom:1; min-height:100vh; }
+  .topbar-row{ grid-template-columns:1fr; row-gap:12px; justify-items:center; }
+  .workspace, .topbar-actions{ justify-self:center; }
 }
 
 /* ==========================================================================

@@ -5309,7 +5309,12 @@ function openMultiColorPanel(anchorEl, colorsCsv, maxColors, onChange){
     });
     const addInput = pop.querySelector('.mcp-color-input');
     if(addInput){
-      addInput.addEventListener('input', (e) => {
+      // 'change' (not 'input') — input fires continuously while the native
+      // picker is still open and the user is dragging around it, and
+      // re-rendering mid-drag replaces this very element, which yanks the
+      // picker closed before they can get to the color they actually want.
+      // 'change' only fires once, when they've committed to a color.
+      addInput.addEventListener('change', (e) => {
         colors.push(e.target.value);
         onChange(colors.join(','));
         render();
@@ -5327,6 +5332,10 @@ function openMultiColorPanel(anchorEl, colorsCsv, maxColors, onChange){
   if(top + popRect.height > window.innerHeight) top = rect.top - popRect.height - 6;
   pop.style.left = Math.max(10, left) + 'px';
   pop.style.top = Math.max(10, top) + 'px';
+  // Opens the native picker right away instead of making them click the
+  // empty dashed "+" circle first — only on this first render, so removing
+  // a color later doesn't keep popping the picker back open unasked.
+  pop.querySelector('.mcp-color-input')?.click();
   setTimeout(() => {
     document.addEventListener('click', function closeOnce(){ pop.remove(); document.removeEventListener('click', closeOnce); }, { once: true });
   }, 0);

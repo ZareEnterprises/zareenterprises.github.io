@@ -10,39 +10,54 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/home.css?v={{ site.time | date: '%s' }}">
 </head>
-<body>
+<body class="home">
 
-<nav class="site-nav">
+<nav class="site-nav nav-hero" id="site-nav">
   <div class="container">
     <a href="#top" class="nav-brand">
-      <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
-      <span>AMBRA</span>
+      <img src="/assets/img/ambrawordlogo.png" alt="AMBRA">
     </a>
     <div class="nav-links" id="nav-links">
       <a href="/cases/">Our Work</a>
       <a href="/our-team/">Story</a>
       <a href="/stories/">Testimonials</a>
-      <a href="/contact/" class="nav-cta">Inquire</a>
     </div>
-    <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+    <div class="nav-right">
+      <a href="/contact/" class="nav-cta">Inquire</a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+    </div>
   </div>
 </nav>
 
 <main id="top">
 
   <!-- ===== Hero ===== -->
-  <section class="hero">
-    <div class="container">
-      <div>
-        <p class="eyebrow">Live Music Production Company</p>
-        <h1>Premium Live Music for Your Event</h1>
-        <p class="lede">We connect you with elite Latin American musicians for fundraisers, anniversaries, and cultural and corporate celebrations — a live show designed around your event, not off a shelf.</p>
-        <div class="btn-row">
-          <a href="/contact/" class="btn btn-solid">Inquire</a>
-          <a href="/cases/" class="btn btn-outline">Our Work</a>
-        </div>
+  <section class="hero hero-video">
+    <video class="hero-video-bg" autoplay muted loop playsinline>
+      <source src="/assets/videos/ambramini.mp4" type="video/mp4">
+    </video>
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+      <p class="eyebrow">Live Music for Organization's Events</p>
+      <h1>Premium Live Music for Your Event</h1>
+      <p class="hero-subtitle">Live Music Production Company</p>
+      <div class="btn-row">
+        <a href="/contact/" class="btn btn-solid">Inquire</a>
+        <a href="/cases/" class="btn btn-outline btn-outline-light">Our Work</a>
       </div>
-      <div class="ph hero-photo"><div class="ph-inner">Hero photo</div><span class="ph-label">Replace with event photo</span></div>
+      <p class="lede">Your connection to elite Latin American musicians for fundraisers, anniversary, cultural and corporative celebrations.</p>
+    </div>
+  </section>
+
+  <!-- ===== Talent sources ===== -->
+  <section class="talent-band">
+    <div class="container talent-sources">
+      <p class="talent-sources-title">Talent Sourced Only From:</p>
+      <div class="talent-sources-list">
+        <span>Berklee College of Music</span>
+        <span>Latin America Grammy Foundation</span>
+        <span>New England Conservatory of Music</span>
+      </div>
     </div>
   </section>
 
@@ -50,12 +65,11 @@
   <section class="stats">
     <div class="container">
       <div class="stats-grid">
-        <div><div class="stat-num">60+</div><div class="stat-label">Pre-Selected Musicians</div></div>
-        <div><div class="stat-num">100%</div><div class="stat-label">Raised for Non-Profits</div></div>
+        <div><div class="stat-num">+60</div><div class="stat-label">Pre-Selected Musicians</div></div>
+        <div><div class="stat-num">100%</div><div class="stat-label">Customized Experiences</div></div>
+        <div><div class="stat-num">+1M</div><div class="stat-label">Raised for non-profits</div></div>
         <div><div class="stat-num">12</div><div class="stat-label">Represented Countries</div></div>
-        <div><div class="stat-num">1M+</div><div class="stat-label">Audience Reached</div></div>
       </div>
-      <div class="talent-sources">Musicians drawn from <b>Berklee College of Music</b>, the <b>Latin America Grammy Foundation</b>, and the <b>New England Conservatory of Music</b>.</div>
     </div>
   </section>
 
@@ -178,8 +192,8 @@
     <div class="footer-top">
       <div>
         <div class="footer-brand">
-          <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
-          <span>AMBRA Live Productions</span>
+          <img src="/assets/img/ambrawordlogo.png" alt="AMBRA">
+          <span>Live Productions</span>
         </div>
         <p style="font-size:13.5px;max-width:280px;line-height:1.6">Premium live music production for fundraisers, anniversaries, and cultural celebrations.</p>
       </div>
@@ -211,6 +225,13 @@
   document.querySelectorAll('.nav-links a').forEach(a => {
     a.addEventListener('click', () => document.getElementById('nav-links').classList.remove('open'));
   });
+
+  // The hero nav starts transparent over the video and only turns into a
+  // solid orange bar once you've scrolled past the top of it.
+  const siteNav = document.getElementById('site-nav');
+  function updateNavScrolled(){ siteNav.classList.toggle('scrolled', window.scrollY > 40); }
+  updateNavScrolled();
+  window.addEventListener('scroll', updateNavScrolled, { passive: true });
 </script>
 
 </body>

@@ -28,6 +28,14 @@ body{
   margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body);
   -webkit-font-smoothing:antialiased;
 }
+/* Scales the whole homepage up ~20%, same trick already used for the admin
+   panel (body.app in login.css) — zoom doesn't touch vh units, so the hero's
+   100vh is compensated separately below. Off on narrow viewports, same as
+   the admin panel, so it doesn't eat into already-tight phone width. */
+body.home{ zoom:1.2; }
+@media (max-width:930px){
+  body.home{ zoom:1; }
+}
 a{ color:inherit; text-decoration:none; }
 img{ max-width:100%; display:block; }
 .container{ max-width:var(--wrap); margin:0 auto; padding:0 28px; }
@@ -51,19 +59,45 @@ img{ max-width:100%; display:block; }
   position:sticky; top:0; z-index:200; background:rgba(255,255,255,.92); backdrop-filter:blur(8px);
   border-bottom:1px solid var(--line);
 }
-.site-nav .container{ display:flex; align-items:center; justify-content:space-between; padding-top:16px; padding-bottom:16px; }
+.site-nav .container{
+  position:relative; display:flex; align-items:center; justify-content:space-between;
+  padding-top:16px; padding-bottom:16px;
+}
 .nav-brand{ display:flex; align-items:center; gap:10px; }
-.nav-brand img{ width:28px; height:28px; }
-.nav-brand span{ font-family:var(--font-display); font-weight:700; font-size:18px; letter-spacing:.02em; }
-.nav-links{ display:flex; align-items:center; gap:34px; }
+.nav-brand img{ height:24px; width:auto; }
+/* Centered in the bar regardless of how wide the logo or the right-side
+   group are, rather than just filling the space between them. */
+.nav-links{
+  display:flex; align-items:center; gap:34px;
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+}
 .nav-links a{ font-size:13.5px; font-weight:600; color:var(--ink); transition:.15s; }
 .nav-links a:hover{ color:var(--orange); }
+.nav-right{ display:flex; align-items:center; gap:14px; }
 .nav-cta{
-  background:var(--orange); color:#fff !important; padding:10px 20px; border-radius:30px;
+  background:var(--orange); color:#fff !important; padding:10px 22px; border-radius:6px;
   font-size:13px; font-weight:700;
 }
 .nav-cta:hover{ background:var(--orange-dark); }
 .nav-toggle{ display:none; background:none; border:none; font-size:22px; cursor:pointer; color:var(--ink); }
+
+/* Hero nav: transparent + white text over the video, solid orange bar once
+   scrolled past it — toggled by the .scrolled class in index.html's JS. */
+.site-nav.nav-hero{
+  position:fixed; top:0; left:0; right:0; background:transparent; border-bottom:none;
+  backdrop-filter:none; transition:background .3s ease, box-shadow .3s ease;
+}
+.site-nav.nav-hero.scrolled{ background:#F36C3B; box-shadow:0 4px 20px rgba(0,0,0,.18); }
+.site-nav.nav-hero .nav-brand img{ filter:brightness(0) invert(1); }
+.site-nav.nav-hero .nav-links a:not(.nav-cta){ color:#fff; }
+.site-nav.nav-hero .nav-links a:not(.nav-cta):hover{ color:#2B1206; }
+.site-nav.nav-hero .nav-cta{ background:#fff; color:#F36C3B !important; }
+.site-nav.nav-hero .nav-cta:hover{ background:#FFE8DC; }
+.site-nav.nav-hero .nav-toggle{ color:#fff; }
+/* The mobile dropdown still opens on a solid white panel, so its links go
+   back to dark text regardless of scroll state. */
+.site-nav.nav-hero .nav-links.open{ background:#fff; }
+.site-nav.nav-hero .nav-links.open a:not(.nav-cta){ color:var(--ink); }
 
 /* ---------- Hero ---------- */
 .hero{ padding:74px 0 60px; }
@@ -76,28 +110,54 @@ img{ max-width:100%; display:block; }
   font-family:var(--font-display); font-weight:700; font-size:clamp(34px,4.6vw,58px); line-height:1.06;
   letter-spacing:-.01em; margin:0 0 20px;
 }
-.hero p.lede{ font-size:16.5px; color:var(--muted); line-height:1.65; max-width:480px; margin:0 0 30px; }
+.hero p.lede{ font-size:16.5px; color:var(--muted); line-height:1.65; max-width:480px; margin:0 auto 30px; }
+.hero-subtitle{ font-family:var(--font-display); font-weight:500; font-size:20px; margin:0 0 28px; }
 .btn-row{ display:flex; gap:14px; flex-wrap:wrap; }
 .btn{
-  display:inline-flex; align-items:center; gap:6px; padding:13px 26px; border-radius:30px;
+  display:inline-flex; align-items:center; gap:6px; padding:13px 26px; border-radius:6px;
   font-size:14px; font-weight:700; cursor:pointer; transition:.15s; border:1px solid transparent;
 }
 .btn-solid{ background:var(--orange); color:#fff; }
 .btn-solid:hover{ background:var(--orange-dark); }
 .btn-outline{ background:transparent; color:var(--ink); border-color:var(--ink); }
 .btn-outline:hover{ border-color:var(--orange); color:var(--orange); }
-.hero-photo{ aspect-ratio:4/5; }
+
+/* ---------- Hero video (homepage only) ---------- */
+.hero-video{
+  position:relative; min-height:calc(100vh / 1.2); padding:0; display:flex; align-items:center;
+  overflow:hidden; background:linear-gradient(160deg,#2B1206,#1A0C04);
+}
+@media (max-width:930px){
+  .hero-video{ min-height:100vh; }
+}
+.hero-video .container{ display:block; }
+.hero-video-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
+.hero-overlay{
+  position:absolute; inset:0; z-index:1;
+  background:linear-gradient(180deg, rgba(20,10,5,.5) 0%, rgba(20,10,5,.7) 100%);
+}
+.hero-content{ position:relative; z-index:2; text-align:center; max-width:1160px; margin:0 auto; padding:0 20px; }
+.hero-content .eyebrow{ color:#fff; }
+.hero-content h1{ color:var(--orange); font-style:italic; font-weight:500; font-size:clamp(32px,5.4vw,76px); }
+.hero-content .hero-subtitle{ color:#F1ECE0; font-size:clamp(18px,2vw,26px); }
+.hero-content .btn-row{ justify-content:center; margin-bottom:28px; }
+.hero-content .lede{ color:#fff; max-width:700px; margin:0 auto; }
+.btn-outline-light{ color:#fff; border-color:#fff; }
+.btn-outline-light:hover{ border-color:var(--orange); color:var(--orange); }
 
 /* ---------- Stats ---------- */
-.stats{ background:var(--ink); color:#fff; padding:46px 0; }
-.stats-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:30px; text-align:center; }
-.stat-num{ font-family:var(--font-display); font-weight:700; font-size:clamp(26px,3vw,38px); color:var(--orange); }
-.stat-label{ font-size:12px; color:#C9C2B4; margin-top:6px; letter-spacing:.02em; }
-.talent-sources{
-  margin-top:34px; padding-top:28px; border-top:1px solid rgba(255,255,255,.14);
-  text-align:center; font-size:12.5px; color:#A79F90; letter-spacing:.02em;
+.talent-band{ background:#0A0A0A; padding:38px 0; }
+.talent-sources{ text-align:center; }
+.talent-sources-title{
+  font-family:var(--font-display); font-style:italic; font-size:16px; color:#6B6358; margin:0 0 16px;
 }
-.talent-sources b{ color:#fff; font-weight:600; }
+.talent-sources-list{ display:flex; justify-content:center; flex-wrap:wrap; gap:14px 50px; }
+.talent-sources-list span{ font-family:var(--font-display); font-weight:700; font-size:19px; color:#fff; }
+
+.stats{ background:#161F1A; color:#fff; padding:60px 0; }
+.stats-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:30px; text-align:center; }
+.stat-num{ font-family:var(--font-display); font-weight:500; font-size:clamp(32px,4vw,46px); color:var(--orange); }
+.stat-label{ font-size:14px; color:#fff; margin-top:10px; letter-spacing:.02em; }
 
 /* ---------- Section scaffolding ---------- */
 .section{ padding:84px 0; }
@@ -161,8 +221,8 @@ blockquote.pull.secondary{ font-size:15px; font-style:normal; color:var(--muted)
 footer.site-footer{ background:var(--ink); color:#C9C2B4; padding:56px 0 26px; }
 .footer-top{ display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:40px; padding-bottom:40px; border-bottom:1px solid rgba(255,255,255,.12); }
 .footer-brand{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-.footer-brand img{ width:26px; filter:brightness(0) saturate(100%) invert(54%) sepia(84%) saturate(1800%) hue-rotate(345deg); }
-.footer-brand span{ font-family:var(--font-display); font-weight:700; font-size:17px; color:#fff; }
+.footer-brand img{ height:20px; width:auto; filter:brightness(0) invert(1); }
+.footer-brand span{ font-family:var(--font-display); font-weight:700; font-size:14px; color:#fff; letter-spacing:.02em; }
 .footer-col h4{ font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#8A8273; margin:0 0 14px; }
 .footer-col a, .footer-col p{ display:block; font-size:13.5px; color:#C9C2B4; margin:0 0 9px; }
 .footer-col a:hover{ color:var(--orange); }
@@ -190,8 +250,9 @@ footer.site-footer{ background:var(--ink); color:#C9C2B4; padding:56px 0 26px; }
 }
 @media (max-width:720px){
   .nav-links{
-    position:absolute; top:100%; left:0; right:0; background:#fff; border-bottom:1px solid var(--line);
-    flex-direction:column; align-items:flex-start; gap:0; padding:8px 28px 18px; display:none;
+    position:absolute; top:100%; left:0; right:0; transform:none; background:#fff; border-bottom:1px solid var(--line);
+    flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:0;
+    padding:8px 28px 18px; display:none;
   }
   .nav-links.open{ display:flex; }
   .nav-links a{ padding:12px 0; width:100%; border-top:1px solid var(--line); }

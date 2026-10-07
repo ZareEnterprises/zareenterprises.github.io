@@ -69,34 +69,26 @@
 </main>
 
 <footer class="site-footer">
-  <div class="container">
-    <div class="footer-top">
-      <div>
-        <div class="footer-brand">
-          <img src="/assets/img/ambrawordlogo.png" alt="AMBRA">
-          <span>Live Productions</span>
-        </div>
-        <p style="font-size:13.5px;max-width:280px;line-height:1.6">Premium live music production for fundraisers, anniversaries, and cultural celebrations.</p>
-      </div>
-      <div class="footer-col">
-        <h4>Location</h4>
-        <p>Brookline, Boston, MA</p>
-      </div>
-      <div class="footer-col">
-        <h4>Contact</h4>
-        <a href="mailto:info@ambralp.com">info@ambralp.com</a>
-        <a href="mailto:careers@ambralp.com">Careers — Learn more</a>
-        <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
-      </div>
+  <div class="container footer-grid">
+    <div class="footer-col">
+      <h4>Location</h4>
+      <p>Brookline, Boston, MA</p>
     </div>
-    <div class="footer-bottom">
-      <p>© {{ site.time | date: '%Y' }} AMBRA Music Productions. All Rights Reserved.</p>
-      <div class="footer-side-links">
-        <a href="https://emnlatam.github.io/emn/" target="_blank" rel="noopener">EMN: Escuela de Música y Negocios ↗</a>
-        <a href="/ambra/" class="team-login">Team Login</a>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <div class="footer-icons">
+        <a href="mailto:info@ambralp.com" aria-label="Email" class="footer-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></a>
+        <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram" class="footer-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+        <a href="/contact/" aria-label="Inquire" class="footer-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></a>
       </div>
+      <a href="mailto:info@ambralp.com" class="footer-email">info@ambralp.com</a>
     </div>
   </div>
+  <p class="footer-copyright">© Copyright {{ site.time | date: '%Y' }} by AMBRA Music Productions. All Rights Reserved.</p>
+  <p class="footer-fine-print">
+    <a href="https://emnlatam.github.io/emn/" target="_blank" rel="noopener">EMN: Escuela de Música y Negocios ↗</a> ·
+    <a href="/ambra/">Team Login</a>
+  </p>
 </footer>
 
 <script>

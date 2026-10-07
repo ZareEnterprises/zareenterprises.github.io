@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inquire — AMBRA Live Productions</title>
+<meta name="description" content="Book a consultation with AMBRA Live Productions for your next event.">
+<link rel="icon" type="image/png" href="/assets/img/ambraSubmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/home.css?v={{ site.time | date: '%s' }}">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-brand">
+      <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
+      <span>AMBRA</span>
+    </a>
+    <div class="nav-links" id="nav-links">
+      <a href="/cases/">Our Work</a>
+      <a href="/our-team/">Story</a>
+      <a href="/stories/">Testimonials</a>
+      <a href="/contact/" class="nav-cta">Inquire</a>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ===== Hero ===== -->
+  <section class="work-hero" style="padding-bottom:20px;">
+    <div class="container">
+      <p class="eyebrow">Let's Design Your Next Company's Event</p>
+      <h1 style="font-size:clamp(30px,4vw,48px)">Book Your Consultation</h1>
+      <p class="lede">Tell us about your event and reserve a time to talk. We'll match you with musicians from the exact country your music calls for.</p>
+    </div>
+  </section>
+
+  <!-- ===== Let's Talk ===== -->
+  <section class="section" style="padding-top:20px">
+    <div class="container" style="max-width:760px">
+      <div class="section-head left" style="margin-bottom:28px">
+        <p class="section-tag">Let's Talk</p>
+        <h2 style="font-size:clamp(22px,3vw,30px)">We only accept six major productions each year to ensure exceptional attention, creative direction, and flawless execution.</h2>
+        <p>If you want to send documents in advance before our meeting, please use this email: <a href="mailto:info@ambralp.com" style="color:var(--orange);font-weight:600">info@ambralp.com</a>.</p>
+      </div>
+
+      <div class="process-list">
+        <div class="process-row">
+          <div class="process-step-num">01</div>
+          <div>
+            <h3>Discovery Call</h3>
+            <p>We talk through your event: date, venue, guest count, and the sound and feel you're after. Reserve your time below.</p>
+          </div>
+        </div>
+        <div class="process-row">
+          <div class="process-step-num">02</div>
+          <div>
+            <h3>Curated Proposal</h3>
+            <p>You'll receive a proposal matched to your event's vibe and message, with band size and pricing options.</p>
+          </div>
+        </div>
+        <div class="process-row">
+          <div class="process-step-num">03</div>
+          <div>
+            <h3>Confirm &amp; Book</h3>
+            <p>Secure your date with a deposit, and we handle the rest: musicians, arrangement, and rehearsal.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- No scheduling-widget link was findable from the live site (it may
+           use Calendly or similar, loaded client-side) — mailto stands in
+           until you send the real booking link to embed here instead. -->
+      <div class="section-cta" style="margin-top:40px">
+        <a href="mailto:info@ambralp.com?subject=Event%20Inquiry" class="btn btn-solid">Reserve your time →</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">
+          <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
+          <span>AMBRA Live Productions</span>
+        </div>
+        <p style="font-size:13.5px;max-width:280px;line-height:1.6">Premium live music production for fundraisers, anniversaries, and cultural celebrations.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Location</h4>
+        <p>Brookline, Boston, MA</p>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <a href="mailto:info@ambralp.com">info@ambralp.com</a>
+        <a href="mailto:careers@ambralp.com">Careers — Learn more</a>
+        <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© {{ site.time | date: '%Y' }} AMBRA Music Productions. All Rights Reserved.</p>
+      <div class="footer-side-links">
+        <a href="https://emnlatam.github.io/emn/" target="_blank" rel="noopener">EMN: Escuela de Música y Negocios ↗</a>
+        <a href="/ambra/" class="team-login">Team Login</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('nav-toggle').addEventListener('click', () => {
+    document.getElementById('nav-links').classList.toggle('open');
+  });
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    a.addEventListener('click', () => document.getElementById('nav-links').classList.remove('open'));
+  });
+</script>
+
+</body>
+</html>

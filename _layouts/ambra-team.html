@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our Team — AMBRA Live Productions</title>
+<meta name="description" content="Meet the AMBRA Live Productions team — the people behind every show.">
+<link rel="icon" type="image/png" href="/assets/img/ambraSubmark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/home.css?v={{ site.time | date: '%s' }}">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-brand">
+      <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
+      <span>AMBRA</span>
+    </a>
+    <div class="nav-links" id="nav-links">
+      <a href="/cases/">Our Work</a>
+      <a href="/our-team/">Story</a>
+      <a href="/stories/">Testimonials</a>
+      <a href="/contact/" class="nav-cta">Inquire</a>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ===== Hero ===== -->
+  <section class="work-hero" style="padding-bottom:20px;">
+    <div class="container">
+      <p class="eyebrow">Our Team</p>
+      <h1 style="font-size:clamp(30px,4vw,46px)">ready for you</h1>
+    </div>
+  </section>
+
+  <!-- ===== Team ===== -->
+  <section class="section">
+    <div class="container">
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="ph team-photo"><div class="ph-inner">Photo</div></div>
+          <h3>Daniel Davila</h3>
+          <p class="team-title">Founder &amp; CEO</p>
+          <p class="team-bio">Daniel is an entrepreneur, Berklee graduate, and Executive Producer with extensive experience designing bespoke live music productions for corporate events, luxury celebrations, and cultural institutions. His work is defined by artistic excellence, meticulous execution, and a commitment to delivering unforgettable experiences.</p>
+          <a href="https://drive.google.com/file/d/1FrGm1Rqhq33Kxg9bWHIaMn3eM8r9l5Kh/view?usp=drive_link" target="_blank" rel="noopener" class="team-resume-link">Resume ↗</a>
+        </div>
+        <div class="team-card">
+          <div class="ph team-photo"><div class="ph-inner">Photo</div></div>
+          <h3>Isabella Campana</h3>
+          <p class="team-title">Marketing Director &amp; Client Acquisition</p>
+          <p class="team-bio">She specializes in marketing and artist development. She has toured across Latin America with multiple bands and has successfully led marketing strategies for a diverse portfolio of clients. Combining industry experience with a creative and results-driven approach, she helps brands and artists strengthen their presence and connect with their audiences.</p>
+        </div>
+        <div class="team-card">
+          <div class="ph team-photo"><div class="ph-inner">Photo</div></div>
+          <h3>Rafael Castro</h3>
+          <p class="team-title">Operations Manager</p>
+          <p class="team-bio">Rafael is an Operations Specialist with extensive experience supporting large real estate companies through process optimization, systems management, and operational excellence. With a strong background in building efficient workflows, Rafael ensures every project is executed with precision, organization, and seamless coordination.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">
+          <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
+          <span>AMBRA Live Productions</span>
+        </div>
+        <p style="font-size:13.5px;max-width:280px;line-height:1.6">Premium live music production for fundraisers, anniversaries, and cultural celebrations.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Location</h4>
+        <p>Brookline, Boston, MA</p>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <a href="mailto:info@ambralp.com">info@ambralp.com</a>
+        <a href="mailto:careers@ambralp.com">Careers — Learn more</a>
+        <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© {{ site.time | date: '%Y' }} AMBRA Music Productions. All Rights Reserved.</p>
+      <div class="footer-side-links">
+        <a href="https://emnlatam.github.io/emn/" target="_blank" rel="noopener">EMN: Escuela de Música y Negocios ↗</a>
+        <a href="/ambra/" class="team-login">Team Login</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('nav-toggle').addEventListener('click', () => {
+    document.getElementById('nav-links').classList.toggle('open');
+  });
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    a.addEventListener('click', () => document.getElementById('nav-links').classList.remove('open'));
+  });
+</script>
+
+</body>
+</html>

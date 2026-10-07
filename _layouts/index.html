@@ -3,51 +3,215 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zare Enterprises</title>
-<meta name="description" content="Zare Enterprises — AMBRA Live Productions and EMN: Escuela de Música y Negocios.">
+<title>AMBRA Live Productions — Premium Live Music for Your Event</title>
+<meta name="description" content="AMBRA Live Productions connects you with elite Latin American musicians for fundraisers, anniversaries, cultural and corporate celebrations.">
+<link rel="icon" type="image/png" href="/assets/img/ambraSubmark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="/assets/css/style.css?v={{ site.time | date: '%s' }}">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/home.css?v={{ site.time | date: '%s' }}">
 </head>
 <body>
-<div class="wrap">
 
-  <header class="site-header">
-    <img class="wordmark-img" src="/assets/img/zare-wordmark.png" alt="Zare Enterprises">
-  </header>
+<nav class="site-nav">
+  <div class="container">
+    <a href="#top" class="nav-brand">
+      <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
+      <span>AMBRA</span>
+    </a>
+    <div class="nav-links" id="nav-links">
+      <a href="/cases/">Our Work</a>
+      <a href="/our-team/">Story</a>
+      <a href="/stories/">Testimonials</a>
+      <a href="/contact/" class="nav-cta">Inquire</a>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu">☰</button>
+  </div>
+</nav>
 
-  <main class="portal">
-    <div class="panel panel--ambra">
-      <div class="panel-inner">
-        <a href="/ambra/" class="logo-slot" id="logo-ambra"><img src="/assets/img/ambra-logo.png" alt="AMBRA Live Productions logo"></a>
-        <a href="/ambra/"><h2>AMBRA Live Productions</h2></a>
-        <p class="tagline">Customized Live Music<br>Experiences for Annual Events.</p>
+<main id="top">
+
+  <!-- ===== Hero ===== -->
+  <section class="hero">
+    <div class="container">
+      <div>
+        <p class="eyebrow">Live Music Production Company</p>
+        <h1>Premium Live Music for Your Event</h1>
+        <p class="lede">We connect you with elite Latin American musicians for fundraisers, anniversaries, and cultural and corporate celebrations — a live show designed around your event, not off a shelf.</p>
+        <div class="btn-row">
+          <a href="/contact/" class="btn btn-solid">Inquire</a>
+          <a href="/cases/" class="btn btn-outline">Our Work</a>
+        </div>
+      </div>
+      <div class="ph hero-photo"><div class="ph-inner">Hero photo</div><span class="ph-label">Replace with event photo</span></div>
+    </div>
+  </section>
+
+  <!-- ===== Stats ===== -->
+  <section class="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div><div class="stat-num">60+</div><div class="stat-label">Pre-Selected Musicians</div></div>
+        <div><div class="stat-num">100%</div><div class="stat-label">Raised for Non-Profits</div></div>
+        <div><div class="stat-num">12</div><div class="stat-label">Represented Countries</div></div>
+        <div><div class="stat-num">1M+</div><div class="stat-label">Audience Reached</div></div>
+      </div>
+      <div class="talent-sources">Musicians drawn from <b>Berklee College of Music</b>, the <b>Latin America Grammy Foundation</b>, and the <b>New England Conservatory of Music</b>.</div>
+    </div>
+  </section>
+
+  <!-- ===== Gallery / Our Work ===== -->
+  <section class="section" id="work">
+    <div class="container">
+      <div class="section-head">
+        <p class="section-tag">Our Work</p>
+        <h2>Shows we've built</h2>
+        <p>A look at past productions — swap these in for real event photography.</p>
+      </div>
+      <div class="gallery-grid">
+        <div class="ph"><div class="ph-inner">Photo 1</div></div>
+        <div class="ph"><div class="ph-inner">Photo 2</div></div>
+        <div class="ph"><div class="ph-inner">Photo 3</div></div>
+        <div class="ph"><div class="ph-inner">Photo 4</div></div>
+        <div class="ph"><div class="ph-inner">Photo 5</div></div>
+        <div class="ph"><div class="ph-inner">Photo 6</div></div>
+        <div class="ph"><div class="ph-inner">Photo 7</div></div>
+      </div>
+      <p class="gallery-caption">The Latino Equity Fund ¡Pa'lante! — and more to come.</p>
+      <div class="section-cta"><a href="/cases/" class="btn btn-outline">See all our work →</a></div>
+    </div>
+  </section>
+
+  <!-- ===== Why AMBRA ===== -->
+  <section class="section" style="background:var(--surface)">
+    <div class="container">
+      <div class="section-head">
+        <p class="section-tag">Why AMBRA</p>
+        <h2>Not an open call. A curated roster.</h2>
+      </div>
+      <div class="why-grid">
+        <div class="why-card">
+          <div class="why-num">01</div>
+          <h3>Top Musicians Roster</h3>
+          <p>No open-call musicians. Every performer comes from one of three exclusive sources: vetted, rehearsed, and stage-ready.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-num">02</div>
+          <h3>Cultural Authenticity</h3>
+          <p>Authentic Latin American traditions, not generic entertainment — music that actually means something to the room.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-num">03</div>
+          <h3>Limited Capacity</h3>
+          <p>We accept only a few major events per year, so every one gets our full, dedicated attention and resources.</p>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="panel panel--emn">
-      <div class="panel-inner">
-        <a href="https://emnlatam.github.io/emn/" class="logo-slot" id="logo-emn"><img src="https://emnlatam.github.io/assets/img/emn-logo.png" alt="EMN logo"></a>
-        <a href="https://emnlatam.github.io/emn/"><h2>EMN: Escuela de Música<br>y Negocios</h2></a>
-        <p class="tagline">Preparación para entrar con beca a Berklee.</p>
+  <!-- ===== Process ===== -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="section-tag">How It Works</p>
+        <h2>From first call to final bow</h2>
+      </div>
+      <div class="process-list">
+        <div class="process-row">
+          <div class="process-step-num">01</div>
+          <div><h3>Discovery</h3><p>We hand-select musicians from our conservatory network to match your event's story.</p></div>
+        </div>
+        <div class="process-row">
+          <div class="process-step-num">02</div>
+          <div><h3>Hand-Pick Curation</h3><p>We select the ideal musicians from our exclusive talent network for your specific occasion.</p></div>
+        </div>
+        <div class="process-row">
+          <div class="process-step-num">03</div>
+          <div><h3>Production Planning</h3><p>We coordinate repertoire, attire, logistics, scheduling, and venue requirements end to end.</p></div>
+        </div>
+        <div class="process-row">
+          <div class="process-step-num">04</div>
+          <div><h3>Rehearsal</h3><p>Every set is prepared and refined before it ever reaches your stage.</p></div>
+        </div>
+        <div class="process-row">
+          <div class="process-step-num">05</div>
+          <div><h3>Performance</h3><p>A live show designed to captivate — built for your room, your guests, your moment.</p></div>
+        </div>
+      </div>
+      <div class="section-cta"><a href="/cases/" class="btn btn-outline">Our Work</a></div>
+    </div>
+  </section>
+
+  <!-- ===== Clients & Partners ===== -->
+  <section class="logos-wrap">
+    <div class="container">
+      <p class="section-tag">Clients &amp; Partners</p>
+      <div class="logo-row">
+        <span class="logo-pill">MIT</span>
+        <span class="logo-pill">Peruvian Taste</span>
+        <span class="logo-pill">Your logo here</span>
+        <span class="logo-pill">Your logo here</span>
+        <span class="logo-pill">Your logo here</span>
       </div>
     </div>
-  </main>
+  </section>
 
-  <footer class="directory">
-    <div class="entry">
-      <h3>AMBRA Live Productions</h3>
-      <p>by Zare Enterprises</p>
-      <p><a href="mailto:info@ambralp.com">info@ambralp.com</a></p>
-      <p>Boston, US</p>
+  <!-- ===== Story / Testimonials ===== -->
+  <section class="section story" id="story">
+    <div class="container">
+      <div class="ph story-photo"><div class="ph-inner">Founder photo</div></div>
+      <div id="testimonials">
+        <blockquote class="pull">"AMBRA was founded with a singular vision: to unite diverse cultural communities and create a sense of home, no matter how far from home one may be. Through the universal language of music we strive to make every guest feel welcomed, connected, and inspired."</blockquote>
+        <blockquote class="pull secondary">"At AMBRA, we transform every event into a space that feels just right. In addition to our elite musicians, their background speaks for itself, leaving a deeply emotional performance — especially for Latinos in the US."</blockquote>
+        <p class="story-attr">Dany Zare<span>AMBRA Founder &amp; CEO</span></p>
+        <p style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <a href="/our-team/" class="btn btn-outline" style="padding:10px 20px;font-size:12.5px">Meet the team →</a>
+          <a href="/stories/" class="btn btn-outline" style="padding:10px 20px;font-size:12.5px">Read more testimonials →</a>
+        </p>
+      </div>
     </div>
-    <div class="entry">
-      <h3>EMN: Escuela de Música y Negocios</h3>
-      <p>by Zare Enterprises</p>
-      <p><a href="mailto:admisiones@emnperu.com">admisiones@emnperu.com</a></p>
-      <p>Lima, Perú</p>
-    </div>
-  </footer>
+  </section>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">
+          <img src="/assets/img/ambraSubmark.png" alt="AMBRA">
+          <span>AMBRA Live Productions</span>
+        </div>
+        <p style="font-size:13.5px;max-width:280px;line-height:1.6">Premium live music production for fundraisers, anniversaries, and cultural celebrations.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Location</h4>
+        <p>Brookline, Boston, MA</p>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <a href="mailto:info@ambralp.com">info@ambralp.com</a>
+        <a href="mailto:careers@ambralp.com">Careers — Learn more</a>
+        <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© {{ site.time | date: '%Y' }} AMBRA Music Productions. All Rights Reserved.</p>
+      <div class="footer-side-links">
+        <a href="https://emnlatam.github.io/emn/" target="_blank" rel="noopener">EMN: Escuela de Música y Negocios ↗</a>
+        <a href="/ambra/" class="team-login">Team Login</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('nav-toggle').addEventListener('click', () => {
+    document.getElementById('nav-links').classList.toggle('open');
+  });
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    a.addEventListener('click', () => document.getElementById('nav-links').classList.remove('open'));
+  });
+</script>
+
 </body>
 </html>

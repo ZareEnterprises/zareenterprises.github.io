@@ -175,8 +175,20 @@ img{ max-width:100%; display:block; }
 .section-head p{ color:var(--muted); font-size:15px; line-height:1.6; }
 
 /* ---------- Gallery ---------- */
-.gallery-grid{ display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:170px; gap:14px; }
-.gallery-grid .ph:nth-child(4n+1){ grid-row:span 2; }
+.gallery-carousel{ max-width:980px; margin:0 auto; }
+.gallery-track{
+  display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
+  border-radius:var(--radius); scrollbar-width:none; -ms-overflow-style:none;
+}
+.gallery-track::-webkit-scrollbar{ display:none; }
+.gallery-track img{
+  flex:0 0 100%; width:100%; aspect-ratio:16/10; object-fit:cover; scroll-snap-align:start;
+}
+.gallery-dots{ display:flex; justify-content:center; gap:9px; margin-top:20px; }
+.gallery-dots button{
+  width:9px; height:9px; border-radius:50%; border:none; padding:0; background:var(--line); cursor:pointer; transition:.2s;
+}
+.gallery-dots button.active{ background:var(--orange); width:22px; border-radius:5px; }
 .gallery-caption{ text-align:center; margin-top:18px; font-size:12.5px; color:var(--faint); font-style:italic; }
 
 /* ---------- Why AMBRA ---------- */
@@ -204,6 +216,8 @@ img{ max-width:100%; display:block; }
   max-width:var(--wrap); margin:0 auto; padding:0 28px;
   border-top:1px solid var(--line);
 }
+.process-card-split{ flex-direction:row; align-items:center; justify-content:space-between; gap:40px; }
+.process-card-split > div{ flex:1; }
 .process-card:first-child{ border-top:none; }
 .process-num{ font-family:var(--font-display); font-style:italic; font-size:16px; color:var(--orange); margin-bottom:18px; }
 .process-card h3{ font-family:var(--font-display); font-weight:700; font-size:clamp(30px,4.4vw,56px); color:var(--orange); margin:0 0 20px; letter-spacing:-.01em; }
@@ -255,7 +269,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
   .hero-photo{ order:-1; aspect-ratio:16/10; }
   .stats-grid{ grid-template-columns:repeat(2,1fr); gap:26px; }
   .why-grid{ grid-template-columns:1fr; }
-  .gallery-grid{ grid-template-columns:repeat(2,1fr); grid-auto-rows:150px; }
+  .gallery-carousel{ max-width:100%; }
   .story .container{ grid-template-columns:1fr; }
   .story-photo{ width:160px; margin:0 auto; }
   .footer-grid{ gap:50px; }
@@ -274,6 +288,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
   .section{ padding:56px 0; }
   .process-scroller{ height:60vh; }
   .process-card{ padding:0 20px; }
+  .process-card-split{ flex-direction:column; align-items:flex-start; gap:20px; }
 }
 
 /* ==========================================================================

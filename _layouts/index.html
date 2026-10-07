@@ -81,14 +81,20 @@
         <h2>Shows we've built</h2>
         <p>A look at past productions — swap these in for real event photography.</p>
       </div>
-      <div class="gallery-grid">
-        <div class="ph"><div class="ph-inner">Photo 1</div></div>
-        <div class="ph"><div class="ph-inner">Photo 2</div></div>
-        <div class="ph"><div class="ph-inner">Photo 3</div></div>
-        <div class="ph"><div class="ph-inner">Photo 4</div></div>
-        <div class="ph"><div class="ph-inner">Photo 5</div></div>
-        <div class="ph"><div class="ph-inner">Photo 6</div></div>
-        <div class="ph"><div class="ph-inner">Photo 7</div></div>
+      <div class="gallery-carousel">
+        <div class="gallery-track" id="gallery-track">
+          <img src="/assets/img/events-web/event-01.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-02.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-03.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-04.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-05.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-06.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-07.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-08.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-09.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+          <img src="/assets/img/events-web/event-10.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+        </div>
+        <div class="gallery-dots" id="gallery-dots"></div>
       </div>
       <p class="gallery-caption">The Latino Equity Fund ¡Pa'lante! — and more to come.</p>
       <div class="section-cta"><a href="/cases/" class="btn btn-outline">See all our work →</a></div>
@@ -151,14 +157,14 @@
         <h3>Rehearsal</h3>
         <p>Every set is prepared and refined before it ever reaches your stage.</p>
       </div>
-      <div class="process-card">
-        <span class="process-num">05</span>
-        <h3>Performance</h3>
-        <p>A live show designed to captivate — built for your room, your guests, your moment.</p>
+      <div class="process-card process-card-split">
+        <div>
+          <span class="process-num">05</span>
+          <h3>Performance</h3>
+          <p>A live show designed to captivate — built for your room, your guests, your moment.</p>
+        </div>
+        <a href="/cases/" class="btn btn-outline">Past Events →</a>
       </div>
-    </div>
-    <div class="container">
-      <div class="section-cta"><a href="/cases/" class="btn btn-outline">Our Work</a></div>
     </div>
   </section>
 
@@ -227,6 +233,33 @@
   function updateNavScrolled(){ siteNav.classList.toggle('scrolled', window.scrollY > 40); }
   updateNavScrolled();
   window.addEventListener('scroll', updateNavScrolled, { passive: true });
+
+  // Gallery carousel — dots built from however many photos are actually in
+  // the track, clicking one scrolls to it, and an IntersectionObserver
+  // keeps the active dot in sync with whichever photo is in view.
+  const galleryTrack = document.getElementById('gallery-track');
+  const galleryDots = document.getElementById('gallery-dots');
+  if(galleryTrack && galleryDots){
+    const slides = Array.from(galleryTrack.children);
+    slides.forEach((slide, i) => {
+      const dot = document.createElement('button');
+      if(i === 0) dot.classList.add('active');
+      dot.setAttribute('aria-label', `Go to photo ${i + 1}`);
+      dot.addEventListener('click', () => slide.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' }));
+      galleryDots.appendChild(dot);
+    });
+    const dots = Array.from(galleryDots.children);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          const i = slides.indexOf(entry.target);
+          dots.forEach(d => d.classList.remove('active'));
+          dots[i]?.classList.add('active');
+        }
+      });
+    }, { root: galleryTrack, threshold: 0.6 });
+    slides.forEach(slide => observer.observe(slide));
+  }
 </script>
 
 </body>

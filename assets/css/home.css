@@ -200,7 +200,7 @@ a.event-card:hover{ background:var(--orange-soft); }
 /* ---------- Why AMBRA ---------- */
 .why-head{ margin-bottom:60px; }
 .why-head-center{ text-align:center; max-width:640px; margin-left:auto; margin-right:auto; }
-.why-head h2{ font-family:var(--font-display); font-weight:700; font-size:clamp(32px,4.2vw,50px); color:var(--orange); margin:0 0 14px; letter-spacing:-.01em; }
+.why-head h2{ font-family:var(--font-display); font-weight:700; font-size:clamp(32px,4.2vw,50px); color:#161F1A; margin:0 0 14px; letter-spacing:-.01em; }
 .why-subtitle{ font-family:var(--font-display); font-style:italic; font-weight:500; font-size:18px; color:var(--orange); margin:0; }
 
 .why-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:40px; }
@@ -243,10 +243,10 @@ a.event-card:hover{ background:var(--orange-soft); }
 /* ---------- Testimonial / Story ---------- */
 .story{ background:var(--surface); }
 .story .container{ display:grid; grid-template-columns:.8fr 1.2fr; gap:50px; align-items:center; }
-.story-photo{ aspect-ratio:1/1; border-radius:50%; }
+.story-photo{ aspect-ratio:1/1; border-radius:50%; width:100%; max-width:260px; object-fit:cover; }
 blockquote.pull{
-  font-family:var(--font-display); font-weight:500; font-style:italic; font-size:clamp(19px,2.2vw,25px);
-  line-height:1.5; margin:0 0 22px; color:var(--ink);
+  font-family:var(--font-display); font-weight:400; font-style:italic; font-size:clamp(16px,1.8vw,20px);
+  line-height:1.55; margin:0 0 22px; color:var(--ink);
 }
 blockquote.pull.secondary{ font-size:15px; font-style:normal; color:var(--muted); font-weight:400; line-height:1.65; }
 .story-attr{ font-weight:700; font-size:14px; margin-top:18px; }
@@ -254,7 +254,7 @@ blockquote.pull.secondary{ font-size:15px; font-style:normal; color:var(--muted)
 
 /* ---------- Footer ---------- */
 footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding:60px 0 36px; text-align:center; }
-.footer-grid{ display:flex; justify-content:center; gap:140px; margin-bottom:40px; flex-wrap:wrap; }
+.footer-grid{ display:flex; justify-content:space-between; max-width:700px; margin:0 auto 40px; flex-wrap:wrap; gap:40px; }
 .footer-col h4{ font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--orange); margin:0 0 14px; }
 .footer-col p{ font-size:14px; color:var(--muted); margin:0; }
 .footer-icons{ display:flex; justify-content:center; gap:10px; margin-bottom:12px; }

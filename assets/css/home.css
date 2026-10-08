@@ -68,7 +68,7 @@ img{ max-width:100%; display:block; }
   max-width:none; padding-left:40px; padding-right:40px;
 }
 .nav-brand{ display:flex; align-items:center; gap:10px; }
-.nav-brand img{ height:24px; width:auto; }
+.nav-brand img{ height:36px; width:auto; }
 /* Centered in the bar regardless of how wide the logo or the right-side
    group are, rather than just filling the space between them. */
 .nav-links{
@@ -79,7 +79,7 @@ img{ max-width:100%; display:block; }
 .nav-links a:hover{ color:var(--orange); }
 .nav-right{ display:flex; align-items:center; gap:14px; }
 .nav-cta{
-  background:var(--orange); color:#fff !important; padding:10px 22px; border-radius:6px;
+  background:var(--orange); color:#fff !important; padding:10px 22px; border-radius:0;
   font-size:13px; font-weight:700;
 }
 .nav-cta:hover{ background:var(--orange-dark); }
@@ -118,7 +118,7 @@ img{ max-width:100%; display:block; }
 .hero-subtitle{ font-family:var(--font-display); font-weight:500; font-size:20px; margin:0 0 28px; }
 .btn-row{ display:flex; gap:14px; flex-wrap:wrap; }
 .btn{
-  display:inline-flex; align-items:center; gap:6px; padding:13px 26px; border-radius:6px;
+  display:inline-flex; align-items:center; gap:6px; padding:13px 26px; border-radius:0;
   font-size:14px; font-weight:700; cursor:pointer; transition:.15s; border:1px solid transparent;
 }
 .btn-solid{ background:var(--orange); color:#fff; }
@@ -140,12 +140,12 @@ img{ max-width:100%; display:block; }
   position:absolute; inset:0; z-index:1;
   background:linear-gradient(180deg, rgba(20,10,5,.5) 0%, rgba(20,10,5,.7) 100%);
 }
-.hero-content{ position:relative; z-index:2; text-align:center; max-width:1160px; margin:0 auto; padding:0 20px; }
+.hero-content{ position:relative; z-index:2; text-align:center; max-width:1160px; margin:0 auto; padding:70px 20px 0; }
 .hero-content .eyebrow{ color:#fff; }
 .hero-content h1{ color:var(--orange); font-style:italic; font-weight:500; font-size:clamp(32px,5.4vw,76px); }
 .hero-content .hero-subtitle{ color:#F1ECE0; font-size:clamp(18px,2vw,26px); }
 .hero-content .btn-row{ justify-content:center; margin-bottom:28px; }
-.hero-content .lede{ color:#fff; max-width:700px; margin:0 auto; }
+.hero-content .lede{ color:#fff; max-width:800px; margin:0 auto; }
 .btn-outline-light{ color:#fff; border-color:#fff; }
 .btn-outline-light:hover{ border-color:var(--orange); color:var(--orange); }
 

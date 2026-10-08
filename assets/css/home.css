@@ -68,7 +68,7 @@ img{ max-width:100%; display:block; }
   max-width:none; padding-left:40px; padding-right:40px;
 }
 .nav-brand{ display:flex; align-items:center; gap:10px; }
-.nav-brand img{ height:36px; width:auto; }
+.nav-brand img{ height:48px; width:auto; }
 /* Centered in the bar regardless of how wide the logo or the right-side
    group are, rather than just filling the space between them. */
 .nav-links{
@@ -114,7 +114,7 @@ img{ max-width:100%; display:block; }
   font-family:var(--font-display); font-weight:700; font-size:clamp(34px,4.6vw,58px); line-height:1.06;
   letter-spacing:-.01em; margin:0 0 20px;
 }
-.hero p.lede{ font-size:16.5px; color:var(--muted); line-height:1.65; max-width:480px; margin:0 auto 30px; }
+.hero p.lede{ font-size:16.5px; color:#fff; line-height:1.65; max-width:820px; margin:0 auto 30px; }
 .hero-subtitle{ font-family:var(--font-display); font-weight:500; font-size:20px; margin:0 0 28px; }
 .btn-row{ display:flex; gap:14px; flex-wrap:wrap; }
 .btn{
@@ -140,24 +140,16 @@ img{ max-width:100%; display:block; }
   position:absolute; inset:0; z-index:1;
   background:linear-gradient(180deg, rgba(20,10,5,.5) 0%, rgba(20,10,5,.7) 100%);
 }
-.hero-content{ position:relative; z-index:2; text-align:center; max-width:1160px; margin:0 auto; padding:70px 20px 0; }
-.hero-content .eyebrow{ color:#fff; }
+.hero-content{ position:relative; z-index:2; text-align:center; max-width:1160px; margin:0 auto; padding:120px 20px 0; }
+.hero-content .eyebrow{ color:#fff; font-weight:400; }
+.eyebrow-roboto{ font-family:'Roboto',sans-serif; }
 .hero-content h1{ color:var(--orange); font-style:italic; font-weight:500; font-size:clamp(32px,5.4vw,76px); }
 .hero-content .hero-subtitle{ color:#F1ECE0; font-size:clamp(18px,2vw,26px); }
 .hero-content .btn-row{ justify-content:center; margin-bottom:28px; }
-.hero-content .lede{ color:#fff; max-width:800px; margin:0 auto; }
 .btn-outline-light{ color:#fff; border-color:#fff; }
 .btn-outline-light:hover{ border-color:var(--orange); color:var(--orange); }
 
 /* ---------- Stats ---------- */
-.talent-band{ background:#0A0A0A; padding:38px 0; }
-.talent-sources{ text-align:center; }
-.talent-sources-title{
-  font-family:var(--font-display); font-style:italic; font-size:16px; color:#6B6358; margin:0 0 16px;
-}
-.talent-sources-list{ display:flex; justify-content:center; flex-wrap:wrap; gap:14px 50px; }
-.talent-sources-list span{ font-family:var(--font-display); font-weight:700; font-size:19px; color:#fff; }
-
 .stats{ background:#161F1A; color:#fff; padding:60px 0; }
 .stats-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:30px; text-align:center; }
 .stat-num{ font-family:var(--font-display); font-weight:500; font-size:clamp(32px,4vw,46px); color:var(--orange); }
@@ -175,10 +167,10 @@ img{ max-width:100%; display:block; }
 .section-head p{ color:var(--muted); font-size:15px; line-height:1.6; }
 
 /* ---------- Gallery ---------- */
-.gallery-carousel{ max-width:980px; margin:0 auto; }
+.gallery-carousel{ padding:0; }
 .gallery-track{
   display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
-  border-radius:var(--radius); scrollbar-width:none; -ms-overflow-style:none;
+  scrollbar-width:none; -ms-overflow-style:none;
 }
 .gallery-track::-webkit-scrollbar{ display:none; }
 .gallery-track img{
@@ -269,7 +261,6 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
   .hero-photo{ order:-1; aspect-ratio:16/10; }
   .stats-grid{ grid-template-columns:repeat(2,1fr); gap:26px; }
   .why-grid{ grid-template-columns:1fr; }
-  .gallery-carousel{ max-width:100%; }
   .story .container{ grid-template-columns:1fr; }
   .story-photo{ width:160px; margin:0 auto; }
   .footer-grid{ gap:50px; }

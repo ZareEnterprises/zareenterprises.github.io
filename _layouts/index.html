@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AMBRA Live Productions — Premium Live Music for Your Event</title>
+<title>AMBRA Live Productions — Premium Live Music for Fundraising and Corporate Events</title>
 <meta name="description" content="AMBRA Live Productions connects you with elite Latin American musicians for fundraisers, anniversaries, cultural and corporate celebrations.">
 <link rel="icon" type="image/png" href="/assets/img/ambraSubmark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/home.css?v={{ site.time | date: '%s' }}">
 </head>
 <body class="home">
@@ -38,26 +38,14 @@
     </video>
     <div class="hero-overlay"></div>
     <div class="container hero-content">
-      <p class="eyebrow">Live Music for Organization's Events</p>
-      <h1>Premium Live Music for Your Event</h1>
+      <p class="eyebrow eyebrow-roboto">EXECUTIVE EVENT LIVE MUSIC</p>
+      <h1>Premium Live Music for Fundraising and Corporate Events</h1>
       <p class="hero-subtitle">Live Music Production Company</p>
       <div class="btn-row">
         <a href="/contact/" class="btn btn-solid">Inquire</a>
         <a href="/cases/" class="btn btn-outline btn-outline-light">Our Work</a>
       </div>
-      <p class="lede">Your connection to elite Latin American musicians for fundraisers, anniversary, cultural and corporative celebrations.</p>
-    </div>
-  </section>
-
-  <!-- ===== Talent sources ===== -->
-  <section class="talent-band">
-    <div class="container talent-sources">
-      <p class="talent-sources-title">Talent Sourced Only From:</p>
-      <div class="talent-sources-list">
-        <span>Berklee College of Music</span>
-        <span>Latin America Grammy Foundation</span>
-        <span>New England Conservatory of Music</span>
-      </div>
+      <p class="lede">Fundraisers, corporative and cultural celebrations, produced from the first note to the last.</p>
     </div>
   </section>
 
@@ -73,32 +61,21 @@
     </div>
   </section>
 
-  <!-- ===== Gallery / Our Work ===== -->
-  <section class="section" id="work">
-    <div class="container">
-      <div class="section-head">
-        <p class="section-tag">Our Work</p>
-        <h2>Shows we've built</h2>
-        <p>A look at past productions — swap these in for real event photography.</p>
-      </div>
-      <div class="gallery-carousel">
-        <div class="gallery-track" id="gallery-track">
-          <img src="/assets/img/events-web/event-01.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-02.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-03.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-04.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-05.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-06.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-07.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-08.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-09.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-          <img src="/assets/img/events-web/event-10.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
-        </div>
-        <div class="gallery-dots" id="gallery-dots"></div>
-      </div>
-      <p class="gallery-caption">The Latino Equity Fund ¡Pa'lante! — and more to come.</p>
-      <div class="section-cta"><a href="/cases/" class="btn btn-outline">See all our work →</a></div>
+  <!-- ===== Gallery ===== -->
+  <section class="gallery-carousel" id="work">
+    <div class="gallery-track" id="gallery-track">
+      <img src="/assets/img/events-web/event-01.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-02.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-03.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-04.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-05.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-06.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-07.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-08.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-09.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
+      <img src="/assets/img/events-web/event-10.jpg" loading="lazy" decoding="async" alt="AMBRA live event">
     </div>
+    <div class="gallery-dots" id="gallery-dots"></div>
   </section>
 
   <!-- ===== Why AMBRA ===== -->
@@ -234,13 +211,23 @@
   updateNavScrolled();
   window.addEventListener('scroll', updateNavScrolled, { passive: true });
 
-  // Gallery carousel — dots built from however many photos are actually in
-  // the track, clicking one scrolls to it, and an IntersectionObserver
-  // keeps the active dot in sync with whichever photo is in view.
+  // Gallery carousel — photos shuffle into a random order on each load,
+  // dots are built to match, clicking one scrolls to it, an
+  // IntersectionObserver keeps the active dot in sync with whichever photo
+  // is actually in view (manual swipe included), and it auto-advances
+  // every 3s, always continuing from wherever the viewer currently is.
   const galleryTrack = document.getElementById('gallery-track');
   const galleryDots = document.getElementById('gallery-dots');
   if(galleryTrack && galleryDots){
+    const imgs = Array.from(galleryTrack.children);
+    for(let i = imgs.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      galleryTrack.appendChild(imgs[j]);
+      imgs.splice(j, 1);
+    }
     const slides = Array.from(galleryTrack.children);
+    let currentIndex = 0;
+
     slides.forEach((slide, i) => {
       const dot = document.createElement('button');
       if(i === 0) dot.classList.add('active');
@@ -252,13 +239,18 @@
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if(entry.isIntersecting){
-          const i = slides.indexOf(entry.target);
+          currentIndex = slides.indexOf(entry.target);
           dots.forEach(d => d.classList.remove('active'));
-          dots[i]?.classList.add('active');
+          dots[currentIndex]?.classList.add('active');
         }
       });
     }, { root: galleryTrack, threshold: 0.6 });
     slides.forEach(slide => observer.observe(slide));
+
+    setInterval(() => {
+      const next = (currentIndex + 1) % slides.length;
+      slides[next].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    }, 3000);
   }
 </script>
 

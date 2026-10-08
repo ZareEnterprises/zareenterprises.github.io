@@ -43,7 +43,7 @@
       <p class="hero-subtitle">Live Music Production Company</p>
       <div class="btn-row">
         <a href="/contact/" class="btn btn-solid">Inquire</a>
-        <a href="/cases/" class="btn btn-outline btn-outline-light">Our Work</a>
+        <a href="#latest-events" class="btn btn-outline btn-outline-light">Our Work</a>
       </div>
       <p class="lede">Fundraisers, corporative and cultural celebrations, produced from the first note to the last.</p>
     </div>
@@ -78,12 +78,33 @@
     <div class="gallery-dots" id="gallery-dots"></div>
   </section>
 
+  <!-- ===== Our Latest Events ===== -->
+  <section class="section latest-events-section" id="latest-events">
+    <div class="container">
+      <div class="section-head">
+        <h2>Our Latest Events</h2>
+      </div>
+    </div>
+    <div class="latest-events-grid">
+      <a href="/tbf/" class="event-card">
+        <h3>Pa'lante 2026</h3>
+        <p class="event-card-sub">Client: The Boston Foundation</p>
+        <p class="event-card-stat">We Raised: +500K</p>
+      </a>
+      <a href="/pa-lante-2025/" class="event-card">
+        <h3>Pa'lante 2025</h3>
+        <p class="event-card-sub">Client: The Boston Foundation</p>
+        <p class="event-card-stat">We Raised: +500K</p>
+      </a>
+    </div>
+  </section>
+
   <!-- ===== Why AMBRA ===== -->
   <section class="section" style="background:#fff">
     <div class="container">
-      <div class="why-head">
+      <div class="why-head why-head-center">
         <h2>Why AMBRA?</h2>
-        <p class="why-subtitle">Because good isn't good enough. Not for us, either.</p>
+        <p class="why-subtitle">Because for us good isn't good enough. We always go all in.</p>
       </div>
       <div class="why-grid">
         <div class="why-card">
@@ -116,29 +137,29 @@
     <div class="process-scroller">
       <div class="process-card">
         <span class="process-num">01</span>
-        <h3>Discovery</h3>
-        <p>On a first call, we listen and picture your event together — so everything we build after is designed to fit it exactly.</p>
+        <h3>AMBRA App: Discovery &amp; Planning</h3>
+        <p>We define what the event needs to achieve and build the production plan around it. From day one, you follow every update and decision in real time through the AMBRA app.</p>
       </div>
       <div class="process-card">
         <span class="process-num">02</span>
-        <h3>Hand-Pick Curation</h3>
-        <p>We select the ideal musicians from our exclusive talent network for your specific occasion.</p>
+        <h3>Venue Mapping &amp; Curation</h3>
+        <p>We recreate your venue in 3D to plan every placement and cue, then hand-pick musicians from our conservatory network and build the setlist with you.</p>
       </div>
       <div class="process-card">
         <span class="process-num">03</span>
         <h3>Production Planning</h3>
-        <p>We coordinate repertoire, attire, logistics, scheduling, and venue requirements end to end.</p>
+        <p>Stage, dancers, DJ, sound and lighting, all contracted and coordinated by us well in advance. Every song is transcribed from scratch and arranged for your event.</p>
       </div>
       <div class="process-card">
         <span class="process-num">04</span>
-        <h3>Rehearsal</h3>
-        <p>Every set is prepared and refined before it ever reaches your stage.</p>
+        <h3>Rehearsals</h3>
+        <p>Attire, stage movement and four full rehearsals for large events. Every set is played, tested and refined before your guests hear a single note.</p>
       </div>
       <div class="process-card process-card-split">
         <div>
           <span class="process-num">05</span>
-          <h3>Performance</h3>
-          <p>A live show designed to captivate — built for your room, your guests, your moment.</p>
+          <h3>Show Day</h3>
+          <p>Our crew builds the stage and runs the audio while the whole team works from one live run-of-show in the AMBRA app, so every cue lands on time.</p>
         </div>
         <a href="/cases/" class="btn btn-outline">Past Events →</a>
       </div>
@@ -228,11 +249,16 @@
     const slides = Array.from(galleryTrack.children);
     let currentIndex = 0;
 
+    // Scrolls only the track itself (never the page) — scrollIntoView
+    // considers every scrollable ancestor including the window, which was
+    // jumping the whole page down to the carousel on every auto-advance.
+    function goToSlide(slide){ galleryTrack.scrollTo({ left: slide.offsetLeft, behavior: 'smooth' }); }
+
     slides.forEach((slide, i) => {
       const dot = document.createElement('button');
       if(i === 0) dot.classList.add('active');
       dot.setAttribute('aria-label', `Go to photo ${i + 1}`);
-      dot.addEventListener('click', () => slide.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' }));
+      dot.addEventListener('click', () => goToSlide(slide));
       galleryDots.appendChild(dot);
     });
     const dots = Array.from(galleryDots.children);
@@ -249,7 +275,7 @@
 
     setInterval(() => {
       const next = (currentIndex + 1) % slides.length;
-      slides[next].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+      goToSlide(slides[next]);
     }, 3000);
   }
 </script>

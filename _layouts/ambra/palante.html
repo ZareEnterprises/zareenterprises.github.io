@@ -24,7 +24,6 @@
 
 <nav class="tabs" id="tabs">
   <button class="tab-btn primary active tab-setlist" data-tab="table">Setlist</button>
-  <button class="tab-btn primary tab-instrumentation" data-tab="instrumentation">Lineup</button>
   <button class="tab-btn primary tab-band" data-tab="band">Band</button>
   <button class="tab-btn primary tab-technical" data-tab="technical">Technical</button>
   <span class="tab-divider"></span>
@@ -86,8 +85,10 @@
       <div class="view-by-bar">
         <span class="mono-label">View by:</span>
         <button class="pill active" data-view="table">☰ Setlist</button>
+        <button class="pill" data-view="lineup">🎼 LineUp</button>
         <button class="pill" data-view="schedule">🕐 Schedule</button>
         <button class="pill live-mode-btn" id="btnLiveMode" type="button">🔴 Live Mode</button>
+        <div id="music-sheets-box"></div>
       </div>
       <div class="view-by-bar stats-by-bar">
         <span class="mono-label">Statistics by:</span>
@@ -154,42 +155,6 @@
           <canvas id="chart-emotion" height="60"></canvas>
         </div>
       </div>
-    </div>
-  </div>
-
-  <div id="view-instrumentation" style="display:none">
-    <div class="toolbar" style="align-items:center;">
-      <div id="music-sheets-box"></div>
-      <div class="filters-anchor">
-        <button class="filters-link" id="btn-lineup-filters-toggle">Filters ▾</button>
-        <div class="filters-dropdown" id="lineup-filters-dropdown" style="display:none">
-          <div class="filter-section">
-            <span class="label">Show columns:</span>
-            <div class="filter-chips-wrap">
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="tonality" checked> Key</label>
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="singers" checked> Singers</label>
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="instruments" checked> Instruments</label>
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="guests" checked> Special guests</label>
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="arranger" checked> Arranger</label>
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="version" checked> Version</label>
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="comments" checked> Comments</label>
-              <label class="filter-chip" id="lineup-band-filter-chip" style="display:none"><input type="checkbox" data-lineup-field="band"> Band</label>
-            </div>
-          </div>
-          <div class="filter-section">
-            <span class="label">Sort by singer:</span>
-            <select id="lineup-singer-sort" class="singer-sort-select">
-              <option value="">— None —</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="set-block">
-      <div class="instr-head" id="instr-head-row">
-        <span>Song</span><span>Key<span class="header-note">Original</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
-      </div>
-      <div id="instr-container"></div>
     </div>
   </div>
 
@@ -1290,21 +1255,48 @@ let genres = [];
 let instrumentCatalog = [];
 let MUSICIANS = []; // global roster — whoever's in it either way (Airtable sync, Excel import, or added by hand in Gig-It)
 let charts = {};
-let visibleFields = { song:true, genre:false, country:false, duration:true, arranger:false, version:false, guests:false, comments:false, band:false, soloist:false };
-// Which optional Setlist columns have ever been added via the "+" button —
-// separate from visibleFields (currently shown/hidden). Filters only ever
-// toggles visibility for a column already in here; adding a new one via "+"
-// is what puts it in here in the first place. song/duration start "created"
-// since they're always on by default; nothing else is until the user adds it.
-let createdFields = { song:true, duration:true };
-const OPTIONAL_COLUMN_DEFS = [
+// Setlist and LineUp are two independent *views* over this exact same
+// table/row engine (same renderSongRow, same +/Filters system) — they just
+// never share which columns are turned on. visibleFields/createdFields
+// below are always "whichever tab is active right now"; switching tabs
+// swaps their contents for the other tab's own saved state (see
+// switchColumnTab()), so every function that already reads/writes them
+// doesn't need to know which tab it's working for.
+// Each view offers its own set of addable columns via "+" — Setlist's are
+// the plain-data fields, LineUp's are the performance-prep ones. "Special
+// guest" and "Comments" are useful in both, so they're in both lists.
+const SETLIST_COLUMN_DEFS = [
   { key:'genre', label:'Genre' },
   { key:'country', label:'Country' },
-  { key:'soloist', label:'Solista' },
+  { key:'soloist', label:'Soloist' },
   { key:'guests', label:'Special guest' },
   { key:'comments', label:'Comments' },
   { key:'band', label:'Band' },
 ];
+const LINEUP_COLUMN_DEFS = [
+  { key:'key', label:'Key' },
+  { key:'singers', label:'Singers' },
+  { key:'instruments', label:'Instruments' },
+  { key:'guests', label:'Special guest' },
+  { key:'arranger', label:'Arranger' },
+  { key:'version', label:'Version' },
+  { key:'comments', label:'Comments' },
+];
+function currentOptionalColumnDefs(){ return currentColumnTab === 'instrumentation' ? LINEUP_COLUMN_DEFS : SETLIST_COLUMN_DEFS; }
+let columnStateByTab = {
+  table: { visible:{ song:true, duration:true }, created:{ song:true, duration:true } },
+  instrumentation: { visible:{ key:true, singers:true, comments:true }, created:{ key:true, singers:true, comments:true } },
+};
+let currentColumnTab = 'table';
+let visibleFields = columnStateByTab.table.visible;
+let createdFields = columnStateByTab.table.created;
+function switchColumnTab(tab){
+  columnStateByTab[currentColumnTab].visible = visibleFields;
+  columnStateByTab[currentColumnTab].created = createdFields;
+  currentColumnTab = tab;
+  visibleFields = columnStateByTab[tab].visible;
+  createdFields = columnStateByTab[tab].created;
+}
 let openPanel = null;
 let singerSortOrder = [];
 
@@ -1408,10 +1400,7 @@ async function fetchBands(){
   if(allBands.length >= 2){
     visibleFields.band = true;
     createdFields.band = true;
-    lineupVisibleCols.band = true;
     renderSetlistFilterChips();
-    const lineupChk = document.querySelector('#lineup-band-filter-chip input');
-    if(lineupChk){ lineupChk.checked = true; lineupChk.closest('.filter-chip').classList.add('active'); }
   }
 }
 async function fetchMusicSheets(){
@@ -1467,12 +1456,33 @@ function getActiveInfoColumns(){
   return [
     { key:'genre', label:'Genre' },
     { key:'country', label:'Country' },
-    { key:'soloist', label:'Solista' },
+    { key:'key', label:'Key' },
+    { key:'soloist', label:'Soloist' },
+    { key:'singers', label:'Singers' },
+    { key:'instruments', label:'Instruments' },
     { key:'guests', label:'Special guest' },
+    { key:'arranger', label:'Arranger' },
+    { key:'version', label:'Version' },
     { key:'comments', label:'Comments' },
     { key:'band', label:'Band' },
     { key:'duration', label:'Duration' },
   ].filter(c => visibleFields[c.key]);
+}
+
+// Shared by columnHeader() and renderSongRow() so the "+" add-column slot
+// lands at the exact same grid position in both — it's a real column (not
+// an element bolted on the outer edge) with its own dedicated, centered
+// space, always after the last active column (Duration, or whatever was
+// added most recently) so it keeps trailing the row as columns get added.
+function computeGridLayout(activeCols){
+  const widths = ['2fr', ...activeCols.map(c => c.key === 'duration' ? '64px' : '1fr')];
+  const addable = currentOptionalColumnDefs().filter(c => !createdFields[c.key]);
+  let addIndex = -1;
+  if(addable.length){
+    addIndex = widths.length;
+    widths.push('90px');
+  }
+  return { gridCols: widths.join(' '), addIndex, addable };
 }
 
 function renderSongRow(song, containerSetName, draggableOn){
@@ -1484,7 +1494,15 @@ function renderSongRow(song, containerSetName, draggableOn){
   const emo = song.emotion_level || 'media';
   const activeCols = getActiveInfoColumns();
 
-  const cellsHtml = activeCols.map(c => {
+  // Shared by the "key", "singers" and "instruments" cells below — same
+  // per-row computations the old Lineup tab did, now reused here.
+  const currentSingers = (song.singers || '').split('/').map(s => s.trim()).filter(Boolean);
+  const singerColorCss = currentSingers.length ? hexToRgba(singerColor(currentSingers[0]), 0.22) : '';
+  const singerBorderCss = currentSingers.length ? singerColor(currentSingers[0]) : '';
+  const currentInstruments = songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument);
+  const isOriginal = song.tonality_original !== false;
+
+  const cellsArr = activeCols.map(c => {
     if(c.key === 'genre'){
       return `<div class="cell combobox-field small-combo">
         <input class="inline-edit genre-edit" data-id="${song.id}" value="${escapeAttr(song.genero || '')}" placeholder="Genre" autocomplete="off">
@@ -1494,6 +1512,12 @@ function renderSongRow(song, containerSetName, draggableOn){
     if(c.key === 'country'){
       return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="artist_country" value="${escapeAttr(song.artist_country || '')}" placeholder="Country">`;
     }
+    if(c.key === 'key'){
+      return `<div class="cell key-cell">
+        <input type="checkbox" class="tonality-original-check" data-id="${song.id}" ${isOriginal ? 'checked' : ''} title="Original">
+        <input class="inline-edit" data-id="${song.id}" data-field="tonality" value="${escapeAttr(song.tonality || '')}" placeholder="Key, e.g. C, Em">
+      </div>`;
+    }
     if(c.key === 'soloist'){
       const options = band.filter(b => b.artist_name);
       return `<select class="inline-edit cell" data-id="${song.id}" data-field="soloist">
@@ -1501,18 +1525,36 @@ function renderSongRow(song, containerSetName, draggableOn){
         ${options.map(b => `<option value="${escapeAttr(b.artist_name)}" ${song.soloist === b.artist_name ? 'selected' : ''}>${escapeHtml(b.artist_name)}</option>`).join('')}
       </select>`;
     }
+    if(c.key === 'singers'){
+      return `<div class="expandable cell" data-kind="singers" data-song-id="${song.id}"><button type="button" class="condensed-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button></div>`;
+    }
+    if(c.key === 'instruments'){
+      return `<div class="expandable cell" data-kind="instruments" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button></div>`;
+    }
     if(c.key === 'guests'){
-      return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="—">`;
+      const currentGuests = (song.guests || '').split('/').map(s => s.trim()).filter(Boolean);
+      return `<div class="expandable cell" data-kind="guests" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentGuests.length ? escapeHtml(currentGuests.join(', ')) : 'Select guest(s)'}</button></div>`;
+    }
+    if(c.key === 'arranger'){
+      return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="arranger" value="${escapeAttr(song.arranger || '')}" placeholder="Arranger">`;
+    }
+    if(c.key === 'version'){
+      return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="youtube_link" value="${escapeAttr(song.youtube_link || '')}" placeholder="https://...">`;
     }
     if(c.key === 'comments'){
       return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="—">`;
     }
     if(c.key === 'band'){
-      return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="band_name" value="${escapeAttr(song.band_name || '')}" placeholder="—">`;
+      return `<select class="inline-edit cell" data-id="${song.id}" data-field="band_name">
+        <option value="">—</option>
+        ${allBands.map(b => `<option value="${escapeAttr(b.name)}" ${song.band_name === b.name ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
+      </select>`;
     }
     return `<input class="inline-edit info-edit cell duration-cell" data-id="${song.id}" data-field="duration" value="${escapeAttr(song.duration || '')}" placeholder="—">`;
-  }).join('');
-  const gridCols = ['2fr', ...activeCols.map(c => c.key === 'duration' ? '64px' : '1fr')].join(' ');
+  });
+  const { gridCols, addIndex } = computeGridLayout(activeCols);
+  if(addIndex > -1) cellsArr.splice(addIndex - 1, 0, '<div class="cell"></div>');
+  const cellsHtml = cellsArr.join('');
 
   row.innerHTML = `
     <span class="drag-handle" title="Drag to reorder">⠿</span>
@@ -1547,17 +1589,30 @@ function columnHeader(){
   const h = document.createElement('div');
   h.className = 'aligned-header';
   const activeCols = getActiveInfoColumns();
-  const gridCols = ['2fr', ...activeCols.map(c => c.key === 'duration' ? '64px' : '1fr')].join(' ');
-  const labels = `<span class="hdr-song">Song</span>` + activeCols.map(c => `<span class="${c.key === 'duration' ? 'hdr-duration' : 'hdr-field'}">${c.label}</span>`).join('');
-  const addable = OPTIONAL_COLUMN_DEFS.filter(c => !createdFields[c.key]);
-  const addColHtml = addable.length ? `
-    <span class="add-col-anchor">
-      <button type="button" class="add-col-btn" title="Add column">+</button>
-      <div class="add-col-dropdown" style="display:none">
-        ${addable.map(c => `<button type="button" class="add-col-item" data-add-col="${c.key}">${c.label}</button>`).join('')}
-      </div>
-    </span>` : '<span></span>';
-  h.innerHTML = `<span></span><span></span><span class="col-labels" style="grid-template-columns:${gridCols}">${labels}</span>${addColHtml}`;
+  const removableKeys = new Set(currentOptionalColumnDefs().map(c => c.key));
+  const { gridCols, addIndex, addable } = computeGridLayout(activeCols);
+  const labelSpans = [`<span class="hdr-song">Song</span>`, ...activeCols.map(c => `<span class="${c.key === 'duration' ? 'hdr-duration' : 'hdr-field'}">${c.label}${removableKeys.has(c.key) ? `<button type="button" class="hdr-remove-btn" data-remove-col="${c.key}" title="Remove column">✕</button>` : ''}</span>`)];
+  if(addIndex > -1){
+    labelSpans.splice(addIndex, 0, `
+      <span class="add-col-anchor">
+        <button type="button" class="add-col-btn" title="Add column">+</button>
+        <div class="add-col-dropdown" style="display:none">
+          ${addable.map(c => `<button type="button" class="add-col-item" data-add-col="${c.key}">${c.label}</button>`).join('')}
+        </div>
+      </span>`);
+  }
+  h.innerHTML = `<span></span><span></span><span class="col-labels" style="grid-template-columns:${gridCols}">${labelSpans.join('')}</span><span></span>`;
+  h.querySelectorAll('.hdr-remove-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = btn.dataset.removeCol;
+      visibleFields[key] = false;
+      createdFields[key] = false;
+      saveSetlistFilters();
+      renderSetlistFilterChips();
+      renderTable();
+    });
+  });
   const anchor = h.querySelector('.add-col-anchor');
   if(anchor){
     const btn = anchor.querySelector('.add-col-btn');
@@ -1583,7 +1638,7 @@ function columnHeader(){
 }
 
 function renderTable(){
-  renderSingerChips();
+  renderMusicSheetsBox();
   renderSetsContainer();
 }
 
@@ -1933,20 +1988,6 @@ function renderSingerSortedView(container){
   wireEmotionFaders();
 }
 
-let lineupSingerSort = '';
-function renderSingerChips(){
-  const sel = document.getElementById('lineup-singer-sort');
-  if(!sel) return;
-  const singers = singerList();
-  const current = sel.value;
-  sel.innerHTML = '<option value="">— None —</option>' +
-    singers.map(s => `<option value="${escapeAttr(s.artist_name)}">${escapeHtml(s.artist_name)}</option>`).join('');
-  sel.value = current;
-}
-document.getElementById('lineup-singer-sort').addEventListener('change', (e) => {
-  lineupSingerSort = e.target.value;
-  renderInstrumentation();
-});
 
 function wireInlineGenreCombo(input, panel){
   input.addEventListener('click', (e) => e.stopPropagation());
@@ -2074,6 +2115,15 @@ function wireRowActions(){
       renderTable();
     });
     inp.addEventListener('click', (e) => e.stopPropagation());
+  });
+  document.querySelectorAll('.tonality-original-check').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${chk.dataset.id}`, {
+        method:'PATCH', headers, body: JSON.stringify({ tonality_original: chk.checked })
+      });
+      await fetchSongs();
+    });
+    chk.addEventListener('click', (e) => e.stopPropagation());
   });
   document.querySelectorAll('.genre-edit').forEach(inp => {
     const panel = inp.nextElementSibling;
@@ -2256,7 +2306,7 @@ document.addEventListener('click', (e) => {
 // offers one that hasn't been created yet (that's what "+" is for).
 function renderSetlistFilterChips(){
   const wrap = document.getElementById('setlist-filter-chips');
-  const created = OPTIONAL_COLUMN_DEFS.filter(c => createdFields[c.key]);
+  const created = currentOptionalColumnDefs().filter(c => createdFields[c.key]);
   wrap.innerHTML = created.length
     ? created.map(c => `<label class="filter-chip ${visibleFields[c.key] ? 'active' : ''}"><input type="checkbox" data-field="${c.key}" ${visibleFields[c.key] ? 'checked' : ''}> ${escapeHtml(c.label)}</label>`).join('')
     : '<span class="hint" style="font-size:11.5px;">No optional columns added yet — use the + at the end of a set\'s header row.</span>';
@@ -2270,26 +2320,39 @@ function renderSetlistFilterChips(){
   });
 }
 
-const SETLIST_FILTERS_KEY = 'ambra_setlist_filters';
+const SETLIST_FILTERS_KEY = 'ambra_setlist_filters'; // old, pre-LineUp-split key — still read once as a fallback for 'table'
+function setlistFiltersKey(tab){ return `ambra_setlist_filters_${tab}`; }
 function saveSetlistFilters(){
-  try { localStorage.setItem(SETLIST_FILTERS_KEY, JSON.stringify({ visible: visibleFields, created: createdFields })); } catch(e){}
+  try { localStorage.setItem(setlistFiltersKey(currentColumnTab), JSON.stringify({ visible: visibleFields, created: createdFields })); } catch(e){}
 }
-function loadSetlistFilters(){
+function loadColumnStateForTab(tab){
+  const state = columnStateByTab[tab];
+  // Only keys that actually belong to this tab's own column defs may load in —
+  // the old pre-split flat key (and any other tab's state) can't leak columns
+  // across tabs this way (e.g. Key/Singers/Comments showing up in Setlist).
+  const allowedKeys = new Set((tab === 'instrumentation' ? LINEUP_COLUMN_DEFS : SETLIST_COLUMN_DEFS).map(c => c.key));
+  const pick = (src) => { const out = {}; Object.keys(src || {}).forEach(k => { if(allowedKeys.has(k)) out[k] = src[k]; }); return out; };
   try {
-    const saved = JSON.parse(localStorage.getItem(SETLIST_FILTERS_KEY) || 'null');
+    const raw = localStorage.getItem(setlistFiltersKey(tab)) || (tab === 'table' ? localStorage.getItem(SETLIST_FILTERS_KEY) : null);
+    const saved = JSON.parse(raw || 'null');
     if(saved){
       // Back-compat: older saves were just the flat visibleFields object
       // (no "created" set yet) — anything that was visible back then
       // counts as already created now, so it doesn't vanish on upgrade.
       if(saved.visible || saved.created){
-        Object.assign(visibleFields, saved.visible || {});
-        Object.assign(createdFields, saved.created || {});
+        Object.assign(state.visible, pick(saved.visible));
+        Object.assign(state.created, pick(saved.created));
       } else {
-        Object.assign(visibleFields, saved);
-        Object.keys(saved).forEach(k => { if(saved[k]) createdFields[k] = true; });
+        const filtered = pick(saved);
+        Object.assign(state.visible, filtered);
+        Object.keys(filtered).forEach(k => { if(filtered[k]) state.created[k] = true; });
       }
     }
   } catch(e){}
+}
+function loadSetlistFilters(){
+  loadColumnStateForTab('table');
+  loadColumnStateForTab('instrumentation');
   renderSetlistFilterChips();
 }
 loadSetlistFilters();
@@ -2705,73 +2768,11 @@ function wireInterludeDragAndDrop(rowsDiv, setInfo, container){
   });
 }
 
-let lineupVisibleCols = { tonality:true, singers:true, instruments:true, guests:true, arranger:true, version:true, comments:true, band:false };
-
-function getLineupColumns(){
-  const cols = [];
-  if(lineupVisibleCols.tonality){
-    cols.push({ key:'tonality_check', width:'50px', label:'Original' });
-    cols.push({ key:'tonality_text', width:'.9fr', label:'Key' });
-  }
-  if(lineupVisibleCols.singers) cols.push({ key:'singers', width:'1fr', label:'Singer(s)' });
-  if(lineupVisibleCols.instruments) cols.push({ key:'instruments', width:'1fr', label:'Instruments' });
-  if(lineupVisibleCols.guests) cols.push({ key:'guests', width:'.9fr', label:'Special guest' });
-  if(lineupVisibleCols.arranger) cols.push({ key:'arranger', width:'1fr', label:'Arranger' });
-  if(lineupVisibleCols.version) cols.push({ key:'version', width:'1fr', label:'Version' });
-  if(lineupVisibleCols.comments) cols.push({ key:'comments', width:'1fr', label:'Comments' });
-  if(lineupVisibleCols.band && allBands.length >= 2) cols.push({ key:'band', width:'1fr', label:'Band' });
-  return cols;
-}
-
-function updateInstrHead(){
-  const head = document.getElementById('instr-head-row');
-  const cols = getLineupColumns();
-  head.style.gridTemplateColumns = `1.3fr ${cols.map(c => c.width).join(' ')}`;
-  head.innerHTML = `<span>Song</span>` + cols.map(c => `<span class="${c.key === 'tonality_text' ? 'hdr-tonality-right' : ''}">${c.label}</span>`).join('');
-}
-
-document.getElementById('btn-lineup-filters-toggle').addEventListener('click', (e) => {
-  e.stopPropagation();
-  const dd = document.getElementById('lineup-filters-dropdown');
-  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-});
-document.addEventListener('click', (e) => {
-  const dd = document.getElementById('lineup-filters-dropdown');
-  if(dd && dd.style.display !== 'none' && !dd.contains(e.target) && e.target.id !== 'btn-lineup-filters-toggle'){
-    dd.style.display = 'none';
-  }
-});
-const LINEUP_FILTERS_KEY = 'ambra_lineup_filters';
-function saveLineupFilters(){
-  try { localStorage.setItem(LINEUP_FILTERS_KEY, JSON.stringify(lineupVisibleCols)); } catch(e){}
-}
-function loadLineupFilters(){
-  try {
-    const saved = JSON.parse(localStorage.getItem(LINEUP_FILTERS_KEY) || 'null');
-    if(saved) Object.assign(lineupVisibleCols, saved);
-  } catch(e){}
-  document.querySelectorAll('#lineup-filters-dropdown input[data-lineup-field]').forEach(chk => {
-    const val = !!lineupVisibleCols[chk.dataset.lineupField];
-    chk.checked = val;
-    chk.closest('.filter-chip').classList.toggle('active', val);
-  });
-}
-loadLineupFilters();
-
-document.querySelectorAll('#lineup-filters-dropdown input[data-lineup-field]').forEach(chk => {
-  chk.addEventListener('change', () => {
-    lineupVisibleCols[chk.dataset.lineupField] = chk.checked;
-    chk.closest('.filter-chip').classList.toggle('active', chk.checked);
-    saveLineupFilters();
-    renderInstrumentation();
-  });
-});
-
 function renderMusicSheetsBox(){
   const box = document.getElementById('music-sheets-box');
   if(musicSheets?.link){
     box.innerHTML = `
-      <a href="${escapeAttr(musicSheets.link)}" target="_blank" rel="noopener" class="btn">🎼 Music Sheets</a>
+      <a href="${escapeAttr(musicSheets.link)}" target="_blank" rel="noopener" class="btn">Music Sheets</a>
       <button class="btn ghost small" id="btn-music-sheets-edit" title="Change or remove link" style="margin-left:6px">✎</button>
     `;
     document.getElementById('btn-music-sheets-edit').addEventListener('click', () => {
@@ -2787,7 +2788,7 @@ function renderMusicSheetsBox(){
     });
   } else {
     box.innerHTML = `
-      <input type="text" id="music-sheets-input" placeholder="Paste Music Sheets link…" style="width:260px">
+      <input type="text" id="music-sheets-input" placeholder="Paste Music Sheets link…">
       <button class="btn small" id="btn-music-sheets-save">Save</button>
     `;
     document.getElementById('btn-music-sheets-save').addEventListener('click', async () => {
@@ -2800,104 +2801,6 @@ function renderMusicSheetsBox(){
   }
 }
 
-function renderInstrumentation(){
-  renderMusicSheetsBox();
-  const container = document.getElementById('instr-container');
-  updateInstrHead();
-  if(songs.length === 0){
-    container.innerHTML = '<div class="empty-note">No songs yet. Add songs from the Setlist tab first.</div>';
-    renderNoteMarkers();
-    return;
-  }
-  container.innerHTML = '';
-  const cols = getLineupColumns();
-  const gridCols = `1.3fr ${cols.map(c => c.width).join(' ')}`;
-  // Same order as Setlist itself: each song's set's own set_order (the real,
-  // drag-and-drop-arranged order — same field Schedule and Lights already
-  // sort by), then song_order within that set. The previous approach parsed
-  // digits out of the set's name (only matching "Set 1", "Set 2", ...), so
-  // any custom-named or interlude set fell through to a null match and got
-  // pushed to the very end regardless of its real position in the setlist.
-  let orderedSongs = [...songs].sort((a, b) => {
-    const setA = sets.find(s => s.set_number === a.set_number);
-    const setB = sets.find(s => s.set_number === b.set_number);
-    const orderA = setA ? (setA.set_order || 0) : Infinity;
-    const orderB = setB ? (setB.set_order || 0) : Infinity;
-    return orderA - orderB || (a.song_order||0) - (b.song_order||0);
-  });
-  if(lineupSingerSort){
-    const matches = orderedSongs.filter(s => (s.singers || '').split('/').map(x => x.trim()).includes(lineupSingerSort));
-    const rest = orderedSongs.filter(s => !matches.includes(s));
-    orderedSongs = [...matches, ...rest];
-  }
-  orderedSongs.forEach(song => {
-    const row = document.createElement('div');
-    row.className = 'instr-row';
-    row.style.gridTemplateColumns = gridCols;
-    const setInfo = sets.find(s => s.set_number === song.set_number);
-    if(setInfo?.color) row.style.borderLeft = `3px solid ${setInfo.color}`;
-    const currentSingers = (song.singers || '').split('/').map(s => s.trim()).filter(Boolean);
-    const singerColorCss = currentSingers.length ? hexToRgba(singerColor(currentSingers[0]), 0.22) : '';
-    const singerBorderCss = currentSingers.length ? singerColor(currentSingers[0]) : '';
-    const currentInstruments = songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument);
-    const isOriginal = song.tonality_original !== false;
-
-    const cellsHtml = cols.map(c => {
-      if(c.key === 'tonality_check') return `<input type="checkbox" data-id="${song.id}" data-field="tonality_original" ${isOriginal ? 'checked' : ''} title="Original">`;
-      if(c.key === 'tonality_text') return `<input type="text" class="tonality-text-input" data-id="${song.id}" data-field="tonality" value="${escapeAttr(song.tonality || '')}" placeholder="Key, e.g. C, Em">`;
-      if(c.key === 'singers') return `<div class="expandable" data-kind="singers" data-song-id="${song.id}"><button type="button" class="condensed-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button></div>`;
-      if(c.key === 'instruments') return `<div class="expandable" data-kind="instruments" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button></div>`;
-      if(c.key === 'guests'){
-        const currentGuests = (song.guests || '').split('/').map(s => s.trim()).filter(Boolean);
-        return `<div class="expandable" data-kind="guests" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentGuests.length ? escapeHtml(currentGuests.join(', ')) : 'Select guest(s)'}</button></div>`;
-      }
-      if(c.key === 'arranger') return `<input type="text" data-id="${song.id}" data-field="arranger" value="${escapeAttr(song.arranger || '')}" placeholder="Arranger">`;
-      if(c.key === 'version') return `<input type="text" data-id="${song.id}" data-field="youtube_link" value="${escapeAttr(song.youtube_link || '')}" placeholder="https://...">`;
-      if(c.key === 'comments') return `<input type="text" data-id="${song.id}" data-field="comments" value="${escapeAttr(song.comments || '')}" placeholder="Comments">`;
-      if(c.key === 'band') return `<select class="member-role-select lineup-band-select" data-id="${song.id}">
-        <option value="">— None —</option>
-        ${allBands.map(b => `<option value="${escapeAttr(b.name)}" ${song.band_name === b.name ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
-      </select>`;
-      return '';
-    }).join('');
-
-    row.innerHTML = `
-      <div class="song-label">${escapeHtml(song.song_name || 'Untitled')}<small>${escapeHtml(song.set_number || 'Unassigned')}</small></div>
-      ${cellsHtml}
-    `;
-    container.appendChild(row);
-  });
-
-  container.querySelectorAll('input[type=text]').forEach(inp => {
-    inp.addEventListener('change', async () => {
-      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${inp.dataset.id}`, {
-        method:'PATCH', headers, body: JSON.stringify({ [inp.dataset.field]: inp.value || null })
-      });
-      await fetchSongs();
-    });
-  });
-  container.querySelectorAll('.lineup-band-select').forEach(sel => {
-    sel.addEventListener('change', async () => {
-      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${sel.dataset.id}`, {
-        method:'PATCH', headers, body: JSON.stringify({ band_name: sel.value || null })
-      });
-      await fetchSongs();
-    });
-  });
-  const bandFilterChip = document.getElementById('lineup-band-filter-chip');
-  if(bandFilterChip) bandFilterChip.style.display = allBands.length >= 2 ? 'flex' : 'none';
-  container.querySelectorAll('input[type=checkbox][data-field=tonality_original]').forEach(chk => {
-    chk.addEventListener('change', async () => {
-      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${chk.dataset.id}`, {
-        method:'PATCH', headers, body: JSON.stringify({ tonality_original: chk.checked })
-      });
-      await fetchSongs();
-    });
-  });
-
-  wireExpandables();
-  renderNoteMarkers();
-}
 
 function openChecklistPanel(wrap){
   const songId = wrap.dataset.songId;
@@ -4123,7 +4026,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['table','instrumentation','band','technical','invoice'].forEach(v => {
+    ['table','band','technical','invoice'].forEach(v => {
       document.getElementById('view-'+v).style.display = (v === btn.dataset.tab) ? 'block' : 'none';
     });
     // The Invoice tab embeds the separate invoice tool via iframe instead of
@@ -4133,7 +4036,16 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       document.body.classList.remove('theme-table','theme-instrumentation','theme-band','theme-technical');
       document.body.classList.add('theme-' + btn.dataset.tab);
     }
-    if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
+    if(btn.dataset.tab === 'table'){
+      // Always land back on the "Setlist" view-by pill (not wherever
+      // LineUp left it) when you return to this tab from elsewhere.
+      if(currentColumnTab !== 'table'){ switchColumnTab('table'); renderSetlistFilterChips(); }
+      document.querySelectorAll('.view-by-bar .pill:not(.live-mode-btn)').forEach(p => p.classList.toggle('active', p.dataset.view === 'table'));
+      document.getElementById('view-table').classList.remove('lineup-view-active');
+      document.getElementById('setlist-table-view').style.display = 'block';
+      document.getElementById('setlist-chart-view').style.display = 'none';
+      renderTable();
+    }
     else if(btn.dataset.tab === 'band') renderBand();
     else if(btn.dataset.tab === 'technical') renderAudioRequirements();
     else if(btn.dataset.tab === 'invoice'){
@@ -4149,13 +4061,29 @@ document.querySelectorAll('.view-by-bar .pill:not(.live-mode-btn)').forEach(pill
     document.querySelectorAll('.view-by-bar .pill:not(.live-mode-btn)').forEach(p => p.classList.remove('active'));
     pill.classList.add('active');
     const view = pill.dataset.view;
-    document.getElementById('setlist-table-view').style.display = view === 'table' ? 'block' : 'none';
-    document.getElementById('setlist-chart-view').style.display = view === 'table' ? 'none' : 'block';
+    // "LineUp" is the same table as "Setlist" — same rows, same engine —
+    // just rendered against its own independent column state (see
+    // switchColumnTab): starts with only Key/Singers/Comments, with
+    // everything else added one at a time via the "+" like Setlist does.
+    // lineup-view-active scopes the blue Music Sheets box + blue input
+    // backgrounds (--input-bg override) to just this view.
+    document.getElementById('view-table').classList.toggle('lineup-view-active', view === 'lineup');
+    const showingTable = view === 'table' || view === 'lineup';
+    document.getElementById('setlist-table-view').style.display = showingTable ? 'block' : 'none';
+    document.getElementById('setlist-chart-view').style.display = showingTable ? 'none' : 'block';
     ['schedule','artist','country','genre','emotion'].forEach(v => {
       document.getElementById('chart-'+v+'-wrap').style.display = (v === view) ? 'block' : 'none';
     });
-    if(view === 'schedule') renderSchedule();
-    else if(view !== 'table') renderChart(view);
+    if(showingTable){
+      const columnTab = view === 'lineup' ? 'instrumentation' : 'table';
+      if(currentColumnTab !== columnTab){
+        switchColumnTab(columnTab);
+        renderSetlistFilterChips();
+      }
+      renderTable();
+    }
+    else if(view === 'schedule') renderSchedule();
+    else renderChart(view);
   });
 });
 

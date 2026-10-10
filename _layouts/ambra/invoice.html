@@ -988,14 +988,7 @@
     dropdown.querySelectorAll('[data-id]').forEach(itemBtn => {
       itemBtn.addEventListener('click', () => {
         const row = rows.find(r => r.id === itemBtn.dataset.id);
-        if(row){
-          DATA = Object.assign(blankInvoiceData(), row.data);
-          currentInvoiceId = row.id;
-          currentEventId = row.event_id || null;
-          invoiceNumberTouched = true;
-          writeDataIntoForm();
-          updatePreview();
-        }
+        if(row) applyLoadedInvoice(row);
         dropdown.style.display = 'none';
       });
     });
@@ -1005,12 +998,42 @@
     if(anchor && !anchor.contains(e.target)) document.getElementById('load-dropdown').style.display = 'none';
   });
 
-  /* ───────── Boot — always starts from a blank invoice ───────── */
+  // Shared by the Load dropdown's item click and by boot()'s auto-load —
+  // drops a saved invoice row straight into the form.
+  function applyLoadedInvoice(row){
+    DATA = Object.assign(blankInvoiceData(), row.data);
+    currentInvoiceId = row.id;
+    currentEventId = row.event_id || null;
+    invoiceNumberTouched = true;
+    writeDataIntoForm();
+    updatePreview();
+  }
+
+  // Arriving from a project's own "Invoice" tab: if that project already has
+  // an invoice, jump straight to it instead of making them use the Load
+  // dropdown themselves. Most recent wins when a big project has more than
+  // one (deposit + balance) — the Load dropdown is still right there to
+  // switch between them. No match at all just falls through to the normal
+  // blank-invoice screen, same as today.
+  async function loadLinkedProjectInvoice(){
+    if(!linkedProjectId) return false;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/invoices?select=id,number,created_at,data,event_id&project_id=eq.${linkedProjectId}&order=created_at.desc`, {
+      headers: { 'Authorization': `Bearer ${currentSession.access_token}`, 'apikey': SUPABASE_ANON_KEY }
+    });
+    if(!res.ok) return false;
+    const rows = await res.json();
+    if(!rows.length) return false;
+    applyLoadedInvoice(rows[0]);
+    return true;
+  }
+
+  /* ───────── Boot — loads this project's invoice if it has one, otherwise starts blank ───────── */
   async function boot(){
     DATA = blankInvoiceData();
     currentInvoiceId = null;
     invoiceNumberTouched = false;
-    if(prefillEventId) await prefillFromEvent(prefillEventId);
+    const loadedExisting = await loadLinkedProjectInvoice();
+    if(!loadedExisting && prefillEventId) await prefillFromEvent(prefillEventId);
     writeDataIntoForm();
     updatePreview();
     document.getElementById('app-body').style.display = 'grid';

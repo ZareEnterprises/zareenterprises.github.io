@@ -27,8 +27,8 @@
   <button class="tab-btn primary tab-instrumentation" data-tab="instrumentation">Lineup</button>
   <button class="tab-btn primary tab-band" data-tab="band">Band</button>
   <button class="tab-btn primary tab-technical" data-tab="technical">Technical</button>
-  <a class="tab-btn primary" id="invoice-link" href="/invoice/" target="_blank" rel="noopener" style="text-decoration:none; display:inline-flex; align-items:center;">Invoice</a>
   <span class="tab-divider"></span>
+  <button class="tab-btn primary tab-invoice" data-tab="invoice" id="invoice-link">Invoice</button>
   <span class="pin-tab-anchor">
     <button class="pill" id="pin-tab-btn">＋ Pin a view</button>
     <button class="pin-tab-clear" id="pin-tab-clear" title="Unpin" style="display:none">✕</button>
@@ -105,15 +105,7 @@
           <div class="filters-dropdown" id="filters-dropdown" style="display:none">
             <div class="filter-section">
               <span class="label">Show:</span>
-              <div class="filter-chips-wrap">
-                <label class="filter-chip active"><input type="checkbox" data-field="song" checked> Artist</label>
-                <label class="filter-chip active"><input type="checkbox" data-field="genre" checked> Genre</label>
-                <label class="filter-chip active"><input type="checkbox" data-field="country" checked> Country</label>
-                <label class="filter-chip active"><input type="checkbox" data-field="duration" checked> Duration</label>
-                <label class="filter-chip"><input type="checkbox" data-field="guests"> Special guest</label>
-                <label class="filter-chip"><input type="checkbox" data-field="comments"> Comments</label>
-                <label class="filter-chip" id="setlist-band-filter-chip"><input type="checkbox" data-field="band"> Band</label>
-              </div>
+              <div class="filter-chips-wrap" id="setlist-filter-chips"></div>
             </div>
           </div>
         </div>
@@ -174,7 +166,7 @@
           <div class="filter-section">
             <span class="label">Show columns:</span>
             <div class="filter-chips-wrap">
-              <label class="filter-chip active"><input type="checkbox" data-lineup-field="tonality" checked> Tonality</label>
+              <label class="filter-chip active"><input type="checkbox" data-lineup-field="tonality" checked> Key</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="singers" checked> Singers</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="instruments" checked> Instruments</label>
               <label class="filter-chip active"><input type="checkbox" data-lineup-field="guests" checked> Special guests</label>
@@ -195,7 +187,7 @@
     </div>
     <div class="set-block">
       <div class="instr-head" id="instr-head-row">
-        <span>Song</span><span>Tonality<span class="header-note">Original</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
+        <span>Song</span><span>Key<span class="header-note">Original</span></span><span>Singer(s)</span><span>Instruments</span><span>Special guest</span>
       </div>
       <div id="instr-container"></div>
     </div>
@@ -419,6 +411,9 @@
     </div>
   </div>
 
+  <div id="view-invoice" style="display:none; height:calc(100vh - 150px);">
+    <iframe id="invoice-iframe" title="Invoice" style="width:100%; height:100%; border:none; border-radius:var(--radius); background:#fff;"></iframe>
+  </div>
 
 </main>
 
@@ -645,8 +640,6 @@ async function loadSessionAndPermissions(){
   PERMS = Object.assign({}, PERMS, mine.permissions || {});
   currentProjectId = mine.project_id;
   currentProjectName = mine.projects.name;
-  const invoiceLink = document.getElementById('invoice-link');
-  if(invoiceLink) invoiceLink.href = `/invoice/?project_id=${currentProjectId}`;
   return true;
 }
 
@@ -1297,7 +1290,21 @@ let genres = [];
 let instrumentCatalog = [];
 let MUSICIANS = []; // global roster — whoever's in it either way (Airtable sync, Excel import, or added by hand in Gig-It)
 let charts = {};
-let visibleFields = { song:true, genre:true, country:true, duration:true, arranger:false, version:false, guests:false, comments:false, band:false };
+let visibleFields = { song:true, genre:false, country:false, duration:true, arranger:false, version:false, guests:false, comments:false, band:false, soloist:false };
+// Which optional Setlist columns have ever been added via the "+" button —
+// separate from visibleFields (currently shown/hidden). Filters only ever
+// toggles visibility for a column already in here; adding a new one via "+"
+// is what puts it in here in the first place. song/duration start "created"
+// since they're always on by default; nothing else is until the user adds it.
+let createdFields = { song:true, duration:true };
+const OPTIONAL_COLUMN_DEFS = [
+  { key:'genre', label:'Genre' },
+  { key:'country', label:'Country' },
+  { key:'soloist', label:'Solista' },
+  { key:'guests', label:'Special guest' },
+  { key:'comments', label:'Comments' },
+  { key:'band', label:'Band' },
+];
 let openPanel = null;
 let singerSortOrder = [];
 
@@ -1400,9 +1407,9 @@ async function fetchBands(){
   }
   if(allBands.length >= 2){
     visibleFields.band = true;
+    createdFields.band = true;
     lineupVisibleCols.band = true;
-    const setlistChk = document.querySelector('#setlist-band-filter-chip input');
-    if(setlistChk){ setlistChk.checked = true; setlistChk.closest('.filter-chip').classList.add('active'); }
+    renderSetlistFilterChips();
     const lineupChk = document.querySelector('#lineup-band-filter-chip input');
     if(lineupChk){ lineupChk.checked = true; lineupChk.closest('.filter-chip').classList.add('active'); }
   }
@@ -1460,6 +1467,7 @@ function getActiveInfoColumns(){
   return [
     { key:'genre', label:'Genre' },
     { key:'country', label:'Country' },
+    { key:'soloist', label:'Solista' },
     { key:'guests', label:'Special guest' },
     { key:'comments', label:'Comments' },
     { key:'band', label:'Band' },
@@ -1485,6 +1493,13 @@ function renderSongRow(song, containerSetName, draggableOn){
     }
     if(c.key === 'country'){
       return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="artist_country" value="${escapeAttr(song.artist_country || '')}" placeholder="Country">`;
+    }
+    if(c.key === 'soloist'){
+      const options = band.filter(b => b.artist_name);
+      return `<select class="inline-edit cell" data-id="${song.id}" data-field="soloist">
+        <option value="">—</option>
+        ${options.map(b => `<option value="${escapeAttr(b.artist_name)}" ${song.soloist === b.artist_name ? 'selected' : ''}>${escapeHtml(b.artist_name)}</option>`).join('')}
+      </select>`;
     }
     if(c.key === 'guests'){
       return `<input class="inline-edit info-edit cell" data-id="${song.id}" data-field="guests" value="${escapeAttr(song.guests || '')}" placeholder="—">`;
@@ -1534,7 +1549,36 @@ function columnHeader(){
   const activeCols = getActiveInfoColumns();
   const gridCols = ['2fr', ...activeCols.map(c => c.key === 'duration' ? '64px' : '1fr')].join(' ');
   const labels = `<span class="hdr-song">Song</span>` + activeCols.map(c => `<span class="${c.key === 'duration' ? 'hdr-duration' : 'hdr-field'}">${c.label}</span>`).join('');
-  h.innerHTML = `<span></span><span></span><span class="col-labels" style="grid-template-columns:${gridCols}">${labels}</span><span></span>`;
+  const addable = OPTIONAL_COLUMN_DEFS.filter(c => !createdFields[c.key]);
+  const addColHtml = addable.length ? `
+    <span class="add-col-anchor">
+      <button type="button" class="add-col-btn" title="Add column">+</button>
+      <div class="add-col-dropdown" style="display:none">
+        ${addable.map(c => `<button type="button" class="add-col-item" data-add-col="${c.key}">${c.label}</button>`).join('')}
+      </div>
+    </span>` : '<span></span>';
+  h.innerHTML = `<span></span><span></span><span class="col-labels" style="grid-template-columns:${gridCols}">${labels}</span>${addColHtml}`;
+  const anchor = h.querySelector('.add-col-anchor');
+  if(anchor){
+    const btn = anchor.querySelector('.add-col-btn');
+    const dd = anchor.querySelector('.add-col-dropdown');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.add-col-dropdown').forEach(el => { if(el !== dd) el.style.display = 'none'; });
+      dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    });
+    dd.querySelectorAll('.add-col-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const key = item.dataset.addCol;
+        createdFields[key] = true;
+        visibleFields[key] = true;
+        saveSetlistFilters();
+        renderSetlistFilterChips();
+        dd.style.display = 'none';
+        renderTable();
+      });
+    });
+  }
   return h;
 }
 
@@ -2199,33 +2243,56 @@ document.addEventListener('click', (e) => {
   if(dd.style.display !== 'none' && !dd.contains(e.target) && e.target.id !== 'btn-filters-toggle'){
     dd.style.display = 'none';
   }
+  // Same close-on-outside-click behavior for every "+" add-column dropdown
+  // (there's one per rendered set block, all sharing the same state).
+  document.querySelectorAll('.add-col-dropdown').forEach(el => {
+    if(el.style.display !== 'none' && !el.contains(e.target) && !e.target.closest('.add-col-btn')){
+      el.style.display = 'none';
+    }
+  });
 });
+
+// Filters only ever shows/toggles columns already added via "+" — it never
+// offers one that hasn't been created yet (that's what "+" is for).
+function renderSetlistFilterChips(){
+  const wrap = document.getElementById('setlist-filter-chips');
+  const created = OPTIONAL_COLUMN_DEFS.filter(c => createdFields[c.key]);
+  wrap.innerHTML = created.length
+    ? created.map(c => `<label class="filter-chip ${visibleFields[c.key] ? 'active' : ''}"><input type="checkbox" data-field="${c.key}" ${visibleFields[c.key] ? 'checked' : ''}> ${escapeHtml(c.label)}</label>`).join('')
+    : '<span class="hint" style="font-size:11.5px;">No optional columns added yet — use the + at the end of a set\'s header row.</span>';
+  wrap.querySelectorAll('input[data-field]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      visibleFields[chk.dataset.field] = chk.checked;
+      chk.closest('.filter-chip').classList.toggle('active', chk.checked);
+      saveSetlistFilters();
+      renderTable();
+    });
+  });
+}
 
 const SETLIST_FILTERS_KEY = 'ambra_setlist_filters';
 function saveSetlistFilters(){
-  try { localStorage.setItem(SETLIST_FILTERS_KEY, JSON.stringify(visibleFields)); } catch(e){}
+  try { localStorage.setItem(SETLIST_FILTERS_KEY, JSON.stringify({ visible: visibleFields, created: createdFields })); } catch(e){}
 }
 function loadSetlistFilters(){
   try {
     const saved = JSON.parse(localStorage.getItem(SETLIST_FILTERS_KEY) || 'null');
-    if(saved) Object.assign(visibleFields, saved);
+    if(saved){
+      // Back-compat: older saves were just the flat visibleFields object
+      // (no "created" set yet) — anything that was visible back then
+      // counts as already created now, so it doesn't vanish on upgrade.
+      if(saved.visible || saved.created){
+        Object.assign(visibleFields, saved.visible || {});
+        Object.assign(createdFields, saved.created || {});
+      } else {
+        Object.assign(visibleFields, saved);
+        Object.keys(saved).forEach(k => { if(saved[k]) createdFields[k] = true; });
+      }
+    }
   } catch(e){}
-  document.querySelectorAll('#filters-dropdown .filter-chip input[data-field]').forEach(chk => {
-    const val = !!visibleFields[chk.dataset.field];
-    chk.checked = val;
-    chk.closest('.filter-chip').classList.toggle('active', val);
-  });
+  renderSetlistFilterChips();
 }
 loadSetlistFilters();
-
-document.querySelectorAll('#filters-dropdown .filter-chip input[data-field]').forEach(chk => {
-  chk.addEventListener('change', () => {
-    visibleFields[chk.dataset.field] = chk.checked;
-    chk.closest('.filter-chip').classList.toggle('active', chk.checked);
-    saveSetlistFilters();
-    renderTable();
-  });
-});
 
 /* ============ CREATE SET MODAL ============ */
 const overlaySet = document.getElementById('overlay-set');
@@ -2644,7 +2711,7 @@ function getLineupColumns(){
   const cols = [];
   if(lineupVisibleCols.tonality){
     cols.push({ key:'tonality_check', width:'50px', label:'Original' });
-    cols.push({ key:'tonality_text', width:'.9fr', label:'Tonality' });
+    cols.push({ key:'tonality_text', width:'.9fr', label:'Key' });
   }
   if(lineupVisibleCols.singers) cols.push({ key:'singers', width:'1fr', label:'Singer(s)' });
   if(lineupVisibleCols.instruments) cols.push({ key:'instruments', width:'1fr', label:'Instruments' });
@@ -4056,14 +4123,23 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['table','instrumentation','band','technical'].forEach(v => {
+    ['table','instrumentation','band','technical','invoice'].forEach(v => {
       document.getElementById('view-'+v).style.display = (v === btn.dataset.tab) ? 'block' : 'none';
     });
-    document.body.classList.remove('theme-table','theme-instrumentation','theme-band','theme-technical');
-    document.body.classList.add('theme-' + btn.dataset.tab);
+    // The Invoice tab embeds the separate invoice tool via iframe instead of
+    // theming like the others — it has its own look (login.css), and
+    // --main-bg would just be wasted on a panel the iframe fully covers.
+    if(btn.dataset.tab !== 'invoice'){
+      document.body.classList.remove('theme-table','theme-instrumentation','theme-band','theme-technical');
+      document.body.classList.add('theme-' + btn.dataset.tab);
+    }
     if(btn.dataset.tab === 'instrumentation') renderInstrumentation();
     else if(btn.dataset.tab === 'band') renderBand();
     else if(btn.dataset.tab === 'technical') renderAudioRequirements();
+    else if(btn.dataset.tab === 'invoice'){
+      const frame = document.getElementById('invoice-iframe');
+      if(!frame.src) frame.src = `/invoice/?project_id=${currentProjectId}`;
+    }
     updateNotesModeBarVisibility();
   });
 });

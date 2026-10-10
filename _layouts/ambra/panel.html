@@ -380,6 +380,30 @@
   </div>
 </div>
 
+<!-- Confirm archive project modal -->
+<div class="overlay" id="overlay-archive-project">
+  <div class="modal" style="max-width:400px">
+    <h2>Archive project?</h2>
+    <p class="hint" id="archive-project-message"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-cancel-archive-project" type="button">Cancel</button>
+      <button class="btn-primary" id="btn-confirm-archive-project" type="button">Archive</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm delete project modal -->
+<div class="overlay" id="overlay-delete-project">
+  <div class="modal" style="max-width:400px">
+    <h2>Delete project?</h2>
+    <p class="hint" id="delete-project-message"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-cancel-delete-project" type="button">Cancel</button>
+      <button class="btn-primary" id="btn-confirm-delete-project" type="button" style="background:var(--error);color:#fff">Delete project</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ============================================================
   // AUTH GUARD — ON. No session redirects to /ambra/ (the login
@@ -650,18 +674,9 @@
       });
     });
   }
-  function handleDeleteProject(id){ console.log('[visual only] delete project', id); }
-  async function handleArchiveProject(id){
-    const p = PROJECTS.find(x => x.id === id);
-    if(!p) return;
-    if(!confirm(`Archive "${p.name}"? It'll disappear from Projects, Finance and Calendar until you restore it from Settings → Archived.`)) return;
-    p.archived = true;
-    const { error } = await supabaseClient.from('projects').update({ archived: true }).eq('id', id);
-    if(error){
-      p.archived = false;
-      alert('Could not archive that project:\n' + error.message);
-      return;
-    }
+  // Dropping a project out of local state + the screens that filter by
+  // project id — shared by both archive and delete once the DB write lands.
+  function dropProjectFromLocalViews(id){
     if(currentFinanceProjectId === id){
       currentFinanceProjectId = '';
       document.getElementById('finance-project-select').value = '';
@@ -675,6 +690,73 @@
     renderCalendar();
     renderReminders();
   }
+
+  let pendingArchiveProjectId = null;
+  function handleArchiveProject(id){
+    const p = PROJECTS.find(x => x.id === id);
+    if(!p) return;
+    pendingArchiveProjectId = id;
+    document.getElementById('archive-project-message').textContent =
+      `Archive "${p.name}"? It'll disappear from Projects, Finance and Calendar until you restore it from Settings → Archived.`;
+    openModal('overlay-archive-project');
+  }
+  document.getElementById('btn-cancel-archive-project').addEventListener('click', () => {
+    pendingArchiveProjectId = null;
+    closeModal('overlay-archive-project');
+  });
+  document.getElementById('btn-confirm-archive-project').addEventListener('click', async () => {
+    if(!pendingArchiveProjectId) return;
+    const id = pendingArchiveProjectId;
+    const p = PROJECTS.find(x => x.id === id);
+    const btn = document.getElementById('btn-confirm-archive-project');
+    btn.disabled = true;
+    btn.textContent = 'Archiving…';
+    p.archived = true;
+    const { error } = await supabaseClient.from('projects').update({ archived: true }).eq('id', id);
+    btn.disabled = false;
+    btn.textContent = 'Archive';
+    if(error){
+      p.archived = false;
+      alert('Could not archive that project:\n' + error.message);
+      return;
+    }
+    pendingArchiveProjectId = null;
+    closeModal('overlay-archive-project');
+    dropProjectFromLocalViews(id);
+  });
+
+  let pendingDeleteProjectId = null;
+  function handleDeleteProject(id){
+    const p = PROJECTS.find(x => x.id === id);
+    if(!p) return;
+    pendingDeleteProjectId = id;
+    document.getElementById('delete-project-message').textContent =
+      `Delete "${p.name}"? This permanently removes the project and everything in it — it can't be undone.`;
+    openModal('overlay-delete-project');
+  }
+  document.getElementById('btn-cancel-delete-project').addEventListener('click', () => {
+    pendingDeleteProjectId = null;
+    closeModal('overlay-delete-project');
+  });
+  document.getElementById('btn-confirm-delete-project').addEventListener('click', async () => {
+    if(!pendingDeleteProjectId) return;
+    const id = pendingDeleteProjectId;
+    const btn = document.getElementById('btn-confirm-delete-project');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    const { error } = await supabaseClient.from('projects').delete().eq('id', id);
+    btn.disabled = false;
+    btn.textContent = 'Delete project';
+    if(error){
+      console.error('delete project failed', error);
+      alert('Could not delete that project:\n' + error.message);
+      return;
+    }
+    pendingDeleteProjectId = null;
+    closeModal('overlay-delete-project');
+    PROJECTS = PROJECTS.filter(x => x.id !== id);
+    dropProjectFromLocalViews(id);
+  });
 
   document.getElementById('btn-search-toggle').addEventListener('click', () => {
     const box = document.getElementById('search-box');
@@ -1516,7 +1598,7 @@
       document.querySelectorAll('.udots-menu').forEach(m => m.classList.remove('open'));
     }
   });
-  [ 'overlay-new-project', 'overlay-duplicate-project', 'overlay-archived', 'overlay-user', 'overlay-delete-user', 'overlay-timezone', 'overlay-calendar-event', 'overlay-day-detail' ].forEach(id => {
+  [ 'overlay-new-project', 'overlay-duplicate-project', 'overlay-archived', 'overlay-user', 'overlay-delete-user', 'overlay-archive-project', 'overlay-delete-project', 'overlay-timezone', 'overlay-calendar-event', 'overlay-day-detail' ].forEach(id => {
     document.getElementById(id).addEventListener('click', (e) => { if(e.target.id === id) closeModal(id); });
   });
 

@@ -83,6 +83,8 @@ img{ max-width:100%; display:block; }
   font-size:13px; font-weight:700;
 }
 .nav-cta:hover{ background:var(--orange-dark); }
+.nav-login{ font-size:13.5px; font-weight:600; color:var(--ink); transition:.15s; }
+.nav-login:hover{ color:var(--orange); }
 .nav-toggle{ display:none; background:none; border:none; font-size:22px; cursor:pointer; color:var(--ink); }
 
 /* Hero nav: transparent + white text over the video, solid orange bar once
@@ -95,6 +97,8 @@ img{ max-width:100%; display:block; }
 .site-nav.nav-hero .nav-brand img{ filter:brightness(0) invert(1); }
 .site-nav.nav-hero .nav-links a:not(.nav-cta){ color:#fff; }
 .site-nav.nav-hero .nav-links a:not(.nav-cta):hover{ color:#2B1206; }
+.site-nav.nav-hero .nav-login{ color:#fff; }
+.site-nav.nav-hero .nav-login:hover{ color:#2B1206; }
 .site-nav.nav-hero .nav-cta{ background:#fff; color:#F36C3B !important; }
 .site-nav.nav-hero .nav-cta:hover{ background:#FFE8DC; }
 .site-nav.nav-hero .nav-toggle{ color:#fff; }
@@ -125,8 +129,6 @@ img{ max-width:100%; display:block; }
 .btn-solid:hover{ background:var(--orange-dark); }
 .btn-outline{ background:transparent; color:var(--ink); border-color:var(--ink); }
 .btn-outline:hover{ border-color:var(--orange); color:var(--orange); }
-.btn-text{ background:transparent; color:var(--ink); border-color:transparent; }
-.btn-text:hover{ color:var(--orange); }
 
 /* ---------- Hero video (homepage only) ---------- */
 .hero-video{
@@ -202,8 +204,8 @@ a.event-card:hover{ background:var(--orange-soft); }
 /* ---------- Why AMBRA ---------- */
 .why-head{ margin-bottom:60px; }
 .why-head-center{ text-align:center; max-width:640px; margin-left:auto; margin-right:auto; }
-.why-head h2{ font-family:var(--font-display); font-weight:700; font-size:clamp(32px,4.2vw,50px); color:#161F1A; margin:0 0 14px; letter-spacing:-.01em; }
-.why-subtitle{ font-family:var(--font-display); font-style:italic; font-weight:500; font-size:18px; color:var(--orange); margin:0; }
+.why-head h2{ font-family:var(--font-display); font-weight:700; font-size:clamp(32px,4.2vw,50px); color:var(--orange); margin:0 0 14px; letter-spacing:-.01em; }
+.why-subtitle{ font-family:var(--font-display); font-style:italic; font-weight:500; font-size:18px; color:#161F1A; margin:0; }
 
 .why-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:40px; }
 .why-card{ border-top:1px solid var(--line); padding-top:26px; }
@@ -354,7 +356,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
    /our-team
    ========================================================================== */
 .team-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:40px; }
-.team-photo{ aspect-ratio:1/1; border-radius:50%; margin-bottom:20px; }
+.team-photo{ aspect-ratio:1/1; border-radius:50%; margin-bottom:20px; width:100%; object-fit:cover; }
 .team-card h3{ font-family:var(--font-display); font-weight:600; font-size:19px; margin:0 0 4px; }
 .team-title{ font-family:var(--font-mono); font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--orange); margin:0 0 14px; }
 .team-bio{ font-size:13.5px; color:var(--muted); line-height:1.65; margin:0; }

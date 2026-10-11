@@ -3976,12 +3976,15 @@ function renderRehearsalSongPicker(){
     picker.innerHTML = '<div class="empty-note" style="border:none;padding:10px 0;">No songs in the Setlist yet.</div>';
     return;
   }
-  picker.innerHTML = songs.map(s => `
+  picker.innerHTML = songs.map(s => {
+    const count = rehearsalDateSongs.filter(rs => rs.song_id === s.id).length;
+    return `
     <div class="rd-picker-song" draggable="true" data-song-id="${s.id}">
-      <span class="rd-picker-title">${escapeHtml(s.song_name || 'Untitled')}</span>
+      <span class="rd-picker-title">${escapeHtml(s.song_name || 'Untitled')}${count > 0 ? `<span class="rd-picker-count">${count}</span>` : ''}</span>
       ${s.artist ? `<span class="rd-picker-artist">${escapeHtml(s.artist)}</span>` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
   picker.querySelectorAll('.rd-picker-song').forEach(el => {
     el.addEventListener('dragstart', () => { draggedSongForRehearsal = el.dataset.songId; });
     el.addEventListener('dragend', () => { draggedSongForRehearsal = null; });

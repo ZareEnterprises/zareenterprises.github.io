@@ -50,6 +50,7 @@ body.home .site-nav{ zoom:1; }
 a{ color:inherit; text-decoration:none; }
 img{ max-width:100%; display:block; }
 .container{ max-width:var(--wrap); margin:0 auto; padding:0 28px; }
+.container-wide{ max-width:1700px; }
 
 /* ---------- Placeholder photo blocks ---------- */
 .ph{
@@ -165,6 +166,7 @@ img{ max-width:100%; display:block; }
 
 /* ---------- Stats ---------- */
 .stats{ background:#161F1A; color:#fff; padding:60px 0; }
+.stats-numbers{ background:#0b3625; }
 .stats-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:30px; text-align:center; }
 .stat-num{ font-family:var(--font-display); font-weight:500; font-size:clamp(32px,4vw,46px); color:var(--orange); }
 .stat-label{ font-size:14px; color:#fff; margin-top:10px; letter-spacing:.02em; }
@@ -516,8 +518,8 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
    left, a collapsed accordion list (reusing the FAQ pattern) on the right.
    Each column's heading reuses .why-head h2 (wrap it in a plain, non-center
    .why-head div) so every title on this page matches "Why AMBRA?" exactly. */
-.needs-deliver-grid{ display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:start; max-width:1100px; margin:0 auto; }
-.case-copy p{ color:var(--muted); font-size:14.5px; line-height:1.75; margin:0 0 16px; }
+.needs-deliver-grid{ display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:start; max-width:1500px; margin:0 auto; }
+.case-copy p{ color:var(--muted); font-size:17px; line-height:1.75; margin:0 0 16px; }
 .case-copy p strong{ color:var(--ink); }
 
 .deliver-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px 36px; max-width:900px; margin:0 auto; }
@@ -547,7 +549,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 
 .quote-block{ max-width:1000px; margin:0 auto; text-align:center; }
 .quote-block blockquote{ font-family:var(--font-display); font-style:italic; font-weight:500; font-size:clamp(18px,2.4vw,24px); line-height:1.5; margin:0 0 16px; }
-.quote-block cite{ font-style:normal; font-size:13px; font-weight:700; color:var(--muted); }
+.quote-block cite{ font-family:var(--font-display); font-style:normal; font-size:13px; font-weight:700; color:var(--muted); }
 
 /* Stage & Setup — visualizer and the descriptive text side by side, wider
    than the standard .case-copy column. */
@@ -555,7 +557,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 .stage-setup-grid .ph{ aspect-ratio:16/9; width:100%; max-width:none; margin:0; }
 .stage-setup-grid .case-copy{ margin:0; max-width:none; }
 
-.partners-list{ display:flex; flex-direction:column; gap:22px; max-width:680px; margin:0 auto; }
+.partners-list{ display:flex; flex-direction:column; gap:22px; max-width:1100px; margin:0 auto; }
 .partner-item h4{ font-family:var(--font-display); font-weight:600; font-size:16px; margin:0 0 6px; }
 .partner-item h4 a{ color:var(--orange); }
 .partner-item p{ font-size:13px; color:var(--muted); line-height:1.65; margin:0 0 10px; }
@@ -592,10 +594,10 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 .video-card:hover .video-play{ background:#FF0000; }
 
 /* Spotify embed block */
-.spotify-block{ max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+.spotify-block{ max-width:1500px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:70px; align-items:center; }
 .spotify-block iframe{ height:480px; }
 .spotify-block iframe{ width:100%; }
-.spotify-copy p{ color:var(--muted); font-size:14px; line-height:1.65; margin:0 0 20px; }
+.spotify-copy p{ color:var(--muted); font-size:17px; line-height:1.75; margin:0 0 20px; }
 
 /* Full-width photo banner between sections */
 .case-banner{ width:100%; aspect-ratio:36/9; object-fit:cover; display:block; }

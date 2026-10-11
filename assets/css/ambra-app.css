@@ -1219,6 +1219,12 @@ button.live-mode-panel:active{ transform:scale(.99); }
 .rd-picker-song.dragging{ opacity:.6; }
 .rd-picker-title{ font-family:'Fraunces',serif; font-weight:600; font-size:12px; color:var(--text); }
 .rd-picker-artist{ font-size:9.5px; color:var(--text-faint); }
+.rd-picker-count{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:16px; height:16px; padding:0 4px; margin-left:6px;
+  border-radius:20px; background:var(--gold); color:#1a1310;
+  font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; vertical-align:middle;
+}
 
 .band-switcher-panel{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
 .band-panel-pill{

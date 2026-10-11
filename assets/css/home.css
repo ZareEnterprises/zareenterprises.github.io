@@ -600,7 +600,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 
 /* Staging-concept renders — used in place of the 3D visualizer when a page
    doesn't have its own .glb model yet. */
-.stage-photos-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:900px; margin:0 auto; }
+.stage-photos-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:100%; margin:0; }
 .stage-photos-grid img{ width:100%; display:block; border-radius:var(--radius); border:1px solid var(--line); }
 
 .partners-list{ display:flex; flex-direction:column; gap:22px; max-width:1100px; margin:0 auto; }

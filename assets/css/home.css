@@ -440,12 +440,12 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
    corner, scattered unevenly rather than sitting in a flat tidy row. */
 .mini-testimonials{ display:grid; grid-template-columns:repeat(3,1fr); gap:40px; margin:30px 0 20px; }
 .mini-testimonial{
-  background:#28593d; border-radius:4px; padding:30px 26px 26px;
-  box-shadow:0 14px 30px rgba(0,0,0,.14); position:relative; transition:transform .2s, opacity .9s ease;
+  background:#4C9A6A; border-radius:4px; padding:30px 26px 26px;
+  position:relative; transition:transform .2s, opacity .9s ease;
 }
 .mini-testimonial::before{ content:''; position:absolute; top:18px; left:18px; width:10px; height:10px; background:#fff; }
 .mini-testimonial-photo{ width:64px; height:64px; border-radius:50%; object-fit:cover; margin-bottom:16px; }
-.mini-testimonial:hover{ transform:rotate(0deg) scale(1.03); box-shadow:0 18px 36px rgba(0,0,0,.18); }
+.mini-testimonial:hover{ transform:rotate(0deg) scale(1.03); }
 .mini-testimonial:nth-child(1){ transform:rotate(-3deg); }
 .mini-testimonial:nth-child(2){ transform:rotate(2deg); margin-top:34px; }
 .mini-testimonial:nth-child(3){ transform:rotate(-2deg); margin-top:10px; }
@@ -561,7 +561,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 .partner-item p{ font-size:13px; color:var(--muted); line-height:1.65; margin:0 0 10px; }
 .partner-item p:last-child{ margin-bottom:0; }
 .partner-item-logo{ display:flex; gap:22px; align-items:flex-start; }
-.partner-logo{ width:150px; height:150px; border-radius:14px; object-fit:contain; background:var(--surface); border:1px solid var(--line); padding:16px; flex-shrink:0; }
+.partner-logo{ max-height:100px; max-width:280px; width:auto; height:auto; object-fit:contain; flex-shrink:0; }
 
 .related-row{ display:flex; gap:28px; justify-content:center; flex-wrap:wrap; }
 .related-pill{

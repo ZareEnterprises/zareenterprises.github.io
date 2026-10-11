@@ -1,4 +1,4 @@
 ---
 layout: ambra-case-tbf
-permalink: /tbf/
+permalink: /tbf2026/
 ---

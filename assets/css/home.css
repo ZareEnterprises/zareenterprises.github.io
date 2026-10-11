@@ -551,6 +551,14 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 .quote-block blockquote{ font-family:var(--font-display); font-style:italic; font-weight:500; font-size:clamp(18px,2.4vw,24px); line-height:1.5; margin:0 0 16px; }
 .quote-block cite{ font-family:var(--font-display); font-style:normal; font-size:13px; font-weight:700; color:var(--muted); }
 
+/* Run of the Show — one big photo with smaller supporting photos stacked
+   beside it. */
+.runshow-grid{ display:grid; grid-template-columns:2fr 1fr; gap:16px; max-width:900px; margin:0 auto; }
+.runshow-grid img{ width:100%; display:block; border-radius:var(--radius); object-fit:cover; }
+.runshow-main{ aspect-ratio:16/8; }
+.runshow-side{ display:flex; flex-direction:column; gap:16px; }
+.runshow-side img{ aspect-ratio:16/9; flex:1; }
+
 /* Stage & Setup — visualizer and the descriptive text side by side, wider
    than the standard .case-copy column. */
 .stage-setup-grid{ display:grid; grid-template-columns:1.2fr 1fr; gap:50px; align-items:center; max-width:1200px; margin:0 auto; }
@@ -612,6 +620,8 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
   .deliver-grid{ grid-template-columns:1fr; }
   .video-grid{ grid-template-columns:1fr; }
   .stage-setup-grid{ grid-template-columns:1fr; gap:30px; }
+  .runshow-grid{ grid-template-columns:1fr; }
+  .runshow-side{ flex-direction:row; }
   .gallery-strip img{ width:88vw; height:50vh; }
   .spotify-block{ grid-template-columns:1fr; gap:24px; }
   .case-hero-photo{ min-height:60vh; }

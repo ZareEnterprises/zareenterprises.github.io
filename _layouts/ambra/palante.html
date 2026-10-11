@@ -5654,172 +5654,18 @@ document.getElementById('btn-download-lights').addEventListener('click', () => {
 }
 </script>
 <script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { initVenueVisualizer } from '/assets/js/venue-visualizer.js';
 
-const MODEL_URL = '/assets/palante.glb';
+const appTitle = document.querySelector('header.top h1')?.textContent?.trim();
 
-const wrap = document.getElementById('stage3d-canvas-wrap');
-const loaderEl = document.getElementById('stage3d-loader');
-const barfill = document.getElementById('stage3d-barfill');
-const emptyEl = document.getElementById('stage3d-empty');
-
-const projectTitleEl = document.getElementById('stage3d-project-title');
-if(projectTitleEl){
-  const appTitle = document.querySelector('header.top h1')?.textContent?.trim();
-  projectTitleEl.textContent = appTitle || 'Untitled Event';
-}
-
-let renderer, scene, camera, controls, currentModel, grid;
-let homePos = null, homeTarget = null;
-let initialized = false;
-
-// Renders only when something actually changes (camera moved, model loaded,
-// window resized) instead of an unconditional render loop — a permanent
-// setAnimationLoop was burning GPU time even while the camera sat still or
-// the canvas was scrolled out of view, which is what made scrolling feel
-// slow anywhere on the page once the Stage tab had been opened once.
-let renderRequested = false;
-function renderFrame(){
-  renderRequested = false;
-  controls.update();
-  renderer.render(scene, camera);
-}
-function requestRender(){
-  if(renderRequested) return;
-  renderRequested = true;
-  requestAnimationFrame(renderFrame);
-}
-
-function initScene(){
-  if(initialized) return;
-  initialized = true;
-  const w = wrap.clientWidth || 800, h = wrap.clientHeight || 520;
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  renderer.setSize(w, h);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  wrap.appendChild(renderer.domElement);
-
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x161f1a);
-  scene.fog = new THREE.Fog(0x161f1a, 40, 120);
-
-  camera = new THREE.PerspectiveCamera(50, w / h, 0.05, 500);
-  camera.position.set(4, 3, 6);
-
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.06;
-
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
-  const key = new THREE.DirectionalLight(0xfff1dc, 1.6);
-  key.position.set(6, 10, 6);
-  scene.add(key);
-  const amber = new THREE.PointLight(0xd98a3d, 12, 40);
-  amber.position.set(-5, 4, -3);
-  scene.add(amber);
-  const violet = new THREE.PointLight(0x8c6fb5, 10, 40);
-  violet.position.set(5, 3, -5);
-  scene.add(violet);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.15));
-
-  grid = new THREE.GridHelper(60, 60, 0x3a4a3f, 0x241c16);
-  grid.material.transparent = true;
-  grid.material.opacity = 0.4;
-  scene.add(grid);
-
-  window.addEventListener('resize', () => {
-    if(!wrap.clientWidth) return;
-    camera.aspect = wrap.clientWidth / wrap.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
-    requestRender();
-  });
-
-  controls.addEventListener('change', requestRender);
-  requestRender();
-}
-
-function frameModel(object){
-  const box = new THREE.Box3().setFromObject(object);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  const dist = maxDim / (2 * Math.tan((camera.fov * Math.PI) / 360)) * 1.4;
-
-  controls.target.copy(center);
-  camera.position.set(center.x + dist * 0.7, center.y + dist * 0.45, center.z + dist * 0.7);
-  camera.near = maxDim / 100;
-  camera.far = maxDim * 20;
-  camera.updateProjectionMatrix();
-  controls.minDistance = maxDim * 0.05;
-  controls.maxDistance = maxDim * 6;
-  scene.fog.near = maxDim * 3;
-  scene.fog.far = maxDim * 12;
-  grid.position.y = box.min.y;
-  controls.update();
-  requestRender();
-
-  homePos = camera.position.clone();
-  homeTarget = controls.target.clone();
-}
-
-const gltfLoader = new GLTFLoader();
-const draco = new DRACOLoader();
-draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/');
-gltfLoader.setDRACOLoader(draco);
-
-function addModel(gltf){
-  if(currentModel) scene.remove(currentModel);
-  currentModel = gltf.scene;
-  scene.add(currentModel);
-  frameModel(currentModel);
-  loaderEl.style.display = 'none';
-  emptyEl.style.display = 'none';
-  renderer.domElement.style.display = 'block';
-  if(window.renderCoordNoteMarkers) window.renderCoordNoteMarkers();
-}
-
-function loadFromURL(url, isInitialCheck){
-  initScene();
-  if(!isInitialCheck){ loaderEl.style.display = 'flex'; emptyEl.style.display = 'none'; }
-  gltfLoader.load(
-    url,
-    (gltf) => addModel(gltf),
-    (xhr) => { if(xhr.total) barfill.style.width = `${(xhr.loaded / xhr.total) * 100}%`; },
-    () => {
-      loaderEl.style.display = 'none';
-      if(!currentModel){ emptyEl.style.display = 'block'; renderer.domElement.style.display = 'none'; }
-    }
-  );
-}
-
-document.getElementById('btn-3d-reset').addEventListener('click', () => {
-  if(!homePos) return;
-  camera.position.copy(homePos);
-  controls.target.copy(homeTarget);
-  controls.update();
-  requestRender();
+// Loads the venue model from assets/palante.glb once the Stage tab is first opened.
+initVenueVisualizer({
+  modelUrl: '/assets/palante.glb',
+  projectTitle: appTitle || 'Untitled Event',
+  lazy: true,
+  triggerEl: document.querySelector('.tech-subtab.stage'),
+  onModelLoaded: () => { if(window.renderCoordNoteMarkers) window.renderCoordNoteMarkers(); },
 });
-document.getElementById('btn-3d-fullscreen').addEventListener('click', () => {
-  document.fullscreenElement ? document.exitFullscreen() : wrap.requestFullscreen();
-});
-
-// Load the venue model from your assets folder (assets/palante.glb) once the Stage tab is first opened
-window.__initStageModelCheck = function(){
-  if(currentModel) return;
-  initScene();
-  loadFromURL(MODEL_URL, true);
-};
-document.querySelector('.tech-subtab.stage')?.addEventListener('click', () => window.__initStageModelCheck());
-if(document.querySelector('.tech-subtab.stage.active')) window.__initStageModelCheck();
 </script>
 </body>
 </html>

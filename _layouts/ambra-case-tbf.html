@@ -40,7 +40,7 @@
       <p class="client-tag">The Boston Foundation</p>
       <div class="event-facts">
         <span class="event-fact">📅 <b>Date:</b> 09/2026</span>
-        <span class="event-fact">📍 <b>Venue:</b> Termeer Square, Boston</span>
+        <span class="event-fact">📍 <b>Venue:</b> Termeer Square, Cambridge</span>
         <span class="event-fact">👥 <b>400</b> Assistants</span>
         <span class="event-fact">🎵 <b>Style:</b> Latin Music</span>
       </div>
@@ -163,41 +163,61 @@
 
   <!-- ===== Run of the Show ===== -->
   <section class="section">
-    <div class="container">
-      <div class="why-head why-head-center">
+    <div class="container container-wide">
+      <div class="why-head">
         <h2>Run of the Show</h2>
         <p class="why-subtitle">The Plan</p>
       </div>
+      <p style="max-width:620px;margin:-20px 0 30px;color:var(--muted);font-size:14px;line-height:1.65">Photos from AMBRA App, only available for clients.</p>
       <div class="runshow-grid">
         <img class="runshow-main" src="/assets/img/runoftheshow.png" alt="Run of the show">
-        <div class="runshow-side">
-          <img src="/assets/img/runoftheshow2.png" alt="Run of the show">
-          <img src="/assets/img/runoftheshow3.png" alt="Run of the show">
-          <img src="/assets/img/runoftheshow4.png" alt="Run of the show">
-        </div>
+        <img class="runshow-main" src="/assets/img/runoftheshow2.png" alt="Run of the show">
+      </div>
+      <div class="runshow-bottom">
+        <img src="/assets/img/runoftheshow3.png" alt="Run of the show">
+        <img src="/assets/img/runoftheshow4.png" alt="Run of the show">
       </div>
     </div>
   </section>
 
   <!-- ===== Stage & Setup ===== -->
   <section class="section" style="background:var(--surface)">
-    <div class="container">
-      <div class="why-head why-head-center">
+    <div class="container container-wide">
+      <div class="why-head">
         <h2>Staging concept</h2>
         <p class="why-subtitle">Stage &amp; Setup</p>
       </div>
-      <p style="text-align:center;max-width:620px;margin:-20px auto 30px;color:var(--muted);font-size:14px;line-height:1.65">A general staging concept showing typical musician placement — hover each point. For the real event, this is built to the exact venue's dimensions and floor plan.</p>
-      <div class="stage-setup-grid">
-        <div class="ph">
-          <div class="ph-inner">3D venue visualizer</div>
-          <!-- No public URL for this — it only exists inside the authenticated
-               AMBRA app (/palante/, Stage tab), not as a standalone page I can
-               link to or embed here. -->
-          <span class="ph-label">The interactive 3D venue model lives inside AMBRA's production app (Stage tab) — it's not a public page, so it can't be linked or embedded here yet</span>
+      <p style="max-width:620px;margin:-20px 0 30px;color:var(--muted);font-size:14px;line-height:1.65">A general staging concept showing typical musician placement — hover each point. For the real event, this is built to the exact venue's dimensions and floor plan.</p>
+      <div class="stage-3d-box wide">
+        <div id="stage3d-canvas-wrap">
+          <div id="stage3d-loader" style="display:none">
+            <div class="stage3d-load-title">Loading model…</div>
+            <div class="stage3d-bar"><i id="stage3d-barfill"></i></div>
+          </div>
+          <div id="stage3d-empty" class="stage3d-empty">No model found at assets/palante.glb yet.</div>
+
+          <div class="stage3d-overlay stage3d-overlay-tl">
+            <div class="stage3d-eyebrow">AMBRA LIVE PRODUCTIONS</div>
+            <div class="stage3d-title">Venue Visualizer · <span id="stage3d-project-title">Pa'Lante 2026</span></div>
+          </div>
+          <div class="stage3d-overlay stage3d-overlay-tr">
+            <button class="stage3d-btn" id="btn-3d-reset">Reset view</button>
+            <button class="stage3d-btn" id="btn-3d-fullscreen">Fullscreen</button>
+          </div>
+          <div class="stage3d-overlay stage3d-overlay-bl">
+            <span><b>Drag</b> rotate</span>
+            <span><b>Scroll / pinch</b> zoom</span>
+            <span><b>Right-drag / two-finger</b> pan</span>
+          </div>
+          <div class="stage3d-overlay stage3d-overlay-br">&copy; AMBRA Live Productions</div>
         </div>
+      </div>
+      <div class="stage-info-row">
         <div class="case-copy">
           <h2 style="font-size:20px">Pa'Lante Event 2026</h2>
           <p>AMBRA Live Productions is responsible for the artistic direction, coordination, and execution of the live musical production for PA'LANTE 2026. Our role includes managing talent, overseeing rehearsals, coordinating production logistics, ensuring a high-quality live performance that aligns with the event's vision and objectives and design models for the accuracy of the planification.</p>
+        </div>
+        <div class="case-copy">
           <p><strong>Commands for Computer:</strong><br>
           Left Click: Rotate<br>
           Right Click: Pan<br>
@@ -208,9 +228,9 @@
   </section>
 
   <!-- ===== Client Quote ===== -->
-  <section class="stats">
+  <section class="stats stats-numbers">
     <div class="container quote-block">
-      <blockquote>"Is a pleasure for me to work again with you, for the third year in a row! I am eager to see the show you are preparing for us."</blockquote>
+      <blockquote>"It's a pleasure for me to work again with you, for the third year in a row! I am eager to see the show you are preparing for us."</blockquote>
       <cite>— Javier A. Juarez</cite>
     </div>
   </section>
@@ -265,7 +285,7 @@
   <div class="section-cta" style="padding-bottom:60px"><a href="/contact/" class="btn btn-solid">Inquire about your event</a></div>
 
   <!-- ===== Closing banner — sits right above the footer ===== -->
-  <img class="case-banner" src="/assets/img/events/TheLatinoEquityFund-¡Pa’lante!-110.jpg" alt="Pa'Lante 2026">
+  <img class="case-banner" src="/assets/img/events-web/event-05.jpg" alt="Pa'Lante 2026">
 
 </main>
 
@@ -343,6 +363,19 @@
       goToSlide(slides[next]);
     }, 3000);
   }
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import { initVenueVisualizer } from '/assets/js/venue-visualizer.js';
+initVenueVisualizer({ modelUrl: '/assets/palante.glb', projectTitle: "Pa'Lante 2026" });
 </script>
 
 </body>

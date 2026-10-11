@@ -266,9 +266,9 @@ a.event-card:hover{ background:var(--orange-soft); }
 .logo-pill img{ max-height:36px; max-width:130px; width:auto; object-fit:contain; }
 .logo-row-big{ gap:34px; }
 .logo-row-big .logo-pill{ padding:30px 44px; }
-.logo-row-big .logo-pill img{ max-height:100px; max-width:280px; }
+.logo-row-big .logo-pill img{ max-height:130px; max-width:340px; }
 .logo-row-plain{ align-items:center; }
-.logo-row-plain img{ max-height:100px; max-width:280px; width:auto; object-fit:contain; }
+.logo-row-plain img{ max-height:130px; max-width:340px; width:auto; object-fit:contain; }
 .logo-row-wide{ justify-content:space-between; align-items:center; gap:30px; width:100%; padding:0 40px; margin:18px 0; }
 .logo-row-wide .logo-pill{ flex:1; min-width:140px; border:none; background:none; padding:0; }
 .logo-row-wide .logo-pill img{ max-height:110px; max-width:260px; }

@@ -1317,7 +1317,7 @@ async function fetchBand(){
   band = res.ok ? await res.json() : [];
 }
 async function fetchMusicians(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians?select=*&order=full_name.asc`, { headers });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians?select=*&order=full_name.asc`, { headers: authedHeaders() });
   MUSICIANS = res.ok ? await res.json() : [];
 }
 async function fetchSongInstruments(){
@@ -3423,7 +3423,7 @@ async function addNewMusicianForRole(instrumentName){
   const name = prompt(`Name for this ${instrumentName}:`);
   if(!name || !name.trim()) return null;
   const full_name = name.trim();
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians`, { method: 'POST', headers, body: JSON.stringify({ full_name, instruments: [instrumentName] }) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians`, { method: 'POST', headers: authedHeaders(), body: JSON.stringify({ full_name, instruments: [instrumentName] }) });
   if(!res.ok){ alert('Could not add that musician: ' + await res.text()); return null; }
   await fetchMusicians();
   if(getDataSource() !== 'none'){

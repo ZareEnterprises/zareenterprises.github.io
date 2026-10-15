@@ -13,14 +13,14 @@
 
 <header class="top">
   <img class="top-logo" src="/assets/img/ambraSubmark.png" alt="AMBRA Submark">
-  <p class="eyebrow">AMBRA Live Productions · The Boston Foundation</p>
-  <h1>PA'LANTE 2026</h1>
+  <p class="eyebrow" id="mv-eyebrow">AMBRA Live Productions</p>
+  <h1 id="mv-event-name"></h1>
   <span class="mv-band-pill" id="mv-band-pill" style="display:none"></span>
   <p class="mv-welcome">Everything you need for the show, in one place — day &amp; time, rehearsals, your setlist, attire and transportation.</p>
 </header>
 
 <nav class="tabs" id="mv-tabs">
-  <button class="tab-btn primary active" data-tab="daytime" type="button">Day &amp; Time</button>
+  <button class="tab-btn primary active" data-tab="daytime" type="button">Day of the Concert</button>
   <button class="tab-btn primary" data-tab="rehearsals" type="button">Rehearsals</button>
   <button class="tab-btn primary" data-tab="setlist" type="button">Setlist</button>
   <button class="tab-btn primary" data-tab="instrumentation" type="button">Instrumentation</button>
@@ -168,81 +168,95 @@ function orderMembersByInstrument(members, catalog){
 }
 
 // ---------- Instrumentation ----------
-// Same instruments the Lineup tab offers (no Voices / Other / Stage Crew —
-// voices are the Singers / BGV columns), plus Voice, BGV and Special guest,
-// which live on the song itself instead of in song_instruments.
-const INSTRUMENTATION_EXCLUDED = ['Voices', 'Other', 'Stage Crew'];
+// A dropdown of the band's musicians (name, with their instrument underneath)
+// plus any guest named on a song. Picking one keeps the setlist visible and
+// adds, to the right of each song, what that person plays in it.
 const splitNames = str => (str || '').split('/').map(s => s.trim()).filter(Boolean);
-let instState = { buttons: [], songs: [], sets: [], songInstruments: [], selected: new Set() };
+const sameName = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+let instState = { people: [], songs: [], sets: [], songInstruments: [], selected: null, open: false };
 
-function buildInstrumentButtons(members, catalog){
-  const ordered = [...catalog]
-    .filter(c => !INSTRUMENTATION_EXCLUDED.includes(c.section))
-    .sort((a, b) => {
-      const sa = SECTIONS.indexOf(a.section), sb = SECTIONS.indexOf(b.section);
-      return (sa === -1 ? 99 : sa) - (sb === -1 ? 99 : sb) || a.name.localeCompare(b.name);
-    });
-  const buttons = ordered.map(cat => ({
-    id: 'inst:' + cat.name,
-    label: cat.name,
-    who: members.filter(m => (m.instrument || '').toLowerCase() === cat.name.toLowerCase() && m.artist_name).map(m => m.artist_name),
-    namesFor: (song, sis) => sis.some(si => si.song_id === song.id && si.instrument === cat.name)
-      ? members.filter(m => (m.instrument || '').toLowerCase() === cat.name.toLowerCase() && m.artist_name).map(m => m.artist_name)
-      : null
+function buildPeople(members, catalog, songs){
+  const ordered = orderMembersByInstrument(members, catalog).filter(m => m.artist_name);
+  const rest = members.filter(m => m.artist_name && !ordered.includes(m));
+  const people = [...ordered, ...rest].map(m => ({ id: 'm:' + m.id, name: m.artist_name, instrument: m.instrument || '', guest: false }));
+  const guests = [];
+  songs.forEach(s => splitNames(s.guests).forEach(n => {
+    if(!guests.some(g => sameName(g, n)) && !people.some(p => sameName(p.name, n))) guests.push(n);
   }));
-  const songField = (id, label, field) => ({
-    id, label,
-    who: [],
-    namesFor: song => { const n = splitNames(song[field]); return n.length ? n : null; }
-  });
-  return [...buttons, songField('voice', 'Voice', 'singers'), songField('bgv', 'BGV', 'bgv'), songField('guest', 'Special guest', 'guests')];
+  guests.forEach(n => people.push({ id: 'g:' + n, name: n, instrument: 'Special guest', guest: true }));
+  return people;
+}
+
+// What this person does in one song: instrument, voice, BGV and/or guest spot.
+function rolesInSong(person, song, songInstruments){
+  const roles = [];
+  const inst = person.instrument.toLowerCase();
+  if(!person.guest && inst && songInstruments.some(si => si.song_id === song.id && (si.instrument || '').toLowerCase() === inst)) roles.push(person.instrument);
+  if(splitNames(song.singers).some(n => sameName(n, person.name))) roles.push('Voice');
+  if(splitNames(song.bgv).some(n => sameName(n, person.name))) roles.push('BGV');
+  if(splitNames(song.guests).some(n => sameName(n, person.name))) roles.push('Special guest');
+  return roles;
 }
 
 function renderInstrumentation(){
-  const { buttons, songs, sets, songInstruments, selected } = instState;
-  const btnHtml = buttons.map(b => `
-    <button type="button" class="mv-inst-btn${selected.has(b.id) ? ' active' : ''}" data-inst="${escapeHtml(b.id)}">
-      <span class="mv-inst-name">${escapeHtml(b.label)}</span>
-      ${b.who.length ? `<span class="mv-inst-who">${escapeHtml(b.who.join(', '))}</span>` : ''}
-    </button>`).join('');
+  const { people, songs, sets, songInstruments, selected, open } = instState;
+  const active = people.find(p => p.id === selected);
 
-  const active = buttons.filter(b => selected.has(b.id));
-  let list = '';
-  if(!active.length){
-    list = `<p class="mv-inst-hint">Tap an instrument to see who plays it in each song.</p>`;
-  } else {
-    const taggedInUse = songs.some(s => s.band_name);
-    const mySongs = taggedInUse ? songs.filter(s => s.band_name === window.__mvBandName) : songs;
-    const orderedSets = [...sets].filter(s => s.set_type !== 'interlude').sort((a,b) => (a.set_order||0) - (b.set_order||0));
-    list = orderedSets.map(set => {
-      const setSongs = mySongs.filter(s => s.set_number === set.set_number).sort((a,b)=>(a.song_order||0)-(b.song_order||0));
-      if(!setSongs.length) return '';
-      const rows = setSongs.map(s => {
-        const chips = active.map(b => {
-          const names = b.namesFor(s, songInstruments);
-          const tag = active.length > 1 ? `<small>${escapeHtml(b.label)}</small>` : '';
-          return names
-            ? `<span class="mv-player-chip">${tag}${escapeHtml(names.length ? names.join(', ') : b.label)}</span>`
-            : `<span class="mv-player-chip no">${tag}Doesn't play</span>`;
-        }).join('');
-        return `
-        <div class="mv-song-row">
-          <span class="mv-song-title">${escapeHtml(s.song_name || 'Untitled')}</span>
-          <div class="mv-song-players">${chips}</div>
-        </div>`;
-      }).join('');
-      return `<div class="mv-card mv-set-card"><div class="mv-set-top"><span class="mv-set-name">${escapeHtml(set.set_number)}</span></div>${rows}</div>`;
-    }).filter(Boolean).join('') || `<div class="mv-card mv-empty">🎶 No setlist for your band yet.</div>`;
-  }
+  const optHtml = people.map(p => `
+    <button type="button" class="mv-dd-opt${p.id === selected ? ' active' : ''}" role="option" data-person="${escapeHtml(p.id)}">
+      <span class="mv-dd-name">${escapeHtml(p.name)}</span>
+      <span class="mv-dd-inst">${escapeHtml(p.instrument || '—')}</span>
+    </button>`).join('');
+  const current = active
+    ? `<span class="mv-dd-name">${escapeHtml(active.name)}</span><span class="mv-dd-inst">${escapeHtml(active.instrument || '—')}</span>`
+    : `<span class="mv-dd-name mv-dd-placeholder">Select your name</span>`;
+
+  const taggedInUse = songs.some(s => s.band_name);
+  const mySongs = taggedInUse ? songs.filter(s => s.band_name === window.__mvBandName) : songs;
+  const orderedSets = [...sets].filter(s => s.set_type !== 'interlude').sort((a,b) => (a.set_order||0) - (b.set_order||0));
+  const list = orderedSets.map(set => {
+    const setSongs = mySongs.filter(s => s.set_number === set.set_number).sort((a,b)=>(a.song_order||0)-(b.song_order||0));
+    if(!setSongs.length) return '';
+    const rows = setSongs.map(s => {
+      let players = '';
+      if(active){
+        const roles = rolesInSong(active, s, songInstruments);
+        players = `<div class="mv-song-players">${roles.length
+          ? roles.map(r => `<span class="mv-player-chip">${escapeHtml(r)}</span>`).join('')
+          : `<span class="mv-player-chip no">Doesn't play</span>`}</div>`;
+      }
+      return `
+      <div class="mv-song-row">
+        <span class="mv-song-title">${escapeHtml(s.song_name || 'Untitled')}</span>
+        ${players}
+      </div>`;
+    }).join('');
+    return `<div class="mv-card mv-set-card"><div class="mv-set-top"><span class="mv-set-name">${escapeHtml(set.set_number)}</span></div>${rows}</div>`;
+  }).filter(Boolean).join('') || `<div class="mv-card mv-empty">🎶 No setlist for your band yet.</div>`;
 
   const panel = document.getElementById('mv-panel-instrumentation');
-  panel.innerHTML = `<div class="mv-card"><div class="mv-inst-buttons">${btnHtml}</div></div>${list}`;
-  panel.querySelectorAll('.mv-inst-btn').forEach(btn => btn.addEventListener('click', () => {
-    const id = btn.dataset.inst;
-    if(selected.has(id)) selected.delete(id); else selected.add(id);
+  panel.innerHTML = `
+    <div class="mv-inst-picker">
+      <p class="mv-inst-prompt">Choose your name to know where you play.</p>
+      <div class="mv-dd${open ? ' open' : ''}">
+        <button type="button" class="mv-dd-toggle" aria-haspopup="listbox" aria-expanded="${open}">${current}<span class="mv-dd-caret">▾</span></button>
+        <div class="mv-dd-menu" role="listbox">${optHtml || '<div class="mv-inst-hint" style="padding:10px 14px">No musicians added yet.</div>'}</div>
+      </div>
+    </div>${list}`;
+  panel.querySelector('.mv-dd-toggle').addEventListener('click', e => {
+    e.stopPropagation();
+    instState.open = !instState.open;
+    renderInstrumentation();
+  });
+  panel.querySelectorAll('.mv-dd-opt').forEach(btn => btn.addEventListener('click', () => {
+    instState.selected = btn.dataset.person;
+    instState.open = false;
     renderInstrumentation();
   }));
 }
+document.addEventListener('click', e => {
+  if(instState.open && !e.target.closest('.mv-dd')){ instState.open = false; renderInstrumentation(); }
+});
 
 function renderAttire(members, catalog){
   const withArtists = orderMembersByInstrument(members, catalog).filter(m => m.artist_name);
@@ -317,7 +331,7 @@ async function boot(){
   window.__mvBandName = bandInfo.name;
   const projectId = bandInfo.project_id;
 
-  const [members, catalog, eventInfoRows, transportRows, rehearsals, rdSongs, songs, sets, spotifyRows] = await Promise.all([
+  const [members, catalog, eventInfoRows, transportRows, rehearsals, rdSongs, songs, sets, spotifyRows, projectRows] = await Promise.all([
     getJson(`band?group_id=eq.${bandId}&select=*`),
     getJson(`instrument_catalog?group_id=eq.${bandId}&select=*`),
     getJson(`event_info?select=*&project_id=eq.${projectId}&limit=1`),
@@ -326,7 +340,8 @@ async function boot(){
     getJson(`rehearsal_date_songs?select=*&order=item_order.asc`),
     getJson(`songs?select=*&project_id=eq.${projectId}&order=song_order.asc`),
     getJson(`sets?select=*&project_id=eq.${projectId}&order=set_order.asc`),
-    getJson(`spotify_embed?select=*&project_id=eq.${projectId}&limit=1`)
+    getJson(`spotify_embed?select=*&project_id=eq.${projectId}&limit=1`),
+    getJson(`projects?id=eq.${projectId}&select=name&limit=1`)
   ]);
 
   const pill = document.getElementById('mv-band-pill');
@@ -334,6 +349,10 @@ async function boot(){
   pill.style.display = 'inline-block';
 
   const eventInfo = eventInfoRows[0];
+  const eventName = eventInfo?.event_name || projectRows[0]?.name || '';
+  document.getElementById('mv-event-name').textContent = eventName;
+  if(eventName) document.title = `${eventName} — AMBRA Live Productions`;
+  if(eventInfo?.client) document.getElementById('mv-eyebrow').textContent = `AMBRA Live Productions · ${eventInfo.client}`;
   if(eventInfo?.venue) document.getElementById('mv-venue').textContent = eventInfo.venue;
   if(eventInfo?.event_date_iso) document.getElementById('mv-date').textContent = formatDateNice(eventInfo.event_date_iso);
   if(eventInfo?.show_time) document.getElementById('mv-showtime').textContent = eventInfo.show_time;
@@ -342,7 +361,7 @@ async function boot(){
   document.getElementById('mv-panel-setlist').innerHTML = renderSetlist(sets, songs, spotifyRows[0]?.link);
   const songIds = songs.map(s => s.id);
   const songInstruments = songIds.length ? await getJson(`song_instruments?select=*&song_id=in.(${songIds.join(',')})`) : [];
-  instState = { buttons: buildInstrumentButtons(members, catalog), songs, sets, songInstruments, selected: new Set() };
+  instState = { people: buildPeople(members, catalog, songs), songs, sets, songInstruments, selected: null, open: false };
   renderInstrumentation();
   document.getElementById('mv-panel-attire').innerHTML = renderAttire(members, catalog);
   document.getElementById('mv-panel-transportation').innerHTML = renderTransportation(transportRows, members, bandInfo);

@@ -1314,9 +1314,36 @@ button.live-mode-panel:active{ transform:scale(.99); }
 .mv-inst-btn{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:8px 12px; color:var(--text-muted); cursor:pointer; font-family:inherit; text-align:left; }
 .mv-inst-btn .mv-inst-name{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; }
 .mv-inst-btn .mv-inst-who{ font-size:13px; color:var(--text); }
-.mv-inst-btn.active{ border-color:var(--gold-bright); color:var(--gold-bright); }
+.mv-inst-btn{ -webkit-appearance:none; appearance:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation; min-height:44px; }
+.mv-inst-btn.active{ border-color:var(--gold-bright); color:var(--gold-bright); background:var(--surface); box-shadow:inset 0 0 0 1px var(--gold-bright); }
+.mv-inst-prompt{ margin:0 0 12px; font-size:14px; font-weight:600; color:#1A1310; }
+.mv-inst-picker .mv-inst-btn{ background:#FFFFFF; border-color:#F2711C; color:#6B6358; }
+.mv-inst-picker .mv-inst-btn .mv-inst-who{ color:#1A1310; }
+.mv-inst-picker .mv-inst-btn.active{ background:#FFF1E6; border-color:#F2711C; color:#F2711C; box-shadow:inset 0 0 0 1px #F2711C; }
+.mv-inst-picker{ margin-bottom:32px; }
+.mv-dd{ position:relative; }
+.mv-dd-toggle, .mv-dd-opt{ -webkit-appearance:none; appearance:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation; display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; min-height:48px; font-family:inherit; text-align:left; cursor:pointer; }
+.mv-dd-toggle{ position:relative; background:#FFFFFF; border:1px solid #F2711C; border-radius:10px; padding:9px 38px 9px 14px; color:#1A1310; }
+.mv-dd-caret{ position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#F2711C; font-size:16px; transition:transform .15s; }
+.mv-dd.open .mv-dd-caret{ transform:translateY(-50%) rotate(180deg); }
+.mv-dd-name{ font-size:15px; font-weight:600; color:#1A1310; }
+.mv-dd-placeholder{ color:#6B6358; font-weight:500; }
+.mv-dd-inst{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:#F2711C; }
+.mv-dd-menu{ display:none; position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:20; max-height:min(60vh,360px); overflow-y:auto; -webkit-overflow-scrolling:touch; background:#FFFFFF; border:1px solid #F2711C; border-radius:10px; box-shadow:0 12px 28px rgba(0,0,0,.18); }
+.mv-dd.open .mv-dd-menu{ display:block; }
+.mv-dd-opt{ background:transparent; border:none; border-top:1px solid #EFE2D3; padding:10px 14px; }
+.mv-dd-opt:first-child{ border-top:none; }
+.mv-dd-opt.active{ background:#FFF1E6; }
+.mv-inst-hint{ color:#6B6358; }
 .mv-inst-hint{ font-size:13px; color:var(--text-muted); margin:12px 0 0; }
-.mv-song-players{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; flex-shrink:0; max-width:55%; }
+.mv-song-players{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; flex-shrink:0; max-width:50%; }
+.mv-song-title{ min-width:0; overflow-wrap:anywhere; }
+@media (max-width:480px){
+  .musician-view{ padding:8px 12px 50px; }
+  .mv-inst-btn{ flex:1 1 calc(50% - 8px); }
+  .mv-song-players{ max-width:46%; }
+  .mv-player-chip{ font-size:11.5px; padding:3px 8px; }
+}
 .mv-player-chip{ background:var(--surface-2); border:1px solid var(--gold-bright); border-radius:12px; padding:3px 10px; font-size:12px; color:var(--text); }
 .mv-player-chip small{ font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; color:var(--text-faint); margin-right:5px; }
 .mv-player-chip.no{ border-color:var(--line); color:var(--text-faint); font-style:italic; }
@@ -1364,3 +1391,26 @@ body.musician-portal .mv-swatch{ border-color:rgba(255,255,255,.5); }
 .mv-state-icon{ font-size:28px; margin-bottom:12px; opacity:.85; }
 .mv-state-title{ font-family:'Fraunces',serif; font-weight:600; font-size:17px; color:var(--text); margin-bottom:6px; }
 .mv-state-text{ color:var(--text-faint); font-size:13px; max-width:320px; margin:0 auto; line-height:1.55; }
+
+/* Musician portal — table/card content (not titles) is bold and 2pt larger */
+body.musician-portal .mv-daytime-row > span:not(.mv-daytime-label){ font-size:calc(14.5px + 1pt); font-weight:700; }
+body.musician-portal .mv-song-title{ font-size:calc(14px + 1pt); font-weight:700; }
+body.musician-portal .mv-song-artist{ font-size:calc(12px + 1pt); font-weight:700; }
+body.musician-portal .mv-song-duration{ font-size:calc(12px + 1pt); font-weight:700; }
+body.musician-portal .mv-player-chip{ font-size:calc(12px + 1pt); font-weight:700; }
+body.musician-portal .mv-song-chip{ font-size:calc(12px + 1pt); font-weight:700; }
+body.musician-portal .mv-rehearsal-location{ font-size:calc(13px + 1pt); font-weight:700; }
+body.musician-portal .mv-member-name{ font-size:calc(14px + 1pt); font-weight:700; }
+body.musician-portal .mv-member-size{ font-size:calc(11.5px + 1pt); font-weight:700; }
+@media (max-width:480px){
+  body.musician-portal .mv-player-chip{ font-size:calc(11.5px + 1pt); }
+}
+
+/* Rehearsals cards — all text white */
+body.musician-portal .mv-rehearsal-card{ --text:#FFFFFF; --text-muted:#FFFFFF; --text-faint:#FFFFFF; --gold-bright:#FFFFFF; }
+body.musician-portal .mv-rehearsal-card .mv-song-chip{ color:#FFFFFF; border-color:rgba(255,255,255,.55); }
+body.musician-portal .mv-rehearsal-card a{ color:#FFFFFF; text-decoration:underline; }
+
+/* Day of the Concert card — all text white */
+body.musician-portal .mv-daytime-row{ --text:#FFFFFF; --text-faint:#FFFFFF; }
+body.musician-portal .mv-daytime-label{ color:#FFFFFF; }

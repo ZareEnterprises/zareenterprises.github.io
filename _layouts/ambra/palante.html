@@ -166,6 +166,9 @@
         <button class="tech-subtab transportation" data-band-sub="transportation">🚌 Transportation</button>
       </div>
       <span class="mono-label" id="band-count">—</span>
+      <label class="mono-label" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer" title="When on, artists added here are also pushed to the roster connected in Gig-It (Airtable or Excel). Off by default; saved per project in this browser.">
+        <input type="checkbox" id="roster-sync-toggle"> Sync new artists to roster
+      </label>
     </div>
 
     <div id="band-panel-members">
@@ -180,9 +183,8 @@
       <div class="band-layout">
         <div class="catalog-col-stack" id="catalog-col-stack"></div>
         <div class="member-list-box">
-          <div class="member-list-head">
-            <span>Instrument</span><span>Artist</span><span>Outfit</span><span>Role</span><span></span><span></span><span></span>
-          </div>
+          <div class="member-col-filters" id="member-col-filters"></div>
+          <div class="member-list-head" id="member-list-head"></div>
           <div id="member-list"></div>
         </div>
       </div>
@@ -495,6 +497,20 @@
   </div>
 </div>
 
+<!-- Generic in-app text prompt (replaces window.prompt() where used via promptInApp()) -->
+<div class="overlay" id="overlay-prompt">
+  <form class="modal" id="prompt-modal-form" style="max-width:400px">
+    <h2 id="prompt-modal-title">Name</h2>
+    <div class="field" style="margin-top:14px">
+      <input type="text" id="prompt-modal-input" autocomplete="off" style="width:100%">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="btn-prompt-modal-cancel" style="background:var(--surface);color:var(--text);border:1px solid var(--line)">Cancel</button>
+      <button type="submit" class="btn" id="btn-prompt-modal-ok">Accept</button>
+    </div>
+  </form>
+</div>
+
 <!-- Create Set Modal -->
 <div class="overlay" id="overlay-set">
   <div class="modal">
@@ -605,6 +621,7 @@ async function loadSessionAndPermissions(){
   PERMS = Object.assign({}, PERMS, mine.permissions || {});
   currentProjectId = mine.project_id;
   currentProjectName = mine.projects.name;
+  document.getElementById('roster-sync-toggle').checked = isRosterSyncOn();
   return true;
 }
 
@@ -1016,6 +1033,34 @@ function confirmInApp(message, title){
   });
 }
 
+// In-app replacement for window.prompt(): resolves with the trimmed text, or
+// null if cancelled / left empty. Enter accepts, Esc or a click outside cancels.
+function promptInApp(title, placeholder){
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('overlay-prompt');
+    const form = document.getElementById('prompt-modal-form');
+    const input = document.getElementById('prompt-modal-input');
+    const cancelBtn = document.getElementById('btn-prompt-modal-cancel');
+    document.getElementById('prompt-modal-title').textContent = title;
+    input.placeholder = placeholder || '';
+    input.value = '';
+    const cleanup = (result) => {
+      overlay.classList.remove('open');
+      form.onsubmit = null;
+      cancelBtn.onclick = null;
+      overlay.onclick = null;
+      overlay.onkeydown = null;
+      resolve(result);
+    };
+    form.onsubmit = (e) => { e.preventDefault(); cleanup(input.value.trim() || null); };
+    cancelBtn.onclick = () => cleanup(null);
+    overlay.onclick = (e) => { if(e.target === overlay) cleanup(null); };
+    overlay.onkeydown = (e) => { if(e.key === 'Escape') cleanup(null); };
+    overlay.classList.add('open');
+    input.focus();
+  });
+}
+
 async function toggleResolveNote(note){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/project_notes?id=eq.${note.id}`, {
     method:'PATCH', headers: authedHeaders(),
@@ -1215,7 +1260,7 @@ document.getElementById('btn-notes-mode').addEventListener('click', () => {
   if(pill) pill.addEventListener('click', () => { if(notesModeActive) exitNotesMode(); });
 });
 
-const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other','Stage Crew'];
+const SECTIONS = ['Voices','Woods','Brasses','Strings','Rhythm Section','Percussion','Other','Stage Crew'];
 // Catalog sections that are part of the Band roster but shouldn't show up as
 // selectable instruments in Lineup — 'Other' was already excluded there;
 // Stage Crew joins it since crew aren't musicians a song can be arranged for.
@@ -3366,6 +3411,15 @@ function artistOptionsHtml(roleName, currentName){
 const DATA_SOURCE_KEY = 'gigit_data_source'; // shared with gig-it.html — same browser, same admin's choice
 function getDataSource(){ return localStorage.getItem(DATA_SOURCE_KEY) || 'airtable'; }
 
+// Per-project on/off switch (Band tab). Off by default, so a project only
+// talks to Airtable/Excel when the admin turns it on for that project.
+function rosterSyncKey(){ return `palante_roster_sync_${currentProjectId}`; }
+function isRosterSyncOn(){ return localStorage.getItem(rosterSyncKey()) === '1'; }
+function activeDataSource(){ return isRosterSyncOn() ? getDataSource() : 'none'; }
+document.getElementById('roster-sync-toggle').addEventListener('change', (e) => {
+  localStorage.setItem(rosterSyncKey(), e.target.checked ? '1' : '0');
+});
+
 async function pushMusicianToDataSource(m){
   const src = getDataSource();
   if(src === 'airtable') return pushToAirtable([m]);
@@ -3420,22 +3474,79 @@ async function pushToExcelRoster(musicians){
 }
 
 async function addNewMusicianForRole(instrumentName){
-  const name = prompt(`Name for this ${instrumentName}:`);
-  if(!name || !name.trim()) return null;
-  const full_name = name.trim();
+  const full_name = await promptInApp(`New ${instrumentName}`, 'Artist name');
+  if(!full_name) return null;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians`, { method: 'POST', headers: authedHeaders(), body: JSON.stringify({ full_name, instruments: [instrumentName] }) });
   if(!res.ok){ alert('Could not add that musician: ' + await res.text()); return null; }
   await fetchMusicians();
-  if(getDataSource() !== 'none'){
+  if(activeDataSource() !== 'none'){
     try { await pushMusicianToDataSource({ full_name, instrument: instrumentName, phone: null, email: null }); }
-    catch(err){ console.error('push to data source', err); alert(`Added locally, but could not push to ${getDataSource()}: ${err.message}`); }
+    catch(err){ console.error('push to data source', err); alert(`Added locally, but could not push to ${activeDataSource()}: ${err.message}`); }
   }
   return full_name;
+}
+
+// Members table columns the admin can show/hide. The choice is saved per
+// project in this browser, so it's the same next time they come back.
+const MEMBER_COLS = [
+  { key:'instrument', label:'Instrument', width:'1fr' },
+  { key:'artist',     label:'Artist',     width:'1.2fr' },
+  { key:'email',      label:'Email',      width:'1.4fr' },
+  { key:'outfit',     label:'Outfit',     width:'70px' },
+  { key:'role',       label:'Role',       width:'1.2fr' },
+  { key:'color',      label:'Color',      width:'22px' },
+];
+const MEMBER_COLS_DEFAULT = ['instrument', 'artist', 'role'];
+function memberColsKey(){ return `palante_member_cols_${currentProjectId}`; }
+function getVisibleMemberCols(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(memberColsKey()));
+    if(Array.isArray(saved)) return saved;
+  } catch(e){}
+  return MEMBER_COLS_DEFAULT;
+}
+function setVisibleMemberCols(keys){
+  try { localStorage.setItem(memberColsKey(), JSON.stringify(keys)); } catch(e){}
+}
+function memberGridCols(visible){
+  return [...MEMBER_COLS.filter(c => visible.includes(c.key)).map(c => c.width), '22px', '22px'].join(' ');
+}
+function renderMemberColFilters(){
+  const visible = getVisibleMemberCols();
+  const bar = document.getElementById('member-col-filters');
+  bar.innerHTML = '<span class="mono-label">Show:</span>' + MEMBER_COLS.map(c =>
+    `<button type="button" class="member-col-chip ${visible.includes(c.key) ? 'active' : ''}" data-col="${c.key}">${c.label}</button>`
+  ).join('');
+  bar.querySelectorAll('.member-col-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cur = getVisibleMemberCols();
+      const next = cur.includes(btn.dataset.col) ? cur.filter(k => k !== btn.dataset.col) : [...cur, btn.dataset.col];
+      setVisibleMemberCols(next);
+      renderMemberList();
+    });
+  });
+  const head = document.getElementById('member-list-head');
+  head.style.gridTemplateColumns = memberGridCols(visible);
+  head.innerHTML = MEMBER_COLS.filter(c => visible.includes(c.key)).map(c =>
+    c.key === 'email' ? `<span>Email <button type="button" class="btn ghost small" id="btn-copy-emails" title="Copy all emails" style="padding:1px 7px;margin-left:6px">Copy all</button></span>`
+    : `<span>${c.key === 'color' ? '' : c.label}</span>`
+  ).join('') + '<span></span><span></span>';
+  document.getElementById('btn-copy-emails')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const emails = [...new Set([...document.querySelectorAll('#member-list .member-email-input')].map(i => i.value.trim()).filter(Boolean))];
+    if(!emails.length){ btn.textContent = 'No emails'; setTimeout(() => btn.textContent = 'Copy all', 1500); return; }
+    try { await navigator.clipboard.writeText(emails.join(', ')); btn.textContent = `Copied ${emails.length}`; }
+    catch(err){ btn.textContent = 'Copy failed'; }
+    setTimeout(() => btn.textContent = 'Copy all', 1500);
+  });
 }
 
 function renderMemberList(){
   const container = document.getElementById('member-list');
   document.getElementById('band-count').textContent = `${instrumentCatalog.length} INSTRUMENTS`;
+  renderMemberColFilters();
+  const visibleCols = getVisibleMemberCols();
+  const gridCols = memberGridCols(visibleCols);
   if(instrumentCatalog.length === 0){
     container.innerHTML = '<div class="empty-note" style="border:none;">Add an instrument on the left — it will show up here right away, ready for a name.</div>';
     renderNoteMarkers();
@@ -3455,16 +3566,21 @@ function renderMemberList(){
     row.dataset.bandId = existing?.id || '';
     row.dataset.prevArtist = existing?.artist_name || '';
     const secondLine = existing?.second_instrument ? `<small class="second-instrument-tag">+ ${escapeHtml(existing.second_instrument)}</small>` : '';
-    row.innerHTML = `
-      <div class="member-row-main">
-        <span class="member-instrument">${escapeHtml(cat.name)}${secondLine}</span>
-        <select class="member-artist-select">${artistOptionsHtml(cat.name, existing?.artist_name)}</select>
-        <input type="text" class="member-outfit-input" data-field="outfit_size" value="${escapeAttr(existing?.outfit_size || '')}" placeholder="Size">
-        <select class="member-role-select">
+    const musician = existing?.artist_name ? MUSICIANS.find(m => m.full_name === existing.artist_name) : null;
+    const cells = {
+      instrument: `<span class="member-instrument">${escapeHtml(cat.name)}${secondLine}</span>`,
+      artist: `<select class="member-artist-select">${artistOptionsHtml(cat.name, existing?.artist_name)}</select>`,
+      email: `<input type="email" class="member-email-input" data-musician-id="${escapeAttr(musician?.id || '')}" value="${escapeAttr(musician?.email || '')}" placeholder="${musician ? 'email' : 'pick an artist'}" ${musician ? '' : 'disabled'}>`,
+      outfit: `<input type="text" class="member-outfit-input" data-field="outfit_size" value="${escapeAttr(existing?.outfit_size || '')}" placeholder="Size">`,
+      role: `<select class="member-role-select">
           ${roleOptions.map(r => `<option value="${escapeAttr(r.name)}" ${r.name === currentRole ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
           <option value="__other__">Other…</option>
-        </select>
-        <button type="button" class="member-color-swatch" style="background:${(existing?.outfit_color || '').split(',')[0] || 'var(--line)'}" title="Outfit color"></button>
+        </select>`,
+      color: `<button type="button" class="member-color-swatch" style="background:${(existing?.outfit_color || '').split(',')[0] || 'var(--line)'}" title="Outfit color"></button>`,
+    };
+    row.innerHTML = `
+      <div class="member-row-main" style="grid-template-columns:${gridCols}">
+        ${MEMBER_COLS.filter(c => visibleCols.includes(c.key)).map(c => cells[c.key]).join('')}
         <button class="edit-pencil" title="Second instrument">✎</button>
         <button class="member-remove-btn" title="Remove this row">✕</button>
       </div>
@@ -3484,7 +3600,7 @@ function renderMemberList(){
     secondInput.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); confirmSecond(); } });
     row.querySelector('.member-second-confirm').addEventListener('click', confirmSecond);
 
-    row.querySelector('.member-role-select').addEventListener('change', async (e) => {
+    row.querySelector('.member-role-select')?.addEventListener('change', async (e) => {
       if(e.target.value === '__other__'){
         const name = prompt('New role name:');
         if(!name || !name.trim()){ e.target.value = currentRole; return; }
@@ -3498,7 +3614,7 @@ function renderMemberList(){
       }
     });
 
-    row.querySelector('.member-color-swatch').addEventListener('click', (e) => {
+    row.querySelector('.member-color-swatch')?.addEventListener('click', (e) => {
       e.stopPropagation();
       openMultiColorPanel(e.currentTarget, existing?.outfit_color || '', 2, async (csv) => {
         await upsertMember(row, 'outfit_color', csv || null);
@@ -3544,6 +3660,15 @@ function renderMemberList(){
       }
       row.dataset.prevArtist = sel.value;
       await upsertMember(row, 'artist_name', sel.value);
+    });
+  });
+  container.querySelectorAll('.member-email-input').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      const email = inp.value.trim() || null;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians?id=eq.${inp.dataset.musicianId}`, { method:'PATCH', headers: authedHeaders(), body: JSON.stringify({ email }) });
+      if(!res.ok){ alert('Could not save that email: ' + await res.text()); return; }
+      const m = MUSICIANS.find(x => x.id === inp.dataset.musicianId);
+      if(m) m.email = email;
     });
   });
   container.querySelectorAll('.member-second-input').forEach(inp => {

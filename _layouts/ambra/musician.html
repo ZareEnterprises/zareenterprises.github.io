@@ -62,7 +62,7 @@ const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KE
 
 // Same section order as the Band tab in the main /palante panel, so Attire
 // lists musicians in the order everyone already knows from there.
-const SECTIONS = ['Voices','Woods','Brasses','Rhythm Section','Percussion','Other','Stage Crew'];
+const SECTIONS = ['Voices','Woods','Brasses','Strings','Rhythm Section','Percussion','Other','Stage Crew'];
 
 function escapeHtml(str){ return (str+'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 

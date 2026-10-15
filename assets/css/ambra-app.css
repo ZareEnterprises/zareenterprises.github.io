@@ -439,10 +439,16 @@ main{ position:relative; }
 .cat-remove-btn:hover{ color:var(--emo-alta); }
 
 .member-list-box{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
-.member-list-head{ display:grid; grid-template-columns:1fr 1.2fr 70px 1.2fr 22px 22px 22px; gap:10px; padding:12px 18px; font-family:'Inter',sans-serif; font-weight:700; font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold-bright); background:var(--surface-2); border-bottom:1px solid var(--line); }
+.member-col-filters{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--surface); }
+.member-col-chip{ background:none; border:1px solid var(--line); color:var(--text-faint); border-radius:999px; padding:4px 12px; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; cursor:pointer; }
+.member-col-chip.active{ border-color:var(--gold-bright); color:var(--gold-bright); }
+.member-email-input{ background:var(--input-bg); border:1px solid #555; color:var(--text); padding:7px 9px; border-radius:7px; font-size:12px; font-family:'Inter',sans-serif; width:100%; min-width:0; }
+.member-email-input:disabled{ opacity:.45; }
+.member-email{font-size:12px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.member-list-head{ display:grid; gap:10px; padding:12px 18px; font-family:'Inter',sans-serif; font-weight:700; font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold-bright); background:var(--surface-2); border-bottom:1px solid var(--line); }
 .member-row{ border-bottom:1px solid var(--line); padding:12px 18px; position:relative; }
 .member-row:last-child{ border-bottom:none; }
-.member-row-main{ display:grid; grid-template-columns:1fr 1.2fr 70px 1.2fr 22px 22px 22px; gap:10px; align-items:center; }
+.member-row-main{ display:grid; gap:10px; align-items:center; }
 .member-color-swatch{ width:18px; height:18px; border-radius:50%; border:1px solid var(--line); cursor:pointer; padding:0; }
 .member-instrument{ font-family:'Fraunces',serif; font-weight:600; font-size:14px; }
 .member-artist-input{ background:var(--input-bg); border:1px solid #555; color:var(--text); padding:7px 9px; border-radius:7px; font-size:13px; font-family:'Inter',sans-serif; }

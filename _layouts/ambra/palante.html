@@ -3948,8 +3948,23 @@ function renderSchedule(){
     const earliest = Math.min(...timedSets.map(s => parseInt(s.set_time.split(':')[0], 10)));
     startHour = Math.max(0, earliest - 2);
   }
-  const endHour = 24;
-  const PX_PER_HOUR = 180; // taller scale so close/simultaneous set times don't visually overlap
+  // Scale adapts to the tightest gap between consecutive sets so every block
+  // stays tall enough (MIN_BLOCK_PX) to read its label without overlapping.
+  const MIN_BLOCK_PX = 48;
+  const startMins = timedSets.map(s => { const [h, m] = s.set_time.split(':').map(Number); return h * 60 + m; }).sort((a, b) => a - b);
+  let minGap = Infinity;
+  for(let i = 1; i < startMins.length; i++){
+    const g = startMins[i] - startMins[i-1];
+    if(g > 0 && g < minGap) minGap = g;
+  }
+  const PX_PER_HOUR = Math.min(1200, Math.max(180, minGap === Infinity ? 180 : (MIN_BLOCK_PX / minGap) * 60));
+  // Trim empty hours after the last set so the taller scale doesn't make the page endless.
+  let endHour = 24;
+  if(timedSets.length){
+    const lastSet = timedSets.reduce((a, b) => (a.set_time > b.set_time ? a : b));
+    const lastEnd = startMins[startMins.length - 1] + parseDurationMinutes(lastSet.set_duration);
+    endHour = Math.min(24, Math.ceil(lastEnd / 60) + 1);
+  }
   const PAD = 20;
   const totalHeight = (endHour - startHour) * PX_PER_HOUR + PAD * 2;
 
@@ -4003,7 +4018,7 @@ function renderSchedule(){
       durMin = parseDurationMinutes(s.set_duration); // last set of the day has no "next" to reach
     }
     const top = PAD + (startMinutes / 60) * PX_PER_HOUR;
-    const height = Math.max((durMin / 60) * PX_PER_HOUR, 20);
+    const height = Math.max((durMin / 60) * PX_PER_HOUR, MIN_BLOCK_PX);
     const block = document.createElement('div');
     block.className = 'schedule-block';
     block.style.top = top + 'px';

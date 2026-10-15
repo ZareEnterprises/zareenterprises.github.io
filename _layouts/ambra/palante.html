@@ -2666,10 +2666,6 @@ function wireExpandables(){
         closeOpenPanel(); return;
       }
       closeOpenPanel();
-      if(wrap.dataset.kind === 'instruments'){
-        const song = songs.find(s => s.id === wrap.dataset.songId);
-        await ensureDefaultInstruments(song);
-      }
       openChecklistPanel(wrap);
     });
   });
@@ -2947,9 +2943,12 @@ function renderInstrumentChecklist(panel, song){
   const current = new Set(songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument));
 
   const bySectionHasAny = SECTIONS.some(s => !LINEUP_EXCLUDED_SECTIONS.includes(s) && bySection[s].length);
-  let html = `<div class="inst-mode-switch">
-    <button type="button" data-mode="instruments">Instruments</button>
-    <button type="button" data-mode="names">Names</button>
+  let html = `<div class="inst-panel-head">
+    <div class="inst-mode-switch">
+      <button type="button" data-mode="instruments">Instruments</button>
+      <button type="button" data-mode="names">Names</button>
+    </div>
+    <button type="button" class="inst-all-btn">All</button>
   </div>`;
   SECTIONS.filter(s => !LINEUP_EXCLUDED_SECTIONS.includes(s)).forEach(section => {
     if(bySection[section].length === 0) return;
@@ -2974,6 +2973,18 @@ function renderInstrumentChecklist(panel, song){
     syncModeButtons();
     updateCondensedLabel();
   }));
+
+  panel.querySelector('.inst-all-btn')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const missing = [...panel.querySelectorAll('input[type=checkbox]')].filter(c => !c.checked);
+    if(!missing.length) return;
+    await Promise.all(missing.map(c =>
+      fetch(`${SUPABASE_URL}/rest/v1/song_instruments`, { method:'POST', headers, body: JSON.stringify({ song_id: song.id, instrument: c.value }) })
+    ));
+    missing.forEach(c => { c.checked = true; });
+    await fetchSongInstruments();
+    updateCondensedLabel();
+  });
 
   panel.querySelectorAll('input[type=checkbox]').forEach(chk => {
     chk.addEventListener('change', async (e) => {

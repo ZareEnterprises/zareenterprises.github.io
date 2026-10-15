@@ -772,6 +772,7 @@
     });
     await supabaseClient.from('role_options').insert([
       { name: 'MainBand', project_id: project.id },
+      { name: 'Singer', project_id: project.id },
       { name: 'Guest', project_id: project.id }
     ]);
     await supabaseClient.from('event_info').insert({

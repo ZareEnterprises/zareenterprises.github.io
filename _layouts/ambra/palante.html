@@ -1264,7 +1264,8 @@ const SECTIONS = ['Voices','Woods','Brasses','Strings','Rhythm Section','Percuss
 // Catalog sections that are part of the Band roster but shouldn't show up as
 // selectable instruments in Lineup — 'Other' was already excluded there;
 // Stage Crew joins it since crew aren't musicians a song can be arranged for.
-const LINEUP_EXCLUDED_SECTIONS = ['Other', 'Stage Crew'];
+// Voices are picked in the Singers / BGV columns instead.
+const LINEUP_EXCLUDED_SECTIONS = ['Voices', 'Other', 'Stage Crew'];
 const SINGER_PALETTE = ['#E0985C','#7FA6A0','#C7738C','#9AA85C','#8C93C9','#D6B24A','#B77B6E','#6FAF9E'];
 const MULTI_SINGER_COLOR = '#6B7FB0';
 const SET_COLOR_PALETTE = ['#E14A3E','#D98A3D','#D6B24A','#4C9A6A','#4A7FB5','#8C6FB5','#3FA8A0','#C7738C'];
@@ -1321,6 +1322,7 @@ const SETLIST_COLUMN_DEFS = [
 const LINEUP_COLUMN_DEFS = [
   { key:'key', label:'Key' },
   { key:'singers', label:'Singers' },
+  { key:'bgv', label:'BGV' },
   { key:'instruments', label:'Instruments' },
   { key:'guests', label:'Special guest' },
   { key:'arranger', label:'Arranger' },
@@ -1330,7 +1332,7 @@ const LINEUP_COLUMN_DEFS = [
 function currentOptionalColumnDefs(){ return currentColumnTab === 'instrumentation' ? LINEUP_COLUMN_DEFS : SETLIST_COLUMN_DEFS; }
 let columnStateByTab = {
   table: { visible:{ song:true, duration:true }, created:{ song:true, duration:true } },
-  instrumentation: { visible:{ key:true, singers:true, comments:true }, created:{ key:true, singers:true, comments:true } },
+  instrumentation: { visible:{ key:true, singers:true, bgv:true, comments:true }, created:{ key:true, singers:true, bgv:true, comments:true } },
 };
 let currentColumnTab = 'table';
 let visibleFields = columnStateByTab.table.visible;
@@ -1504,6 +1506,7 @@ function getActiveInfoColumns(){
     { key:'key', label:'Key' },
     { key:'soloist', label:'Soloist' },
     { key:'singers', label:'Singers' },
+    { key:'bgv', label:'BGV' },
     { key:'instruments', label:'Instruments' },
     { key:'guests', label:'Special guest' },
     { key:'arranger', label:'Arranger' },
@@ -1544,6 +1547,9 @@ function renderSongRow(song, containerSetName, draggableOn){
   const currentSingers = (song.singers || '').split('/').map(s => s.trim()).filter(Boolean);
   const singerColorCss = currentSingers.length ? hexToRgba(singerColor(currentSingers[0]), 0.22) : '';
   const singerBorderCss = currentSingers.length ? singerColor(currentSingers[0]) : '';
+  const currentBgv = (song.bgv || '').split('/').map(s => s.trim()).filter(Boolean);
+  const bgvColorCss = currentBgv.length ? hexToRgba(singerColor(currentBgv[0]), 0.22) : '';
+  const bgvBorderCss = currentBgv.length ? singerColor(currentBgv[0]) : '';
   const currentInstruments = songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument);
   const isOriginal = song.tonality_original !== false;
 
@@ -1573,8 +1579,11 @@ function renderSongRow(song, containerSetName, draggableOn){
     if(c.key === 'singers'){
       return `<div class="expandable cell" data-kind="singers" data-song-id="${song.id}"><button type="button" class="condensed-btn" style="background:${singerColorCss};border-color:${singerBorderCss}">${currentSingers.length ? escapeHtml(currentSingers.join(', ')) : 'Select singer(s)'}</button></div>`;
     }
+    if(c.key === 'bgv'){
+      return `<div class="expandable cell" data-kind="bgv" data-song-id="${song.id}"><button type="button" class="condensed-btn" style="background:${bgvColorCss};border-color:${bgvBorderCss}">${currentBgv.length ? escapeHtml(currentBgv.join(', ')) : 'Select BGV(s)'}</button></div>`;
+    }
     if(c.key === 'instruments'){
-      return `<div class="expandable cell" data-kind="instruments" data-song-id="${song.id}"><button type="button" class="condensed-btn">${currentInstruments.length ? escapeHtml(currentInstruments.slice(0,2).join(', ')) + (currentInstruments.length>2 ? ` +${currentInstruments.length-2}` : '') : 'Select instruments'}</button></div>`;
+      return `<div class="expandable cell" data-kind="instruments" data-song-id="${song.id}"><button type="button" class="condensed-btn">${escapeHtml(instrumentsButtonLabel(currentInstruments))}</button></div>`;
     }
     if(c.key === 'guests'){
       const currentGuests = (song.guests || '').split('/').map(s => s.trim()).filter(Boolean);
@@ -2394,6 +2403,8 @@ function loadColumnStateForTab(tab){
       }
     }
   } catch(e){}
+  // BGV was added after some users saved their Lineup columns — show it once by default.
+  if(tab === 'instrumentation' && !(state.created.bgv)){ state.visible.bgv = true; state.created.bgv = true; }
 }
 function loadSetlistFilters(){
   loadColumnStateForTab('table');
@@ -2856,8 +2867,8 @@ function openChecklistPanel(wrap){
   panel.dataset.songId = songId;
   panel.dataset.kind = kind;
 
-  if(kind === 'singers'){
-    renderSingerChecklist(panel, song);
+  if(kind === 'singers' || kind === 'bgv'){
+    renderSingerChecklist(panel, song, kind === 'bgv' ? 'bgv' : 'singers');
   } else if(kind === 'guests'){
     renderGuestChecklist(panel, song);
   } else {
@@ -2865,18 +2876,23 @@ function openChecklistPanel(wrap){
   }
   wrap.appendChild(panel);
   openPanel = panel;
+  // Keep the panel inside the viewport with a 16px margin: shift it left if it
+  // would run off the right edge (the Instruments panel is wide).
+  const r = panel.getBoundingClientRect();
+  const overflow = r.right - (window.innerWidth - 16);
+  if(overflow > 0) panel.style.left = Math.max(-r.left + 16 + 0, -overflow) + 'px';
 }
 
-function renderSingerChecklist(panel, song){
+function renderSingerChecklist(panel, song, field = 'singers'){
   const options = singerList().map(b => b.artist_name);
-  const current = new Set((song.singers || '').split('/').map(s => s.trim()).filter(Boolean));
+  const current = new Set((song[field] || '').split('/').map(s => s.trim()).filter(Boolean));
   panel.innerHTML = options.length ? options.map(name => `
     <label><input type="checkbox" value="${escapeAttr(name)}" ${current.has(name) ? 'checked' : ''}><span class="singer-dot" style="background:${singerColor(name)}"></span>${escapeHtml(name)}</label>
   `).join('') : '<div class="none">No band members marked as Singer yet. Add them in the Band tab.</div>';
   panel.querySelectorAll('input').forEach(chk => {
     chk.addEventListener('change', async () => {
       const checked = Array.from(panel.querySelectorAll('input:checked')).map(i => i.value);
-      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${song.id}`, { method:'PATCH', headers, body: JSON.stringify({ singers: checked.join('/') || null }) });
+      await fetch(`${SUPABASE_URL}/rest/v1/songs?id=eq.${song.id}`, { method:'PATCH', headers, body: JSON.stringify({ [field]: checked.join('/') || null }) });
       await fetchSongs();
       updateCondensedLabel();
     });
@@ -2909,23 +2925,55 @@ function renderGuestChecklist(panel, song){
   });
 }
 
+// Instruments checklist can show either the instrument names or the names of
+// the musicians who play them (Band > Members). Only the display changes —
+// what's stored on the song is always the instrument.
+let instrumentLabelMode = 'instruments';
+try { if(localStorage.getItem('ambra_instrument_label_mode') === 'names') instrumentLabelMode = 'names'; } catch(e){}
+function instrumentDisplayName(instrument){
+  if(instrumentLabelMode !== 'names') return instrument;
+  const member = band.find(b => (b.instrument || '').toLowerCase() === instrument.toLowerCase() && b.artist_name);
+  return member ? member.artist_name : instrument;
+}
+function instrumentsButtonLabel(arr){
+  const names = arr.map(instrumentDisplayName);
+  return names.length ? names.slice(0,2).join(', ') + (names.length>2 ? ` +${names.length-2}` : '') : 'Select instruments';
+}
+
 function renderInstrumentChecklist(panel, song){
   const bySection = {};
   SECTIONS.forEach(s => bySection[s] = []);
   instrumentCatalog.forEach(i => { if(!LINEUP_EXCLUDED_SECTIONS.includes(i.section) && bySection[i.section]) bySection[i.section].push(i.name); });
   const current = new Set(songInstruments.filter(si => si.song_id === song.id).map(si => si.instrument));
 
-  let html = '';
+  const bySectionHasAny = SECTIONS.some(s => !LINEUP_EXCLUDED_SECTIONS.includes(s) && bySection[s].length);
+  let html = `<div class="inst-mode-switch">
+    <button type="button" data-mode="instruments">Instruments</button>
+    <button type="button" data-mode="names">Names</button>
+  </div>`;
   SECTIONS.filter(s => !LINEUP_EXCLUDED_SECTIONS.includes(s)).forEach(section => {
     if(bySection[section].length === 0) return;
     html += `<div class="panel-section-label">${section}</div>`;
     html += bySection[section].map(name => `
-      <label><input type="checkbox" value="${escapeAttr(name)}" ${current.has(name) ? 'checked' : ''}> ${escapeHtml(name)}</label>
+      <label><input type="checkbox" value="${escapeAttr(name)}" ${current.has(name) ? 'checked' : ''}> <span class="inst-label" data-instrument="${escapeAttr(name)}">${escapeHtml(instrumentDisplayName(name))}</span></label>
     `).join('');
   });
-  if(!html) html = '<div class="none">No instruments in the catalog yet. Add them from the Band tab.</div>';
+  if(!bySectionHasAny) html = '<div class="none">No instruments in the catalog yet. Add them from the Band tab.</div>';
   panel.classList.add('wide-panel');
   panel.innerHTML = html;
+
+  // Switch in place (labels are rewritten, nothing is re-created) so the
+  // click target stays in the DOM and the outside-click handler doesn't close the panel.
+  const syncModeButtons = () => panel.querySelectorAll('.inst-mode-switch button').forEach(b => b.classList.toggle('active', b.dataset.mode === instrumentLabelMode));
+  syncModeButtons();
+  panel.querySelectorAll('.inst-mode-switch button').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    instrumentLabelMode = b.dataset.mode;
+    try { localStorage.setItem('ambra_instrument_label_mode', instrumentLabelMode); } catch(err){}
+    panel.querySelectorAll('.inst-label').forEach(el => { el.textContent = instrumentDisplayName(el.dataset.instrument); });
+    syncModeButtons();
+    updateCondensedLabel();
+  }));
 
   panel.querySelectorAll('input[type=checkbox]').forEach(chk => {
     chk.addEventListener('change', async (e) => {
@@ -2952,7 +3000,12 @@ function updateCondensedLabel(){
   const song = songs.find(s => s.id === songId);
   const btn = wrap.querySelector('.condensed-btn');
   if(!song || !btn) return;
-  if(kind === 'singers'){
+  if(kind === 'bgv'){
+    const arr = (song.bgv || '').split('/').map(s => s.trim()).filter(Boolean);
+    btn.textContent = arr.length ? arr.join(', ') : 'Select BGV(s)';
+    btn.style.background = arr.length ? hexToRgba(singerColor(arr[0]), 0.22) : '';
+    btn.style.borderColor = arr.length ? singerColor(arr[0]) : '';
+  } else if(kind === 'singers'){
     const arr = (song.singers || '').split('/').map(s => s.trim()).filter(Boolean);
     btn.textContent = arr.length ? arr.join(', ') : 'Select singer(s)';
     btn.style.background = arr.length ? hexToRgba(singerColor(arr[0]), 0.22) : '';
@@ -2962,7 +3015,7 @@ function updateCondensedLabel(){
     btn.textContent = arr.length ? arr.join(', ') : 'Select guest(s)';
   } else {
     const arr = songInstruments.filter(si => si.song_id === songId).map(si => si.instrument);
-    btn.textContent = arr.length ? arr.slice(0,2).join(', ') + (arr.length>2 ? ` +${arr.length-2}` : '') : 'Select instruments';
+    btn.textContent = instrumentsButtonLabel(arr);
   }
 }
 
@@ -3382,6 +3435,15 @@ let roleOptions = [];
 async function fetchRoleOptions(){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/role_options?select=*&project_id=eq.${currentProjectId}&order=name.asc`, { headers });
   roleOptions = res.ok ? await res.json() : [];
+  // "Singer" is the role the Lineup/Setlist Singers dropdown is built from
+  // (singerList), so every project must have it — add it to older projects.
+  if(res.ok && !roleOptions.some(r => (r.name || '').trim().toLowerCase() === 'singer')){
+    const ins = await fetch(`${SUPABASE_URL}/rest/v1/role_options`, { method:'POST', headers, body: JSON.stringify({ name: 'Singer', project_id: currentProjectId }) });
+    if(ins.ok){
+      const res2 = await fetch(`${SUPABASE_URL}/rest/v1/role_options?select=*&project_id=eq.${currentProjectId}&order=name.asc`, { headers });
+      if(res2.ok) roleOptions = await res2.json();
+    }
+  }
 }
 
 /* ---------------- Band chair → roster dropdown ----------------

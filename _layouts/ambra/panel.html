@@ -798,6 +798,7 @@
     // names /palante's own code relies on by name (default role, guest list).
     await supabaseClient.from('role_options').insert([
       { name: 'MainBand', project_id: project.id },
+      { name: 'Singer', project_id: project.id },
       { name: 'Guest', project_id: project.id }
     ]);
 
@@ -1060,6 +1061,7 @@
       } else {
         await supabaseClient.from('role_options').insert([
           { name: 'MainBand', project_id: newProjectId },
+          { name: 'Singer', project_id: newProjectId },
           { name: 'Guest', project_id: newProjectId }
         ]);
       }

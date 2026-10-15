@@ -3568,7 +3568,7 @@ function renderMemberList(){
     const secondLine = existing?.second_instrument ? `<small class="second-instrument-tag">+ ${escapeHtml(existing.second_instrument)}</small>` : '';
     const musician = existing?.artist_name ? MUSICIANS.find(m => m.full_name === existing.artist_name) : null;
     const cells = {
-      instrument: `<span class="member-instrument">${escapeHtml(cat.name)}${secondLine}</span>`,
+      instrument: `<span class="member-instrument"><input type="text" class="member-instrument-input" value="${escapeAttr(cat.name)}" title="Click to rename" maxlength="40">${secondLine}</span>`,
       artist: `<select class="member-artist-select">${artistOptionsHtml(cat.name, existing?.artist_name)}</select>`,
       email: `<input type="email" class="member-email-input" data-musician-id="${escapeAttr(musician?.id || '')}" value="${escapeAttr(musician?.email || '')}" placeholder="${musician ? 'email' : 'pick an artist'}" ${musician ? '' : 'disabled'}>`,
       outfit: `<input type="text" class="member-outfit-input" data-field="outfit_size" value="${escapeAttr(existing?.outfit_size || '')}" placeholder="Size">`,
@@ -3599,6 +3599,35 @@ function renderMemberList(){
     }
     secondInput.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); confirmSecond(); } });
     row.querySelector('.member-second-confirm').addEventListener('click', confirmSecond);
+
+    // Rename the instrument everywhere it's used in this band/project, so the
+    // row keeps its artist, role, outfit and song assignments.
+    const nameInput = row.querySelector('.member-instrument-input');
+    nameInput?.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') nameInput.blur();
+      if(e.key === 'Escape'){ nameInput.value = cat.name; nameInput.blur(); }
+    });
+    nameInput?.addEventListener('change', async () => {
+      const newName = nameInput.value.trim();
+      if(!newName || newName === cat.name){ nameInput.value = cat.name; return; }
+      if(instrumentCatalog.some(i => i.id !== cat.id && i.name.toLowerCase() === newName.toLowerCase())){
+        alert(`"${newName}" already exists in this band.`);
+        nameInput.value = cat.name;
+        return;
+      }
+      const enc = encodeURIComponent;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/instrument_catalog?id=eq.${cat.id}`, { method:'PATCH', headers, body: JSON.stringify({ name: newName }) });
+      if(!res.ok){ alert('Could not rename that instrument: ' + await res.text()); nameInput.value = cat.name; return; }
+      await fetch(`${SUPABASE_URL}/rest/v1/band?group_id=eq.${activeBandId}&instrument=eq.${enc(cat.name)}`, { method:'PATCH', headers, body: JSON.stringify({ instrument: newName }) });
+      const songsRes = await fetch(`${SUPABASE_URL}/rest/v1/songs?select=id&project_id=eq.${currentProjectId}`, { headers });
+      const songIds = songsRes.ok ? (await songsRes.json()).map(s => s.id) : [];
+      if(songIds.length){
+        await fetch(`${SUPABASE_URL}/rest/v1/song_instruments?instrument=eq.${enc(cat.name)}&song_id=in.(${songIds.join(',')})`, { method:'PATCH', headers, body: JSON.stringify({ instrument: newName }) });
+      }
+      await Promise.all([fetchInstrumentCatalog(), fetchBand(), fetchSongInstruments()]);
+      renderCatalogColumns();
+      renderMemberList();
+    });
 
     row.querySelector('.member-role-select')?.addEventListener('change', async (e) => {
       if(e.target.value === '__other__'){
@@ -3894,7 +3923,7 @@ function computeShowEndLabel(){
   const endMinutes = hh * 60 + mm + parseDurationMinutes(last.set_duration);
   const endH = Math.floor(endMinutes / 60) % 24;
   const endM = endMinutes % 60;
-  return `${endH === 0 ? 12 : endH > 12 ? endH - 12 : endH}:${String(endM).padStart(2,'0')}${endH >= 12 ? 'pm' : 'am'}`;
+  return `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
 }
 
 function parseDurationMinutes(str){

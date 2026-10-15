@@ -451,6 +451,9 @@ main{ position:relative; }
 .member-row-main{ display:grid; gap:10px; align-items:center; }
 .member-color-swatch{ width:18px; height:18px; border-radius:50%; border:1px solid var(--line); cursor:pointer; padding:0; }
 .member-instrument{ font-family:'Fraunces',serif; font-weight:600; font-size:14px; }
+.member-instrument-input{ font:inherit; color:inherit; background:transparent; border:1px solid transparent; border-radius:6px; padding:3px 6px; margin-left:-7px; width:100%; min-width:0; }
+.member-instrument-input:hover{ border-color:var(--line); }
+.member-instrument-input:focus{ border-color:var(--gold-bright); background:var(--input-bg); outline:none; }
 .member-artist-input{ background:var(--input-bg); border:1px solid #555; color:var(--text); padding:7px 9px; border-radius:7px; font-size:13px; font-family:'Inter',sans-serif; }
 .member-artist-select{ background:var(--input-bg); border:1px solid #555; color:var(--text); padding:7px 9px; border-radius:7px; font-size:13px; font-family:'Inter',sans-serif; width:100%; }
 .member-row .edit-pencil{ opacity:.5; background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:13px; }

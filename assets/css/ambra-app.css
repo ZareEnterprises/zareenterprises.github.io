@@ -1309,6 +1309,18 @@ button.live-mode-panel:active{ transform:scale(.99); }
 .mv-swatch{ width:16px; height:16px; border-radius:50%; border:1px solid var(--line); }
 .mv-member-size{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text-muted); width:36px; text-align:right; flex-shrink:0; }
 
+/* Instrumentation tab — instrument toggle buttons + per-song player names */
+.mv-inst-buttons{ display:flex; flex-wrap:wrap; gap:8px; }
+.mv-inst-btn{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:8px 12px; color:var(--text-muted); cursor:pointer; font-family:inherit; text-align:left; }
+.mv-inst-btn .mv-inst-name{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; }
+.mv-inst-btn .mv-inst-who{ font-size:13px; color:var(--text); }
+.mv-inst-btn.active{ border-color:var(--gold-bright); color:var(--gold-bright); }
+.mv-inst-hint{ font-size:13px; color:var(--text-muted); margin:12px 0 0; }
+.mv-song-players{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; flex-shrink:0; max-width:55%; }
+.mv-player-chip{ background:var(--surface-2); border:1px solid var(--gold-bright); border-radius:12px; padding:3px 10px; font-size:12px; color:var(--text); }
+.mv-player-chip small{ font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; color:var(--text-faint); margin-right:5px; }
+.mv-player-chip.no{ border-color:var(--line); color:var(--text-faint); font-style:italic; }
+
 /* Musician portal (/musico/) — a calmer, more welcoming read-only view
    than the admin tool whose card styles it borrows. The page used to sit
    on body.theme-table just to reuse the header/nav, which also meant it

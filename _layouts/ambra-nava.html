@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>NAVA Technical Overview — AMBRA Live Productions</title>
+<meta name="description" content="A technical presentation of NAVA: the agents, automations, data layer and tools that run AMBRA, EMN and Berklee Perú.">
+<link rel="icon" type="image/png" href="/assets/img/ambraweb.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#F2711C; --orange-dark:#C65A14; --orange-soft:#FDE8D8;
+    --ink:#141414; --cream:#FAF8F5; --white:#FFFFFF; --line:#ECE4D8;
+    --muted:#6B6358; --faint:#A39A8A;
+    --ink-line:#2C2A27; --ink-muted:#B7AF9E;
+    --font-display:'Fraunces',Georgia,serif;
+    --font-body:'Inter',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --gutter:clamp(20px,5vw,72px);
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-snap-type:y proximity; scroll-behavior:smooth; }
+  body{ margin:0; background:var(--cream); color:var(--ink); font-family:var(--font-body); font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,h4{ font-family:var(--font-display); font-weight:600; line-height:1.12; margin:0; letter-spacing:-.01em; }
+  p{ margin:0 0 14px; max-width:62ch; }
+  ul{ margin:0; padding:0; list-style:none; }
+  code,.mono{ font-family:var(--font-mono); font-size:.86em; }
+  a{ color:inherit; }
+
+  /* ---- Slide frame ---- */
+  .slide{ min-height:100vh; min-height:100svh; scroll-snap-align:start; display:flex; align-items:center; padding:72px var(--gutter) 84px; position:relative; }
+  .slide.dark{ background:var(--ink); color:var(--cream); }
+  .slide.soft{ background:var(--white); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .wrap{ width:100%; max-width:1180px; margin:0 auto; }
+  .slide h2{ font-size:clamp(30px,4.4vw,54px); max-width:20ch; }
+  .slide .lede{ font-size:clamp(17px,1.5vw,20px); color:var(--muted); margin-top:18px; max-width:60ch; }
+  .dark .lede{ color:var(--ink-muted); }
+  .slide-foot{ position:absolute; left:var(--gutter); right:var(--gutter); bottom:26px; display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:12px; color:var(--faint); }
+
+  /* ---- Layout helpers ---- */
+  .cols{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,4vw,64px); align-items:start; margin-top:36px; }
+  .cols.wide-left{ grid-template-columns:1.15fr .85fr; }
+  .cols.wide-right{ grid-template-columns:.85fr 1.15fr; }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:28px 32px; margin-top:36px; }
+  .grid2{ display:grid; grid-template-columns:repeat(2,1fr); gap:24px 40px; margin-top:32px; }
+  .item{ border-top:1px solid var(--line); padding-top:14px; }
+  .dark .item{ border-top-color:var(--ink-line); }
+  .item h4{ font-size:20px; margin-bottom:6px; }
+  .item p{ font-size:15px; color:var(--muted); margin:0; }
+  .dark .item p{ color:var(--ink-muted); }
+  .item .tag{ display:inline-block; font-family:var(--font-mono); font-size:12px; color:var(--orange-dark); background:var(--orange-soft); border-radius:20px; padding:2px 10px; margin-bottom:8px; }
+  .dark .item .tag{ color:var(--orange); background:rgba(242,113,28,.14); }
+
+  .facts li{ position:relative; padding:9px 0 9px 22px; border-top:1px solid var(--line); font-size:16px; }
+  .facts li:last-child{ border-bottom:1px solid var(--line); }
+  .facts li::before{ content:''; position:absolute; left:0; top:20px; width:9px; height:9px; border-radius:50%; background:var(--orange); }
+  .dark .facts li{ border-color:var(--ink-line); }
+  .facts strong{ font-weight:600; }
+
+  /* ---- Code panel ---- */
+  .code{ background:var(--ink); color:#F1ECE0; border-radius:14px; padding:22px 24px; font-family:var(--font-mono); font-size:13.5px; line-height:1.75; overflow-x:auto; white-space:pre; box-shadow:0 24px 60px -20px rgba(32,36,31,.28); }
+  .dark .code{ background:#0A0A0A; border:1px solid var(--ink-line); }
+  .code .c{ color:#8F887A; }
+  .code .k{ color:#FFB97D; }
+  .code .g{ color:#8FD0A4; }
+
+  /* ---- Table ---- */
+  .tbl{ width:100%; border-collapse:collapse; margin-top:32px; font-size:15px; }
+  .tbl th{ text-align:left; font-weight:600; padding:10px 14px 10px 0; border-bottom:2px solid var(--ink); font-family:var(--font-display); font-size:16px; }
+  .tbl td{ padding:12px 14px 12px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+  .tbl td:first-child{ font-family:var(--font-mono); font-size:13.5px; color:var(--orange-dark); white-space:nowrap; }
+
+  /* ---- Photo slots (the owner drops images in assets/img/nava/) ---- */
+  .slot{ margin:0; position:relative; aspect-ratio:16/10; border:2px dashed #D9CDBA; border-radius:16px; background:repeating-linear-gradient(135deg,rgba(242,113,28,.045) 0 14px,transparent 14px 28px); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:18px; overflow:hidden; }
+  .dark .slot{ border-color:#4A4640; background:repeating-linear-gradient(135deg,rgba(242,113,28,.09) 0 14px,transparent 14px 28px); }
+  .slot.tall{ aspect-ratio:4/5; }
+  .slot.wide{ aspect-ratio:21/9; }
+  .slot b{ font-family:var(--font-display); font-weight:600; font-size:17px; }
+  .slot span{ font-family:var(--font-mono); font-size:12px; color:var(--muted); margin-top:6px; }
+  .dark .slot span{ color:var(--ink-muted); }
+  .slot.filled{ border:0; background:none; padding:0; box-shadow:0 24px 60px -20px rgba(32,36,31,.3); }
+  .slot.filled img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .slot.filled b,.slot.filled span{ display:none; }
+  .stack{ display:grid; gap:20px; }
+
+  /* ---- Title slide ---- */
+  .title-grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:clamp(32px,5vw,80px); align-items:center; }
+  .title-grid h1{ font-size:clamp(88px,15vw,210px); font-weight:700; letter-spacing:-.045em; line-height:.86; color:var(--cream); }
+  .title-grid h1 i{ font-style:normal; color:var(--orange); }
+  .title-sub{ font-family:var(--font-display); font-size:clamp(22px,2.6vw,34px); font-weight:500; line-height:1.25; margin-top:26px; max-width:22ch; }
+  .title-meta{ color:var(--ink-muted); margin-top:20px; font-size:15px; max-width:44ch; }
+  .rundown{ border-left:2px solid var(--orange); padding-left:22px; font-family:var(--font-mono); font-size:14px; }
+  .rundown h3{ font-family:var(--font-display); font-size:22px; color:var(--cream); margin-bottom:14px; font-weight:600; }
+  .rundown li{ display:grid; grid-template-columns:96px 1fr; gap:12px; padding:9px 0; border-bottom:1px solid var(--ink-line); color:var(--cream); }
+  .rundown li span:first-child{ color:var(--orange); }
+  .rundown li span:last-child{ color:var(--ink-muted); }
+  @media (prefers-reduced-motion:no-preference){
+    .rundown li{ opacity:0; transform:translateY(6px); animation:cue .5s ease forwards; }
+    .rundown li:nth-child(1){ animation-delay:.25s } .rundown li:nth-child(2){ animation-delay:.5s }
+    .rundown li:nth-child(3){ animation-delay:.75s } .rundown li:nth-child(4){ animation-delay:1s }
+    .rundown li:nth-child(5){ animation-delay:1.25s } .rundown li:nth-child(6){ animation-delay:1.5s }
+    @keyframes cue{ to{ opacity:1; transform:none; } }
+  }
+
+  /* ---- Diagram ---- */
+  .diagram{ width:100%; height:auto; margin-top:30px; }
+  .diagram .box{ fill:var(--cream); stroke:var(--ink); stroke-width:1.5; }
+  .diagram .box.hub{ fill:var(--orange); stroke:var(--orange-dark); }
+  .diagram .box.db{ fill:var(--ink); stroke:var(--ink); }
+  .diagram .band{ fill:var(--orange-soft); stroke:#EBC9AB; stroke-width:1.2; stroke-dasharray:5 4; }
+  .diagram .t1{ font-family:var(--font-display); font-weight:600; font-size:20px; fill:var(--ink); }
+  .diagram .t2{ font-family:var(--font-body); font-size:13.5px; fill:var(--muted); }
+  .diagram .hub-t1{ font-family:var(--font-display); font-weight:600; font-size:20px; fill:#fff; }
+  .diagram .hub-t2{ font-family:var(--font-body); font-size:13.5px; fill:#FFF1E6; }
+  .diagram .db-t1{ font-family:var(--font-display); font-weight:600; font-size:20px; fill:var(--cream); }
+  .diagram .db-t2{ font-family:var(--font-body); font-size:13.5px; fill:var(--ink-muted); }
+  .diagram .ln{ stroke:var(--ink); stroke-width:1.6; fill:none; }
+  .diagram .lbl{ font-family:var(--font-mono); font-size:11.5px; fill:var(--muted); }
+  .diagram .chip{ font-family:var(--font-mono); font-size:12.5px; fill:var(--ink); }
+
+  /* ---- Lifecycle ---- */
+  .steps{ display:grid; grid-template-columns:repeat(6,1fr); gap:0; margin-top:44px; counter-reset:step; }
+  .step{ position:relative; padding:0 18px 0 0; }
+  .step::before{ counter-increment:step; content:counter(step); display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:var(--orange); color:#fff; font-family:var(--font-mono); font-size:14px; margin-bottom:14px; position:relative; z-index:1; }
+  .step::after{ content:''; position:absolute; top:16px; left:34px; right:0; height:2px; background:var(--ink-line); }
+  .step:last-child::after{ display:none; }
+  .step h4{ font-size:18px; margin-bottom:6px; }
+  .step p{ font-size:14px; color:var(--ink-muted); margin:0; }
+
+  /* ---- Chips ---- */
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .chips span{ font-family:var(--font-mono); font-size:12.5px; background:var(--white); border:1px solid var(--line); border-radius:30px; padding:6px 14px; }
+  .stack-group{ border-top:1px solid var(--line); padding-top:14px; }
+  .stack-group h4{ font-size:20px; }
+
+  /* ---- Navigation ---- */
+  .rail{ position:fixed; right:18px; top:50%; transform:translateY(-50%); z-index:20; display:flex; flex-direction:column; gap:9px; }
+  .rail a{ width:10px; height:10px; border-radius:50%; background:var(--faint); opacity:.5; display:block; transition:transform .2s,background .2s,opacity .2s; }
+  .rail a.on{ background:var(--orange); opacity:1; transform:scale(1.5); }
+  .rail a:focus-visible{ outline:2px solid var(--orange); outline-offset:3px; }
+  .brandmark{ position:fixed; top:18px; left:var(--gutter); z-index:20; }
+  .brandmark img{ height:26px; width:auto; display:block; filter:drop-shadow(0 0 6px rgba(250,248,245,.7)); }
+  .hint{ position:fixed; right:var(--gutter); bottom:20px; z-index:20; font-family:var(--font-mono); font-size:12px; color:var(--muted); background:rgba(250,248,245,.9); padding:2px 10px; border-radius:20px; }
+
+  @media (max-width:980px){
+    .title-grid,.cols,.cols.wide-left,.cols.wide-right{ grid-template-columns:1fr; }
+    .grid3{ grid-template-columns:1fr 1fr; }
+    .steps{ grid-template-columns:1fr 1fr; gap:28px 0; }
+    .step::after{ display:none; }
+    .rail{ display:none; }
+    .slide{ align-items:flex-start; padding-top:76px; }
+  }
+  @media (max-width:620px){
+    body{ font-size:16px; }
+    .grid3,.grid2{ grid-template-columns:1fr; }
+    .steps{ grid-template-columns:1fr; }
+    .hint{ display:none; }
+    .tbl{ font-size:14px; }
+    .tbl td:first-child{ white-space:normal; }
+    .rundown li{ grid-template-columns:1fr; gap:2px; }
+  }
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+</style>
+</head>
+<body>
+
+<div class="brandmark"><img src="/assets/img/ambrawordlogo.png" alt="AMBRA"></div>
+<nav class="rail" aria-label="Slides" id="rail"></nav>
+<div class="hint">Use the arrow keys to move between slides</div>
+
+<main id="deck">
+
+<!-- 1. Title -->
+<section class="slide dark" id="s-title" data-title="Title">
+  <div class="wrap">
+    <div class="title-grid">
+      <div>
+        <h1>NAVA<i>.</i></h1>
+        <p class="title-sub">The operations control center behind AMBRA, EMN and Berklee Perú</p>
+        <p class="title-meta">A technical walkthrough of the agents, automations, data layer and tools we built, and how they work together. Internal document.</p>
+      </div>
+      <div class="rundown">
+        <h3>A normal weekday, run by NAVA</h3>
+        <ul>
+          <li><span>06:00</span><span>Cloud routine reads Gmail, Zoho and Calendar, then saves the daily brief</span></li>
+          <li><span>08:00</span><span>Outreach agent researches 10 new leads and drafts the emails</span></li>
+          <li><span>08:30</span><span>Follow-up check finds who has not replied</span></li>
+          <li><span>every 30 min</span><span>n8n pulls Stripe charges into the Cash Ledger</span></li>
+          <li><span>every 5 min</span><span>Watchdogs restart anything that stopped</span></li>
+          <li><span>always</span><span>Nothing sensitive happens until a person presses Accept</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>01 / 17</span></div>
+</section>
+
+<!-- 2. What it is -->
+<section class="slide" id="s-what" data-title="What NAVA is">
+  <div class="wrap">
+    <h2>One operator, three organizations, nine agents</h2>
+    <p class="lede">Daniel runs AMBRA Live Productions, the music school EMN and the Berklee Perú club. NAVA is the single screen where all three meet. AI agents do the repetitive work. A person approves anything that matters.</p>
+    <div class="cols">
+      <ul class="facts">
+        <li><strong>A dashboard</strong> built on Tabler 1.6.1 and ApexCharts. It shows the day: brief, calendar, to do, alerts, finance, social reach and the lead pipeline.</li>
+        <li><strong>A local hub</strong>, a small Python service, that serves data to the dashboard and keeps secret keys out of the browser.</li>
+        <li><strong>A Supabase database</strong> in its own <code>nava</code> schema that stores everything the daily routine collects.</li>
+        <li><strong>A team of agents</strong>, one per role, each with an identity file, skills and a memory file per company.</li>
+        <li><strong>Automation in n8n</strong> for fixed steps such as invoices and the finance ledger.</li>
+      </ul>
+      <figure class="slot" data-slot="hero-dashboard"><b>Photo: full NAVA dashboard</b><span>assets/img/nava/hero-dashboard.png</span></figure>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>02 / 17</span></div>
+</section>
+
+<!-- 3. Architecture -->
+<section class="slide soft" id="s-arch" data-title="Architecture">
+  <div class="wrap">
+    <h2>Architecture at a glance</h2>
+    <p class="lede">Everything runs on the owner's computer except the morning routine. The browser never sees a secret key: it only talks to the local hub.</p>
+    <svg class="diagram" viewBox="0 0 1100 520" role="img" aria-label="Architecture diagram: the dashboard talks to a local hub, the hub talks to Supabase and to three workers, a cloud routine writes to Supabase, and the workers reach external services through connectors.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#141414"/></marker>
+      </defs>
+      <rect class="box" x="20" y="30" width="280" height="110" rx="14"/>
+      <text class="t1" x="40" y="68">NAVA dashboard</text>
+      <text class="t2" x="40" y="92">index.html, Tabler, ApexCharts</text>
+      <text class="t2" x="40" y="114">runs in the browser</text>
+
+      <rect class="box hub" x="410" y="30" width="280" height="110" rx="14"/>
+      <text class="hub-t1" x="430" y="68">Local hub</text>
+      <text class="hub-t2" x="430" y="92">nava-bridge.py on port 5680</text>
+      <text class="hub-t2" x="430" y="114">holds the secret key</text>
+
+      <rect class="box db" x="800" y="30" width="280" height="110" rx="14"/>
+      <text class="db-t1" x="820" y="68">Supabase</text>
+      <text class="db-t2" x="820" y="92">schema nava: nava_items, deals</text>
+      <text class="db-t2" x="820" y="114">RLS on, no public policies</text>
+
+      <line class="ln" x1="304" y1="85" x2="406" y2="85" marker-start="url(#ah)" marker-end="url(#ah)"/>
+      <text class="lbl" x="312" y="72">JSON, polls 3 s</text>
+      <line class="ln" x1="694" y1="85" x2="796" y2="85" marker-start="url(#ah)" marker-end="url(#ah)"/>
+      <text class="lbl" x="706" y="72">REST, server side</text>
+
+      <path class="ln" d="M550 140 V190 M80 190 H620"/>
+      <path class="ln" d="M80 190 V236" marker-end="url(#ah)"/>
+      <path class="ln" d="M350 190 V236" marker-end="url(#ah)"/>
+      <path class="ln" d="M620 190 V236" marker-end="url(#ah)"/>
+      <text class="lbl" x="632" y="186">localhost HTTP</text>
+
+      <rect class="box" x="20" y="240" width="245" height="100" rx="12"/>
+      <text class="t1" x="38" y="274">Chat responder</text>
+      <text class="t2" x="38" y="297">nava-responder.py</text>
+      <text class="t2" x="38" y="317">one claude -p per message</text>
+
+      <rect class="box" x="290" y="240" width="245" height="100" rx="12"/>
+      <text class="t1" x="308" y="274">Task runner</text>
+      <text class="t2" x="308" y="297">nava-task-runner.py</text>
+      <text class="t2" x="308" y="317">agents with tool allowlists</text>
+
+      <rect class="box" x="560" y="240" width="245" height="100" rx="12"/>
+      <text class="t1" x="578" y="274">n8n workflows</text>
+      <text class="t2" x="578" y="297">invoice, finance ledger</text>
+      <text class="t2" x="578" y="317">pause for human approval</text>
+
+      <rect class="box" x="830" y="240" width="245" height="100" rx="12"/>
+      <text class="t1" x="848" y="274">Morning routine</text>
+      <text class="t2" x="848" y="297">cloud scheduled task, 06:00</text>
+      <text class="t2" x="848" y="317">insert-only into Supabase</text>
+      <path class="ln" d="M952 240 V144" marker-end="url(#ah)"/>
+
+      <path class="ln" d="M142 340 V396 M412 340 V396 M682 340 V396 M952 340 V396" marker-end="url(#ah)"/>
+      <rect class="band" x="20" y="400" width="1055" height="100" rx="14"/>
+      <text class="t1" x="40" y="430">External services through MCP connectors and APIs</text>
+      <text class="chip" x="40" y="458">Gmail    Zoho Mail (AMBRA, EMN)    Google Calendar    Google Drive    Google Sheets    Airtable</text>
+      <text class="chip" x="40" y="482">Stripe    Metricool    Buffer    Canva    Zapier</text>
+    </svg>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>03 / 17</span></div>
+</section>
+
+<!-- 4. Command Center -->
+<section class="slide" id="s-command" data-title="Command Center">
+  <div class="wrap">
+    <h2>The Command Center</h2>
+    <p class="lede">The first screen answers one question: what needs me today? Each card reads from the hub, so the page is a thin client with no secrets.</p>
+    <div class="cols wide-left">
+      <div class="grid2" style="margin-top:0">
+        <div class="item"><h4>Daily Brief</h4><p>Important mail from Gmail and the AMBRA and EMN Zoho inboxes, summarised. Low-value mail is counted and left out. Checkboxes hide what is done (stored per browser in localStorage).</p></div>
+        <div class="item"><h4>Calendar</h4><p>Today's events from Google Calendar, refreshed from the hub on demand.</p></div>
+        <div class="item"><h4>To Do</h4><p>Three lanes: AMBRA (orange), EMN (red) and Personal (purple). Tasks never expire until checked off.</p></div>
+        <div class="item"><h4>Working On and Done</h4><p>Drag a To Do card to an agent. The card shows its state and the owning agent until it is truly done.</p></div>
+        <div class="item"><h4>Company headers</h4><p>Revenue for the current month and cash flow for 2026 per company, with a pop-up that compares this month with the last.</p></div>
+        <div class="item"><h4>Social reach</h4><p>Followers and reach for the AMBRA and EMN channels. Some feeds are still being connected.</p></div>
+      </div>
+      <div class="stack">
+        <figure class="slot" data-slot="command-center"><b>Photo: Command Center</b><span>assets/img/nava/command-center.png</span></figure>
+        <figure class="slot" data-slot="daily-brief"><b>Photo: Daily Brief card</b><span>assets/img/nava/daily-brief.png</span></figure>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>04 / 17</span></div>
+</section>
+
+<!-- 5. Alerts and Clients -->
+<section class="slide soft" id="s-alerts" data-title="Alerts and Clients">
+  <div class="wrap">
+    <h2>Where decisions and leads live</h2>
+    <div class="cols">
+      <div>
+        <h3 style="font-size:26px;margin-bottom:10px">Alerts &amp; Decisions</h3>
+        <p>Every agent that needs a human posts here. A card has the question, Accept and Deny buttons and a reply box. The title opens a large panel with all notifications, pending first and decided below.</p>
+        <ul class="facts">
+          <li>Pending approvals are saved to disk, so a restart loses nothing.</li>
+          <li>The list only redraws when data changes, so a half-typed reply is never erased.</li>
+          <li>Every notification carries the name of the agent that raised it.</li>
+        </ul>
+        <figure class="slot" data-slot="alerts-decisions" style="margin-top:24px"><b>Photo: Alerts &amp; Decisions</b><span>assets/img/nava/alerts-decisions.png</span></figure>
+      </div>
+      <div>
+        <h3 style="font-size:26px;margin-bottom:10px">Clients tab</h3>
+        <p>AMBRA and EMN side by side. Each company has an Outreach box with its latest lead search, then one card per lead.</p>
+        <ul class="facts">
+          <li>Each card shows the lead, the reasons it fits and the full draft email.</li>
+          <li><strong>Send</strong> sends the email and logs the lead in Airtable with status and next follow-up date.</li>
+          <li>A comment box plus <strong>Request changes</strong> sends the draft back to the Outreach agent.</li>
+          <li>Rejecting a lead stores it as Rejected, so it is never proposed again.</li>
+        </ul>
+        <figure class="slot" data-slot="clients-tab" style="margin-top:24px"><b>Photo: Clients tab</b><span>assets/img/nava/clients-tab.png</span></figure>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>05 / 17</span></div>
+</section>
+
+<!-- 6. Agents -->
+<section class="slide" id="s-agents" data-title="The agents">
+  <div class="wrap">
+    <h2>Nine agents, one per role</h2>
+    <p class="lede">An agent is a role, not a program. Each role has an identity file, generic skills and a memory file for every company it serves. The same agent can work for AMBRA and EMN without ever mixing their data.</p>
+    <div class="grid3">
+      <div class="item"><span class="tag">front door</span><h4>Assistant</h4><p>Receives every request, picks the company and role, routes it, and owns the cross-company view: digests, follow-ups, reminders and calendar.</p></div>
+      <div class="item"><span class="tag">sales</span><h4>Outreach</h4><p>Finds and ranks prospects, researches each one, writes short emails that cite real proof, and tracks every touch so nobody is contacted twice.</p></div>
+      <div class="item"><span class="tag">billing</span><h4>Invoice</h4><p>Turns a closed deal into a payment link and a PDF invoice for the right company, after a human confirms.</p></div>
+      <div class="item"><span class="tag">delivery</span><h4>Coordinator</h4><p>After payment, adds the client to Airtable and the company site, sends welcome emails and reminders, and closes the case.</p></div>
+      <div class="item"><span class="tag">money</span><h4>Finances</h4><p>Logs income, expenses and transfers in each company's Cash Ledger, reconciles Stripe and prepares the monthly close.</p></div>
+      <div class="item"><span class="tag">content</span><h4>Socials</h4><p>Cuts long event videos into clips, picks covers, writes captions and schedules posts through Metricool and Buffer.</p></div>
+      <div class="item"><span class="tag">brand</span><h4>Visuals</h4><p>The single source of truth for colors, fonts, logos and video rules. It works like a stylesheet for everything the companies publish.</p></div>
+      <div class="item"><span class="tag">build</span><h4>Web</h4><p>Builds and maintains the sites and web apps: Jekyll on GitHub Pages, Supabase backends, admin panels and invoice tools.</p></div>
+      <div class="item"><span class="tag">coaching</span><h4>Trainer</h4><p>Sales mentor and speaking coach. Prepares call structures, scripts, rescue phrases and role-play before live conversations with leads.</p></div>
+    </div>
+    <figure class="slot wide" data-slot="agents-overview" style="margin-top:32px"><b>Photo: agent picker or agents overview</b><span>assets/img/nava/agents-overview.png</span></figure>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>06 / 17</span></div>
+</section>
+
+<!-- 7. How an agent runs -->
+<section class="slide dark" id="s-runtime" data-title="How agents run">
+  <div class="wrap">
+    <h2>How an agent is assembled</h2>
+    <p class="lede">Agents run as Claude Code sessions started inside a shared vault. A router file decides which files an agent may read for a given role and company.</p>
+    <div class="cols">
+      <ul class="facts">
+        <li><strong>Router.</strong> <code>CLAUDE.md</code> at the vault root maps role and company to the files to read. It also holds the language rules and the email rule.</li>
+        <li><strong>Identity.</strong> Who the role is and how it works, generic and free of client names.</li>
+        <li><strong>Skills.</strong> Plain-text procedures per role, and per role and company when they differ.</li>
+        <li><strong>Memory.</strong> A file per role and company with what is done and what is pending.</li>
+        <li><strong>Isolation.</strong> An agent never reads another company's folders unless Daniel authorises it for that task.</li>
+        <li><strong>Changelog.</strong> Every saved rule or skill is logged with date, location and audience.</li>
+      </ul>
+      <div class="code"><span class="c"># read order for a task: role + company</span>
+1. _companies/&lt;C&gt;/&lt;C&gt;-context.md    <span class="c">hard rules</span>
+2. _companies/&lt;C&gt;/&lt;C&gt;-clients.md    <span class="c">shared memory</span>
+3. &lt;Role&gt;/&lt;Role&gt;-identity.md         <span class="c">who the agent is</span>
+4. &lt;Role&gt;/skills/                   <span class="c">generic skills</span>
+5. &lt;Role&gt;/&lt;C&gt;/&lt;Role&gt;-&lt;C&gt;-memory.md  <span class="c">state</span>
+6. &lt;Role&gt;/&lt;C&gt;/skills/             <span class="c">company skills</span>
+7. Visuals/&lt;C&gt;/...-brand.md          <span class="c">design work only</span>
+
+<span class="c"># the hand-off chain for a new client</span>
+Outreach <span class="k">&gt;</span> Invoice <span class="k">&gt;</span> Coordinator <span class="k">&gt;</span> Finances</div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>07 / 17</span></div>
+</section>
+
+<!-- 8. Task lifecycle -->
+<section class="slide dark" id="s-lifecycle" data-title="Task lifecycle" style="border-top:1px solid var(--ink-line)">
+  <div class="wrap">
+    <h2>From a to-do card to a finished task</h2>
+    <p class="lede">The task runner polls the hub every three seconds. Each queued task runs in its own thread with the tools of the agent that was picked. Runs time out after 30 minutes.</p>
+    <div class="steps">
+      <div class="step"><h4>Drag</h4><p>Daniel drags a To Do card onto an agent. The task is queued.</p></div>
+      <div class="step"><h4>Investigate</h4><p><code>claude -p</code> starts with read-only tools and writes a plan.</p></div>
+      <div class="step"><h4>Ask</h4><p>If it needs an answer, it ends with a QUESTION line. The runner posts it to Alerts &amp; Decisions.</p></div>
+      <div class="step"><h4>Go ahead</h4><p>Daniel replies, accepts or denies. Accepting the plan unlocks the act tools.</p></div>
+      <div class="step"><h4>Act</h4><p>The same Claude session resumes and writes files, drafts, rows or records.</p></div>
+      <div class="step"><h4>Done</h4><p>A DONE line with no open questions moves the card to Done. Otherwise it stays in Working On.</p></div>
+    </div>
+    <div class="cols" style="margin-top:44px">
+      <p style="color:var(--ink-muted)">A finished task has a redo icon. It resumes the agent's session and runs only what was left pending, without repeating finished work.</p>
+      <figure class="slot" data-slot="todo-board"><b>Photo: To Do, Working On, Done board</b><span>assets/img/nava/todo-board.png</span></figure>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>08 / 17</span></div>
+</section>
+
+<!-- 9. Safety -->
+<section class="slide" id="s-safety" data-title="Safety">
+  <div class="wrap">
+    <h2>Built so that a person stays in charge</h2>
+    <div class="grid2">
+      <div class="item"><h4>Two tool tiers per agent</h4><p>Each agent has a read-only list used while it investigates and an act list that is enabled only for the step after Daniel accepts its plan. Anything not on a list is denied.</p></div>
+      <div class="item"><h4>No deletes</h4><p>Coordinator can create and update Airtable records, never delete. The morning routine inserts rows and never replaces or removes them.</p></div>
+      <div class="item"><h4>Email rule</h4><p>Nothing is sent without explicit approval of the final version: text, recipients, sender account and signature. An earlier "send it" does not count.</p></div>
+      <div class="item"><h4>Secrets stay on the server</h4><p>The Supabase secret key lives in a local config read by the hub. The browser cannot receive it. Credentials are never written in notes.</p></div>
+      <div class="item"><h4>Database lockdown</h4><p>NAVA tables sit in their own schema with row level security on, no policies and no grants for the anon or authenticated roles. Only the secret key reads them.</p></div>
+      <div class="item"><h4>Company isolation</h4><p>Each task works with one company's folders, accounts and Stripe account. Money moving between AMBRA and EMN is a transfer, not income.</p></div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>09 / 17</span></div>
+</section>
+
+<!-- 10. Routines -->
+<section class="slide soft" id="s-routines" data-title="Daily routines">
+  <div class="wrap">
+    <h2>What runs without being asked</h2>
+    <table class="tbl">
+      <thead><tr><th>When</th><th>What</th><th>How it stays safe</th></tr></thead>
+      <tbody>
+        <tr><td>06:00 daily</td><td>Cloud routine reads the last 24 hours of Gmail, both Zoho inboxes and the calendar, then saves the brief, calendar, to do and outreach pipeline counts.</td><td>Read-only on mail. Insert-only on the database, and a row with the same kind, title and url is never duplicated.</td></tr>
+        <tr><td>08:00 weekdays</td><td>Find 10 leads: the Outreach agent researches, checks Sheets and Airtable for duplicates and drops 10 leads with drafts into Clients.</td><td>No email is sent. Writes happen only after the person presses Send.</td></tr>
+        <tr><td>08:30 weekdays</td><td>Follow-up check: lists which sent emails have no reply and are due, up to three follow-ups per lead.</td><td>Produces drafts for review, never sends by itself.</td></tr>
+        <tr><td>every 30 min</td><td>n8n finance workflow pulls new Stripe charges, writes the first free row of the Cash Ledger and refreshes the dashboard files.</td><td>Writes only to its own sheet and skips formula columns.</td></tr>
+        <tr><td>every 5 min</td><td>Watchdogs check the hub, n8n, the responder and the web server, and restart whatever is down.</td><td>A start is logged to a file each time.</td></tr>
+        <tr><td>on change</td><td>Hub, responder and runner reload themselves when their code changes, after the new code passes a syntax check.</td><td>A broken file never replaces a running process.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>10 / 17</span></div>
+</section>
+
+<!-- 11. n8n -->
+<section class="slide" id="s-n8n" data-title="n8n automations">
+  <div class="wrap">
+    <h2>Fixed steps belong in n8n</h2>
+    <p class="lede">The rule we followed: mechanical steps run in automation, and an AI model is used only where judgment is needed. That keeps cost low and behavior predictable.</p>
+    <div class="cols wide-left">
+      <div class="grid2" style="margin-top:0">
+        <div class="item"><span class="tag">Invoice</span><h4>Check, approve, charge</h4><p>A closed deal in Supabase triggers an AI judgment step that confirms the deal has enough data. The workflow then pauses and asks in NAVA before it creates a Stripe client, a payment link or an invoice.</p></div>
+        <div class="item"><span class="tag">Finances</span><h4>Stripe to Cash Ledger</h4><p>Every 30 minutes it reads new charges, writes them to the company's Google Sheet, reads the summary back to verify and updates the dashboard's finance data.</p></div>
+        <div class="item"><span class="tag">Coordinator</span><h4>Payment trigger</h4><p>Starts only when Outreach has confirmed the deal and the client has paid. Welcome emails and reminders go through approval.</p></div>
+        <div class="item"><span class="tag">Socials</span><h4>Mixed</h4><p>n8n schedules and publishes. The model is used only to write captions and pick covers.</p></div>
+      </div>
+      <figure class="slot tall" data-slot="n8n-workflows"><b>Photo: n8n workflow canvas</b><span>assets/img/nava/n8n-workflows.png</span></figure>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>11 / 17</span></div>
+</section>
+
+<!-- 12. Outreach pipeline -->
+<section class="slide soft" id="s-outreach" data-title="Outreach pipeline">
+  <div class="wrap">
+    <h2>The lead pipeline, end to end</h2>
+    <div class="cols">
+      <ul class="facts">
+        <li><strong>Research.</strong> Web search, social profiles and email finders. Anything not confirmed, such as a date, name or address, is marked unconfirmed rather than guessed.</li>
+        <li><strong>Classify.</strong> Prospect, partner, competitor or discard. Only prospects with a live event or need and a reachable contact get outreach.</li>
+        <li><strong>Deduplicate.</strong> The agent reads the tracking sheet and the Airtable Leads table before proposing anyone.</li>
+        <li><strong>Draft.</strong> Short, in the audience's language, with one specific detail, one line of proof with a link, the formats on offer and a single ask.</li>
+        <li><strong>Review in Clients.</strong> Edit, comment, request changes, reject or send.</li>
+        <li><strong>Track.</strong> Sending logs status, date and next follow-up in Airtable. The rule is a maximum of three follow-ups.</li>
+      </ul>
+      <div class="stack">
+        <figure class="slot" data-slot="lead-card"><b>Photo: a lead card with its draft</b><span>assets/img/nava/lead-card.png</span></figure>
+        <div class="code"><span class="c"># pipeline counts written by the morning routine</span>
+kind   = <span class="g">"pipeline"</span>
+source = <span class="g">"ambra_pipeline"</span> | <span class="g">"emn_pipeline"</span>
+detail = {<span class="g">"leads"</span>: n, <span class="g">"clients"</span>: n}</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>12 / 17</span></div>
+</section>
+
+<!-- 13. Chat -->
+<section class="slide dark" id="s-chat" data-title="Chat and voice">
+  <div class="wrap">
+    <h2>A chat that answers every message</h2>
+    <div class="cols">
+      <div>
+        <p class="lede" style="margin-top:0">The NAVA assistant lives inside the dashboard, with an orb for voice and an arrow that switches between voice only and the full chat.</p>
+        <ul class="facts" style="margin-top:20px">
+          <li>The responder polls the hub and answers each new message with one <code>claude -p</code> call. There is no saved session and no tools.</li>
+          <li>Every call is given Daniel's saved memory, read fresh each time, plus today's calendar events and the To Do list.</li>
+          <li>Replies are plain text, posted back with <code>POST /reply</code> and read aloud.</li>
+          <li>After a restart, messages that never got an answer are answered first.</li>
+          <li>Real work, such as files, email or Supabase, is not done in the chat. It is routed to an agent.</li>
+        </ul>
+      </div>
+      <figure class="slot tall" data-slot="chat-orb"><b>Photo: chat and voice orb</b><span>assets/img/nava/chat-orb.png</span></figure>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>13 / 17</span></div>
+</section>
+
+<!-- 14. Data layer -->
+<section class="slide" id="s-data" data-title="Data and API">
+  <div class="wrap">
+    <h2>The data layer and the hub API</h2>
+    <p class="lede">Reads and writes to Supabase use the PostgREST profile headers for the <code>nava</code> schema. The dashboard never calls Supabase directly.</p>
+    <div class="cols">
+      <div class="code"><span class="c"># reads</span>
+GET  /rows?day=YYYY-MM-DD   <span class="c">today's items</span>
+GET  /messages              <span class="c">chat history</span>
+GET  /approvals?all=1       <span class="c">Alerts &amp; Decisions</span>
+GET  /tasks                 <span class="c">To Do, Working On, Done</span>
+GET  /agents                <span class="c">agent list and tools</span>
+GET  /leads                 <span class="c">Clients tab</span>
+GET  /decisions
+
+<span class="c"># writes</span>
+POST /message  /reply
+POST /approval              <span class="c">Accept, Deny, reply</span>
+POST /task  /task/rerun  /task/dismiss
+POST /lead  /lead/comment
+POST /leads/find            <span class="c">start a lead search</span>
+POST /followups/check
+POST /refresh/calendar</div>
+      <div>
+        <ul class="facts">
+          <li><strong>nava.nava_items</strong> holds brief items, calendar events, to do and pipeline counts, one row per item with a kind, title, url and a JSON detail.</li>
+          <li><strong>nava.deals</strong> holds closed deals. A new row is the trigger for the Invoice workflow.</li>
+          <li><strong>Local JSON files</strong> in the dashboard's data folder hold tasks, approvals, leads, finance and the updates log.</li>
+          <li><strong>Updates log.</strong> Every improvement to NAVA is added with a small script and shows in the Updates panel with its date.</li>
+        </ul>
+        <div class="code" style="margin-top:22px"><span class="c"># Supabase REST headers</span>
+Accept-Profile:  nava   <span class="c">reads</span>
+Content-Profile: nava   <span class="c">writes</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>14 / 17</span></div>
+</section>
+
+<!-- 15. Websites and content -->
+<section class="slide soft" id="s-web" data-title="Websites and content">
+  <div class="wrap">
+    <h2>What the Web, Visuals and Socials agents ship</h2>
+    <div class="grid3">
+      <div class="item"><h4>Public sites</h4><p>Jekyll on GitHub Pages with custom domains, one repo per company. A single shared stylesheet holds the design tokens.</p></div>
+      <div class="item"><h4>Client and staff apps</h4><p>Login, admin panel, musician view, invoice builder with PDF output, showcase pages and the PA'LANTE setlist app with a 3D asset.</p></div>
+      <div class="item"><h4>Backends</h4><p>Supabase auth, tables and Edge Functions. Integrations with Stripe payment links, Airtable and transactional email.</p></div>
+    </div>
+    <div class="grid3" style="margin-top:28px">
+      <figure class="slot" data-slot="website-home"><b>Photo: AMBRA website</b><span>assets/img/nava/website-home.png</span></figure>
+      <figure class="slot" data-slot="invoice-builder"><b>Photo: invoice builder</b><span>assets/img/nava/invoice-builder.png</span></figure>
+      <figure class="slot" data-slot="social-calendar"><b>Photo: social content calendar</b><span>assets/img/nava/social-calendar.png</span></figure>
+    </div>
+    <p class="lede" style="margin-top:26px">Socials follows a fixed workflow: intake, source audio check, cut, covers, captions, review, then schedule. Nothing is published without Daniel's explicit OK on the final video, cover, caption and hashtags.</p>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>15 / 17</span></div>
+</section>
+
+<!-- 16. Stack -->
+<section class="slide" id="s-stack" data-title="Tool stack">
+  <div class="wrap">
+    <h2>The tools behind it</h2>
+    <div class="grid2">
+      <div class="stack-group"><h4>AI and agents</h4><div class="chips"><span>Claude Code</span><span>claude -p</span><span>MCP connectors</span><span>Skills</span><span>Scheduled cloud routines</span></div></div>
+      <div class="stack-group"><h4>Backend and data</h4><div class="chips"><span>Supabase (PostgreSQL)</span><span>Row level security</span><span>Edge Functions</span><span>PostgREST</span><span>SQL</span><span>Airtable</span><span>Google Sheets</span></div></div>
+      <div class="stack-group"><h4>Automation</h4><div class="chips"><span>n8n</span><span>Zapier</span><span>PowerShell</span><span>Task Scheduler</span><span>Watchdogs</span></div></div>
+      <div class="stack-group"><h4>Code</h4><div class="chips"><span>Python</span><span>JavaScript</span><span>HTML / CSS</span><span>Jekyll</span><span>Liquid</span><span>Tabler</span><span>ApexCharts</span></div></div>
+      <div class="stack-group"><h4>Communication</h4><div class="chips"><span>Gmail</span><span>Zoho Mail</span><span>Google Calendar</span><span>Google Drive</span></div></div>
+      <div class="stack-group"><h4>Money, content and hosting</h4><div class="chips"><span>Stripe</span><span>Metricool</span><span>Buffer</span><span>Canva</span><span>GitHub Pages</span><span>GitHub Desktop</span></div></div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>NAVA technical overview</span><span>16 / 17</span></div>
+</section>
+
+<!-- 17. Status -->
+<section class="slide dark" id="s-status" data-title="Status and next">
+  <div class="wrap">
+    <h2>Where it stands</h2>
+    <div class="cols">
+      <div>
+        <h3 style="font-size:26px;margin-bottom:12px">Working</h3>
+        <ul class="facts">
+          <li>Dashboard, Command Center and Clients tab</li>
+          <li>Morning routine and the task runner with approvals</li>
+          <li>Voice and text chat</li>
+          <li>Stripe to Cash Ledger every 30 minutes</li>
+          <li>Lead search, drafts, send and follow-up tracking</li>
+          <li>Trainer agent with call structure, scripts and role-play</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size:26px;margin-bottom:12px">In progress</h3>
+        <ul class="facts">
+          <li>AMBRA Instagram feed in Social reach</li>
+          <li>EMN social numbers</li>
+          <li>Sales pipeline view</li>
+          <li>A fully unattended lead and invoice loop, still gated by human approval by design</li>
+        </ul>
+        <p style="color:var(--ink-muted);margin-top:22px;font-size:15px">NAVA runs on the owner's computer and is an internal tool, not a public product.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span>© AMBRA Music Productions. Private page, please do not share.</span><span>17 / 17</span></div>
+</section>
+
+</main>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var rail = document.getElementById('rail');
+  slides.forEach(function(s, i){
+    var a = document.createElement('a');
+    a.href = '#' + s.id;
+    a.setAttribute('aria-label', 'Slide ' + (i + 1) + ': ' + (s.getAttribute('data-title') || ''));
+    a.title = s.getAttribute('data-title') || '';
+    rail.appendChild(a);
+  });
+  var dots = rail.querySelectorAll('a');
+
+  var current = 0;
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) {
+          current = slides.indexOf(e.target);
+          dots.forEach(function(d, i){ d.classList.toggle('on', i === current); });
+        }
+      });
+    }, { threshold: 0.5 });
+    slides.forEach(function(s){ io.observe(s); });
+  }
+  dots[0].classList.add('on');
+
+  function go(i){
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    slides[i].scrollIntoView();
+  }
+  document.addEventListener('keydown', function(e){
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(current + 1); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(slides.length - 1); }
+  });
+
+  // Photo slots: a file named after data-slot in /assets/img/nava/ replaces the placeholder.
+  var exts = ['png', 'jpg', 'jpeg', 'webp'];
+  document.querySelectorAll('.slot[data-slot]').forEach(function(slot){
+    var name = slot.getAttribute('data-slot');
+    (function tryExt(n){
+      if (n >= exts.length) return;
+      var img = new Image();
+      img.onload = function(){
+        img.alt = slot.querySelector('b') ? slot.querySelector('b').textContent : name;
+        slot.classList.add('filled');
+        slot.appendChild(img);
+      };
+      img.onerror = function(){ tryExt(n + 1); };
+      img.src = '/assets/img/nava/' + name + '.' + exts[n];
+    })(0);
+  });
+})();
+</script>
+</body>
+</html>

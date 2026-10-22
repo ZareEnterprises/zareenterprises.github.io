@@ -89,6 +89,7 @@
   /* ---- Title slide ---- */
   .title-grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:clamp(32px,5vw,80px); align-items:center; }
   .title-grid h1{ font-size:clamp(88px,15vw,210px); font-weight:700; letter-spacing:-.045em; line-height:.86; color:var(--cream); }
+  .title-grid h1 .nava-logo{ display:block; width:clamp(260px,34vw,520px); height:auto; }
   .title-grid h1 i{ font-style:normal; color:var(--orange); }
   .title-sub{ font-family:var(--font-display); font-size:clamp(22px,2.6vw,34px); font-weight:500; line-height:1.25; margin-top:26px; max-width:22ch; }
   .title-status{ text-align:center; font-weight:700; color:var(--cream); margin:clamp(28px,4vw,48px) auto 0; max-width:none; }
@@ -179,7 +180,7 @@
   <div class="wrap">
     <div class="title-grid">
       <div>
-        <h1>NAVA<i>.</i></h1>
+        <h1><img class="nava-logo" src="/assets/img/nava/Navalogo-crop.png" alt="NAVA"></h1>
         <p class="title-sub">The operations control center behind AMBRA, EMN and Berklee Perú</p>
         <p class="title-meta">A technical walkthrough of the agents, automations, data layer and tools we built, and how they work together. Internal document.</p>
       </div>

@@ -91,6 +91,7 @@
   .title-grid h1{ font-size:clamp(88px,15vw,210px); font-weight:700; letter-spacing:-.045em; line-height:.86; color:var(--cream); }
   .title-grid h1 i{ font-style:normal; color:var(--orange); }
   .title-sub{ font-family:var(--font-display); font-size:clamp(22px,2.6vw,34px); font-weight:500; line-height:1.25; margin-top:26px; max-width:22ch; }
+  .title-status{ text-align:center; font-weight:700; color:var(--cream); margin:clamp(28px,4vw,48px) auto 0; max-width:none; }
   .title-meta{ color:var(--ink-muted); margin-top:20px; font-size:15px; max-width:44ch; }
   .rundown{ border-left:2px solid var(--orange); padding-left:22px; font-family:'Roboto',var(--font-body); font-size:15px; }
   .rundown h3{ font-family:var(--font-display); font-size:22px; color:var(--cream); margin-bottom:14px; font-weight:600; }
@@ -141,9 +142,7 @@
   .rail a{ width:10px; height:10px; border-radius:50%; background:var(--faint); opacity:.5; display:block; transition:transform .2s,background .2s,opacity .2s; }
   .rail a.on{ background:var(--orange); opacity:1; transform:scale(1.5); }
   .rail a:focus-visible{ outline:2px solid var(--orange); outline-offset:3px; }
-  .brandmark{ position:fixed; top:18px; left:var(--gutter); z-index:20; display:flex; align-items:center; gap:14px; }
-  .brand-status{ font-size:12.5px; color:rgba(250,248,245,.7); }
-  @media (max-width:620px){ .brand-status{ display:none; } }
+  .brandmark{ position:fixed; top:18px; left:var(--gutter); z-index:20; }
   .brandmark img{ height:26px; width:auto; display:block; filter:drop-shadow(0 0 6px rgba(250,248,245,.7)); }
   .hint{ position:fixed; right:var(--gutter); bottom:20px; z-index:20; font-family:var(--font-mono); font-size:12px; color:var(--muted); background:rgba(250,248,245,.9); padding:2px 10px; border-radius:20px; }
 
@@ -169,7 +168,7 @@
 </head>
 <body>
 
-<div class="brandmark"><img src="/assets/img/ambrawordlogo.png" alt="AMBRA"><span class="brand-status">Work in Progress · Project started 2 weeks ago</span></div>
+<div class="brandmark"><img src="/assets/img/ambrawordlogo.png" alt="AMBRA"></div>
 <nav class="rail" aria-label="Slides" id="rail"></nav>
 <div class="hint">Use the arrow keys to move between slides</div>
 
@@ -196,6 +195,7 @@
         </ul>
       </div>
     </div>
+    <p class="title-status">Work in Progress · Project started 2 weeks ago</p>
   </div>
   <div class="slide-foot"><span>NAVA technical overview</span><span>01 / 17</span></div>
 </section>
@@ -493,9 +493,10 @@ detail = {<span class="g">"leads"</span>: n, <span class="g">"clients"</span>: n
 <section class="slide dark" id="s-chat" data-title="Chat and voice">
   <div class="wrap">
     <h2>A chat that answers every message</h2>
-    <div class="cols">
+    <figure class="slot" data-slot="chat-orb" style="aspect-ratio:1872/197;margin-top:32px"><b>Photo: chat and voice orb</b><span>assets/img/nava/chat-orb.png</span></figure>
+    <div>
       <div>
-        <p class="lede" style="margin-top:0">The NAVA assistant lives inside the dashboard, with an orb for voice and an arrow that switches between voice only and the full chat.</p>
+        <p class="lede" style="margin-top:28px">The NAVA assistant lives inside the dashboard, with an orb for voice and an arrow that switches between voice only and the full chat.</p>
         <ul class="facts" style="margin-top:20px">
           <li>The responder polls the hub and answers each new message with one <code>claude -p</code> call. There is no saved session and no tools.</li>
           <li>Every call is given Daniel's saved memory, read fresh each time, plus today's calendar events and the To Do list.</li>
@@ -504,7 +505,6 @@ detail = {<span class="g">"leads"</span>: n, <span class="g">"clients"</span>: n
           <li>Real work, such as files, email or Supabase, is not done in the chat. It is routed to an agent.</li>
         </ul>
       </div>
-      <figure class="slot tall" data-slot="chat-orb"><b>Photo: chat and voice orb</b><span>assets/img/nava/chat-orb.png</span></figure>
     </div>
   </div>
   <div class="slide-foot"><span>NAVA technical overview</span><span>13 / 17</span></div>

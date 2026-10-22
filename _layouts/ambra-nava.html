@@ -163,7 +163,9 @@
   .rail a{ width:10px; height:10px; border-radius:50%; background:var(--faint); opacity:.6; display:block; transition:transform .2s,background .2s,opacity .2s,box-shadow .2s; }
   .rail a:hover{ opacity:1; background:var(--cyan); }
   .rail a.on{ background:var(--cyan); opacity:1; transform:scale(1.5); box-shadow:0 0 12px var(--cyan); }
-  .brandmark{ position:fixed; top:18px; left:var(--gutter); z-index:20; }
+  .brandmark{ position:fixed; top:18px; left:var(--gutter); z-index:20; display:flex; align-items:center; gap:14px; }
+  .brand-status{ font-size:12.5px; color:var(--muted); }
+  @media (max-width:620px){ .brand-status{ display:none; } }
   .brandmark img{ height:26px; width:auto; display:block; filter:drop-shadow(0 0 8px rgba(255,255,255,.6)); }
   .hint{ position:fixed; right:var(--gutter); bottom:20px; z-index:20; font-family:var(--font-body); font-size:12.5px; color:var(--muted); background:rgba(13,18,32,.85); border:1px solid var(--line); backdrop-filter:blur(8px); padding:4px 12px; border-radius:20px; }
 
@@ -189,7 +191,7 @@
 </head>
 <body>
 
-<div class="brandmark"><img src="/assets/img/ambrawordlogo.png" alt="AMBRA"></div>
+<div class="brandmark"><img src="/assets/img/ambrawordlogo.png" alt="AMBRA"><span class="brand-status">Work in Progress · Project started 2 weeks ago</span></div>
 <nav class="rail" aria-label="Slides" id="rail"></nav>
 <div class="hint">Use the arrow keys to move between slides</div>
 

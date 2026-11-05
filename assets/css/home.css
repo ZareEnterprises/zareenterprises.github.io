@@ -432,13 +432,15 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 /* ==========================================================================
    /stories — Testimonials
    ========================================================================== */
-/* Testimonials page (/stories/), styled after morisdesignco.com: uppercase label,
-   two columns, each with the quote above a square photo beside a bold name and title. */
-.testimonial-stack{ display:grid; grid-template-columns:repeat(2,1fr); gap:64px 48px; max-width:1300px; margin:0 auto; }
-.testimonial-row{ display:grid; grid-template-columns:128px 1fr; column-gap:32px; align-items:center; align-content:start; }
+/* Testimonials page (/stories/): one testimonial per line, stacked. Each line reads left to right:
+   square photo | stars above name and role | quote. Photo, name and quote columns line up from row to row. */
+.testimonial-stack{ display:grid; grid-template-columns:1fr; gap:0; max-width:1180px; margin:0 auto; }
+.testimonial-row{ display:grid; grid-template-columns:128px 230px 1fr; column-gap:36px; align-items:center; padding:40px 0; border-bottom:1px solid var(--line); }
+.testimonial-row:first-child{ padding-top:8px; }
+.testimonial-row:last-child{ border-bottom:0; }
 .testimonial-stack .testimonial-row > div:last-child{ display:contents; }
-.testimonial-photo-col{ grid-column:1; grid-row:2; }
-.testimonial-meta{ grid-column:2; grid-row:2; display:flex; flex-direction:column; gap:6px; }
+.testimonial-photo-col{ grid-column:1; grid-row:1; }
+.testimonial-stack .testimonial-meta{ grid-column:2; grid-row:1; display:flex; flex-direction:column; gap:8px; }
 .testimonial-stars{ color:var(--orange); font-size:18px; letter-spacing:3px; }
 .testimonial-photo{ width:128px; height:128px; object-fit:cover; flex-shrink:0; }
 .testimonial-photo .ph-inner, .testimonial-photo::before{ font-size:14px; }
@@ -446,6 +448,7 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
   grid-column:1 / -1; grid-row:1; margin:0 0 64px; max-width:none; text-align:left;
   font-family:var(--font-body); font-weight:400; font-style:normal; font-size:15pt; line-height:1.4; color:var(--ink);
 }
+.testimonial-stack .testimonial-quote{ grid-column:3; grid-row:1; margin:0; font-size:17px; line-height:1.6; }
 .testimonial-attr{ font-size:16px; font-weight:700; margin:0; color:var(--ink); }
 .testimonial-attr span{ display:block; font-weight:400; color:var(--muted); font-size:16px; margin-top:0; }
 
@@ -473,8 +476,9 @@ footer.site-footer{ background:#fff; border-top:2px solid var(--orange); padding
 }
 
 @media (max-width:720px){
-  .testimonial-stack{ grid-template-columns:1fr; gap:48px; }
-  .testimonial-row{ grid-template-columns:96px 1fr; column-gap:20px; }
+  .testimonial-row{ grid-template-columns:96px 1fr; column-gap:20px; row-gap:18px; padding:32px 0; }
+  .testimonial-stack .testimonial-meta{ grid-column:2; grid-row:1; }
+  .testimonial-stack .testimonial-quote{ grid-column:1 / -1; grid-row:2; font-size:16px; }
   .testimonial-photo{ width:96px; height:96px; }
   .testimonial-attr, .testimonial-attr span{ font-size:14px; }
 }

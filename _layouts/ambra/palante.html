@@ -3482,7 +3482,7 @@ function artistOptionsHtml(roleName, currentName){
 }
 
 const DATA_SOURCE_KEY = 'gigit_data_source'; // shared with gig-it.html — same browser, same admin's choice
-function getDataSource(){ return localStorage.getItem(DATA_SOURCE_KEY) || 'airtable'; }
+function getDataSource(){ return localStorage.getItem(DATA_SOURCE_KEY) || 'none'; }
 
 // Per-project on/off switch (Band tab). Off by default, so a project only
 // talks to Airtable/Excel when the admin turns it on for that project.
@@ -3549,10 +3549,18 @@ async function pushToExcelRoster(musicians){
 async function addNewMusicianForRole(instrumentName){
   const full_name = await promptInApp(`New ${instrumentName}`, 'Artist name');
   if(!full_name) return null;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians`, { method: 'POST', headers: authedHeaders(), body: JSON.stringify({ full_name, instruments: [instrumentName] }) });
-  if(!res.ok){ alert('Could not add that musician: ' + await res.text()); return null; }
-  await fetchMusicians();
-  if(activeDataSource() !== 'none'){
+  // The global roster is optional: if the name already exists there, or the
+  // insert is refused (non-admin / RLS), the artist is still added to this
+  // project's band — artist_name is free text, so the roster never blocks it.
+  const existsInRoster = MUSICIANS.some(m => (m.full_name || '').trim().toLowerCase() === full_name.trim().toLowerCase());
+  if(!existsInRoster){
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/musicians`, { method: 'POST', headers: authedHeaders(), body: JSON.stringify({ full_name: full_name.trim(), instruments: [instrumentName] }) });
+      if(!res.ok) console.warn('Roster insert skipped (artist still added to the band):', await res.text());
+      else await fetchMusicians();
+    } catch(err){ console.warn('Roster insert skipped:', err); }
+  }
+  if(!existsInRoster && activeDataSource() !== 'none'){
     try { await pushMusicianToDataSource({ full_name, instrument: instrumentName, phone: null, email: null }); }
     catch(err){ console.error('push to data source', err); alert(`Added locally, but could not push to ${activeDataSource()}: ${err.message}`); }
   }

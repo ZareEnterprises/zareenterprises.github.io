@@ -600,7 +600,7 @@ async function renderImportList(){
 // (localStorage), not shared across admins. "Import from Band" above only
 // pushes up to it when it isn't 'none'.
 const DATA_SOURCE_KEY = 'gigit_data_source';
-function getDataSource(){ return localStorage.getItem(DATA_SOURCE_KEY) || 'airtable'; }
+function getDataSource(){ return localStorage.getItem(DATA_SOURCE_KEY) || 'none'; }
 function setDataSource(src){ localStorage.setItem(DATA_SOURCE_KEY, src); applyDataSourceUI(); }
 
 function applyDataSourceUI(){
